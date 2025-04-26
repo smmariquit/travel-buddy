@@ -45,6 +45,34 @@ Future<String?> signUp(String firstName, String lastName, String email, String p
   return message;
 }
 
+Future<String?> signInWithGoogle() async {
+  String? message = await authService.signInWithGoogle();
+  User? user = FirebaseAuth.instance.currentUser;
+
+  if (message == null && user != null) {
+    _uid = user.uid;
+
+    final userDoc = FirebaseFirestore.instance.collection('users').doc(user.uid);
+    final docSnapshot = await userDoc.get();
+
+    if (!docSnapshot.exists) {
+      await userDoc.set({
+        'firstName': user.displayName?.split(' ').first ?? '',
+        'lastName': user.displayName!.split(' ').length > 1
+            ? user.displayName!.split(' ').sublist(1).join(' ')
+            : '',
+        'email': user.email,
+        'createdAt': Timestamp.now(),
+        'uid': user.uid,
+      });
+    }
+  }
+
+  notifyListeners();
+  return message;
+}
+
+
 
   Future<void> signOut() async {
     await authService.signOut();

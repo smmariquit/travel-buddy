@@ -52,6 +52,7 @@ class _SignInPageState extends State<SignInPage> {
                 passwordField,
                 if (showSignInErrorMessage) signInErrorMessage,
                 submitButton,
+                googleSignInButton,
                 signUpButton,
               ],
             ),
@@ -139,7 +140,7 @@ class _SignInPageState extends State<SignInPage> {
     padding: EdgeInsets.only(bottom: 30),
     child: Text(
       "Invalid email or password",
-      style: TextStyle(color: Colors.red),
+      style: TextStyle(color: Color.fromARGB(255, 57, 244, 54)),
     ),
   );
 
@@ -177,6 +178,36 @@ class _SignInPageState extends State<SignInPage> {
         }
       },
       child: const Text("Sign In"),
+    ),
+  );
+
+    Widget get googleSignInButton => Container(
+    width: double.infinity,
+    height: 50,
+    margin: const EdgeInsets.symmetric(vertical: 10),
+    child: ElevatedButton.icon(
+      icon: const Icon(Icons.login, color: Colors.white),
+      label: const Text("Sign in with Google", style: TextStyle(color: Colors.white)),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color.fromARGB(255, 32, 141, 208),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
+        ),
+      ),
+      onPressed: () async {
+        final authProvider = context.read<UserAuthProvider>();
+        final travelProvider = context.read<TravelTrackerProvider>();
+
+        String? result = await authProvider.signInWithGoogle();
+
+        if (result == null) {
+          travelProvider.setUser(authProvider.uid);
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(result)),
+          );
+        }
+      },
     ),
   );
 
