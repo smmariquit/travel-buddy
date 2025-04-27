@@ -57,7 +57,6 @@ Created with https://ascii-tree-generator.com/
 * Windee Rose De Ramos - II BSCS
 * Simonee Ezekiel Mariquit - II BSCS ([LinkedIn](https://linkedin.com/in/stimmie))
 * Jason Duran - II BSCS
----
 ## References 📚
 * [Flutter Documentation](https://flutter.dev/docs)
 * [Firebase Documentation](https://firebase.google.com/docs)
