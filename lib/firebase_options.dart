@@ -25,15 +25,9 @@ class DefaultFirebaseOptions {
       case TargetPlatform.iOS:
         return ios;
       case TargetPlatform.macOS:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for macos - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return macos;
       case TargetPlatform.windows:
-        throw UnsupportedError(
-          'DefaultFirebaseOptions have not been configured for windows - '
-          'you can reconfigure this by running the FlutterFire CLI again.',
-        );
+        return windows;
       case TargetPlatform.linux:
         throw UnsupportedError(
           'DefaultFirebaseOptions have not been configured for linux - '
@@ -70,7 +64,28 @@ class DefaultFirebaseOptions {
     messagingSenderId: '369804060656',
     projectId: 'travel-app-23',
     storageBucket: 'travel-app-23.firebasestorage.app',
+    iosClientId: '369804060656-ksd9kecmi3hgs51mqa2rrpcfgtmtkdij.apps.googleusercontent.com',
     iosBundleId: 'com.example.travelApp',
+  );
+
+  static const FirebaseOptions macos = FirebaseOptions(
+    apiKey: 'AIzaSyCW8UFA8J006iCNzW5H5X9hgmpMpqjlCNE',
+    appId: '1:369804060656:ios:d528494cacbbfcab031f35',
+    messagingSenderId: '369804060656',
+    projectId: 'travel-app-23',
+    storageBucket: 'travel-app-23.firebasestorage.app',
+    iosClientId: '369804060656-ksd9kecmi3hgs51mqa2rrpcfgtmtkdij.apps.googleusercontent.com',
+    iosBundleId: 'com.example.travelApp',
+  );
+
+  static const FirebaseOptions windows = FirebaseOptions(
+    apiKey: 'AIzaSyCzwC1B4cFcu-7Y1ChCH-GLz76IAS5nibo',
+    appId: '1:369804060656:web:4a2bbd0afe66ed6a031f35',
+    messagingSenderId: '369804060656',
+    projectId: 'travel-app-23',
+    authDomain: 'travel-app-23.firebaseapp.com',
+    storageBucket: 'travel-app-23.firebasestorage.app',
+    measurementId: 'G-3DRZ2VYKW5',
   );
 
 }

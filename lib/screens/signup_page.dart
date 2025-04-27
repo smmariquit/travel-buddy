@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:travel_app/screens/interests_page.dart';
 import '../providers/auth_provider.dart';
 
 class SignUpPage extends StatefulWidget {
@@ -61,7 +62,7 @@ class _SignUpPageState extends State<SignUpPage> {
   Widget get subtitle => const Center(
     child: Text(
       "Please fill the details and create account",
-      style: TextStyle(fontSize: 16, color: Colors.grey),
+      style: TextStyle(fontSize: 16, color: Color.fromARGB(214, 0, 0, 0)),
     ),
   );
 
@@ -70,17 +71,24 @@ class _SignUpPageState extends State<SignUpPage> {
       filled: true,
       fillColor: const Color.fromARGB(174, 238, 238, 238),
       labelText: label,
+      labelStyle: TextStyle(color: Color.fromARGB(255, 55, 55, 55)),
       hintText: hint,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
         borderSide: BorderSide.none,
       ),
+      focusedBorder: OutlineInputBorder(
+        borderRadius: BorderRadius.circular(8),
+        borderSide: const BorderSide(color: Colors.blue, width: 2.0),
+      )
     );
   }
 
   Widget get firstNameField => Padding(
     padding: const EdgeInsets.only(bottom: 30),
     child: TextFormField(
+      
+      style: const TextStyle(color: Colors.black),
       decoration: _inputDecoration("First Name", "Juan"),
       onSaved: (value) => firstName = value,
       validator: (value) {
@@ -95,6 +103,7 @@ class _SignUpPageState extends State<SignUpPage> {
   Widget get lastNameField => Padding(
     padding: const EdgeInsets.only(bottom: 30),
     child: TextFormField(
+      style: const TextStyle(color: Colors.black),
       decoration: _inputDecoration("Last Name", "Dela Cruz"),
       onSaved: (value) => lastName = value,
       validator: (value) {
@@ -109,6 +118,7 @@ class _SignUpPageState extends State<SignUpPage> {
   Widget get emailField => Padding(
     padding: const EdgeInsets.only(bottom: 30),
     child: TextFormField(
+      style: const TextStyle(color: Colors.black),
       decoration: _inputDecoration("Email", "juandelacruz09@gmail.com"),
       onSaved: (value) => email = value,
       validator: (value) {
@@ -127,6 +137,7 @@ class _SignUpPageState extends State<SignUpPage> {
   Widget get passwordField => Padding(
     padding: const EdgeInsets.only(bottom: 30),
     child: TextFormField(
+      style: const TextStyle(color: Colors.black),
       obscureText: _obscurePassword,
       decoration: _inputDecoration("Password", "At least 6 characters").copyWith(
         suffixIcon: IconButton(
@@ -178,7 +189,12 @@ class _SignUpPageState extends State<SignUpPage> {
               .read<UserAuthProvider>()
               .signUp(firstName!, lastName!, email!, password!);
 
-          if (mounted) Navigator.pop(context);
+          if (mounted) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const InterestsPage()),
+            );
+          };
         }
       },
       child: const Text("Sign Up", style: TextStyle(fontSize: 16)),
