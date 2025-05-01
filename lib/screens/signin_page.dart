@@ -14,12 +14,12 @@ class SignInPage extends StatefulWidget {
 
 class _SignInPageState extends State<SignInPage> {
   final _formKey = GlobalKey<FormState>();
-  final _emailController = TextEditingController();
+  final _usernameController = TextEditingController();
   final _passwordController = TextEditingController();
   bool showSignInErrorMessage = false;
   bool _obscurePassword = true;
 
-  String? email;
+  String? username;
   String? password;
 
   @override
@@ -49,7 +49,7 @@ class _SignInPageState extends State<SignInPage> {
                 const SizedBox(height: 10),
                 subtitle,
                 const SizedBox(height: 40),
-                emailField,
+                usernameField,
                 passwordField,
                 if (showSignInErrorMessage) signInErrorMessage,
                 submitButton,
@@ -92,20 +92,23 @@ class _SignInPageState extends State<SignInPage> {
     );
   }
 
-  Widget get emailField => Padding(
+  Widget get usernameField => Padding(
     padding: const EdgeInsets.only(bottom: 30),
     child: TextFormField(
-      controller: _emailController,
-      decoration: _inputDecoration("Email", "juandelacruz09@gmail.com"),
-      onSaved: (value) => email = value,
+      controller: _usernameController,
+      decoration: _inputDecoration("Username", "e.g. travelguru123"),
+      onSaved: (value) => username = value,
       validator: (value) {
         if (value == null || value.isEmpty) {
-          return "Please enter your email";
+          return "Please enter your username";
         }
-        final emailRegex = RegExp(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]+$");
-        if (!emailRegex.hasMatch(value)) {
-          return 'Please enter a valid email address';
-        }
+        if (value.length < 3) {
+        return "Username must be at least 3 characters long";
+      }
+        // final emailRegex = RegExp(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]+$");
+        // if (!emailRegex.hasMatch(value)) {
+        //   return 'Please enter a valid email address';
+        // }
         return null;
       },
     ),
@@ -141,8 +144,8 @@ class _SignInPageState extends State<SignInPage> {
   Widget get signInErrorMessage => const Padding(
     padding: EdgeInsets.only(bottom: 30),
     child: Text(
-      "Invalid email or password",
-      style: TextStyle(color: Color.fromARGB(255, 57, 244, 54)),
+      "Invalid username or password",
+      style: TextStyle(color: Color.fromARGB(255, 255, 0, 0)),
     ),
   );
 
@@ -165,7 +168,7 @@ class _SignInPageState extends State<SignInPage> {
           final authProvider = context.read<UserAuthProvider>();
           final travelProvider = context.read<TravelTrackerProvider>();
 
-          String message = await authProvider.signIn(email!, password!);
+          String message = await authProvider.signIn(username!, password!);
 
           if (message == "Signed in successfully") {
             travelProvider.setUser(authProvider.uid);

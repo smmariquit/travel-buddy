@@ -20,15 +20,38 @@ class UserAuthProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<String> signIn(String email, String password) async {
-  String message = await authService.signIn(email, password);
+// Future<String> signIn(String username, String password) async {
+//   String message = await authService.signIn(username, password);
+//   User? user = FirebaseAuth.instance.currentUser;
+//   if (user != null) _uid = user.uid;
+//   notifyListeners();
+//   return message;
+// }
+
+Future<String> signIn(String username, String password) async {
+  // Step 1: Look up the email by username
+  final userDoc = await FirebaseFirestore.instance
+      .collection('users')
+      .where('username', isEqualTo: username)
+      .limit(1)
+      .get();
+
+  if (userDoc.docs.isEmpty) {
+    return "No user found for that username";
+  }
+
+  final email = userDoc.docs.first['email'];
+
+  // Step 2: Use the email to sign in
+  String message = await authService.signIn(email, password);    
   User? user = FirebaseAuth.instance.currentUser;
   if (user != null) _uid = user.uid;
   notifyListeners();
   return message;
-}
+} 
 
-Future<String?> signUp(String firstName, String lastName, String email, String password) async {
+
+Future<String?> signUp(String firstName, String lastName, String email, String password, String username) async {
   String? message = await authService.signUp(email, password);
   User? user = FirebaseAuth.instance.currentUser;
   if (user != null) {
@@ -36,6 +59,7 @@ Future<String?> signUp(String firstName, String lastName, String email, String p
     await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
       'firstName': firstName,
       'lastName': lastName,
+      'username': username, 
       'email': email,
       'createdAt': Timestamp.now(),
       'uid': user.uid,
