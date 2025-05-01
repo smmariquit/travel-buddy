@@ -2,6 +2,8 @@
 // reference indian guy https://www.youtube.com/watch?v=yB_ysDytI9k
 import 'package:flutter/material.dart';
 import 'package:travel_app/screens/travel_styles_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class InterestsPage extends StatefulWidget {
   const InterestsPage({super.key});
@@ -22,8 +24,31 @@ class _InterestsPageState extends State<InterestsPage> {
     {"interest": 'Sports', "selected": false}
   ];
 
-  // List selectedInterests = [];
-  // No need yet for functionality
+  // Firebase Authentication and Firestore instances
+  final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  // Function to save selected interests to Firebase
+  Future<void> saveInterests() async {
+  User? user = _auth.currentUser;
+
+  if (user != null) {
+    List<String> selectedInterests = interests
+        .where((interest) => interest['selected'])
+        .map<String>((interest) => interest['interest'] as String)
+        .toList();
+
+    try {
+      await _firestore.collection('users').doc(user.uid).update({
+        'interests': selectedInterests,
+      });
+    } catch (e) {
+      print("Failed to save interests: $e");
+    }
+  } else {
+    print("No user is currently signed in.");
+  }
+}
 
   @override
   Widget build(BuildContext context) {
@@ -42,8 +67,10 @@ class _InterestsPageState extends State<InterestsPage> {
           children: [
             Column(
               children: [
-                Text("Help us know you better.", style: TextStyle(fontSize: 40)),
-                Text("Select your interests", style: TextStyle(fontSize: 20)),
+                Text("Help us know you better.", style: TextStyle(fontSize: 25)),
+                const SizedBox(height: 10),
+                Text("Select your interests", style: TextStyle(fontSize: 16, color: Colors.grey)),
+                const SizedBox(height: 15),
                 interestChips,
               ],
             ),
@@ -55,15 +82,16 @@ class _InterestsPageState extends State<InterestsPage> {
   }
 
   Widget get saveOrSkipButton => ElevatedButton(
-      onPressed: () {
-        // Handle save or skip logic here
-        if (interests.any((interest) => interest['selected'])) {
-          // Save selected interests
-        } else {
-          // Skip
-        }
-        Navigator.push(context, MaterialPageRoute(builder: (context) => const TravelStylesPage() )); // Navigate back or to the next screen
-      },
+      onPressed: () async {
+      if (interests.any((interest) => interest['selected'])) {
+        await saveInterests();  // Save to Firestore
+      }
+      Navigator.push(
+        context,
+        MaterialPageRoute(builder: (context) => const TravelStylesPage()),
+      );
+    },
+
       style: ElevatedButton.styleFrom(
         minimumSize: const Size(double.infinity, 50), // Full-width button
         shape: RoundedRectangleBorder(
@@ -72,7 +100,7 @@ class _InterestsPageState extends State<InterestsPage> {
       ),
       child: Text(
         interests.any((interest) => interest['selected']) ? "Save" : "Skip",
-        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w400, color: Colors.black),
       ),
     );
 
