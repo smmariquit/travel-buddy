@@ -5,6 +5,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'signin_page.dart';
 import '../providers/auth_provider.dart';
 import 'package:travel_app/screens/interests_page.dart';
+import 'main_page.dart';
 
 class Profile extends StatelessWidget {
   const Profile({super.key});
@@ -13,25 +14,25 @@ class Profile extends StatelessWidget {
   Widget build(BuildContext context) {
     final userStream = context.watch<UserAuthProvider>().userStream;
 
-    return StreamBuilder<User?>(
-      stream: userStream,
-      builder: (context, snapshot) {
-        if (snapshot.hasError) {
-          return Scaffold(
-            body: Center(child: Text("Error: ${snapshot.error}")),
-          );
-        } else if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
-        } else if (!snapshot.hasData) {
-          return const SignInPage();
-        }
+    // return StreamBuilder<User?>(
+    //   stream: userStream,
+    //   builder: (context, snapshot) {
+    //     if (snapshot.hasError) {
+    //       return Scaffold(
+    //         body: Center(child: Text("Error: ${snapshot.error}")),
+    //       );
+    //     } else if (snapshot.connectionState == ConnectionState.waiting) {
+    //       return const Scaffold(
+    //         body: Center(child: CircularProgressIndicator()),
+    //       );
+    //     } else if (!snapshot.hasData) {
+    //       return const SignInPage();
+    //     }
         
-        final user = snapshot.data!;
-        final provider = Provider.of<TravelTrackerProvider>(context, listen: false);
-        provider.setUser(user.uid);
-        // final provider = Provider.of<TravelTrackerProvider>(context);
+    //     final user = snapshot.data!;
+    //     final provider = Provider.of<TravelTrackerProvider>(context, listen: false);
+    //     provider.setUser(user.uid);
+    //     // final provider = Provider.of<TravelTrackerProvider>(context);
 
         return Scaffold(
           appBar: AppBar(
@@ -90,6 +91,10 @@ class Profile extends StatelessWidget {
               switch (index) {
               case 0:
                 // Navigate to Home
+                Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (context) => const MainPage()),
+                  );
                 break;
               case 1:
                 // Navigate to Search
@@ -102,7 +107,7 @@ class Profile extends StatelessWidget {
             ),
           );
       }
-      );
+      // );
   }
 
   void _showSignOutDialog(BuildContext context) {
@@ -131,4 +136,4 @@ class Profile extends StatelessWidget {
       },
     );
   }
-}
+// }
