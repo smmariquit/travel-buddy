@@ -14,6 +14,7 @@ class _SignUpPageState extends State<SignUpPage> {
   final _formKey = GlobalKey<FormState>();
   String? firstName;
   String? lastName;
+  String? username;
   String? email;
   String? password;
   bool _obscurePassword = true;
@@ -41,6 +42,7 @@ class _SignUpPageState extends State<SignUpPage> {
                 const SizedBox(height: 40),
                 firstNameField,
                 lastNameField,
+                usernameField,
                 emailField,
                 passwordField,
                 submitButton,
@@ -54,14 +56,14 @@ class _SignUpPageState extends State<SignUpPage> {
 
   Widget get heading => const Center(
     child: Text(
-      "Sign up now",
-      style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
+      "Create an account",
+      style: TextStyle(fontSize: 30, fontWeight: FontWeight.w400),
     ),
   );
 
   Widget get subtitle => const Center(
     child: Text(
-      "Please fill the details and create account",
+      "Tell us a bit about yourself",
       style: TextStyle(fontSize: 16, color: Color.fromARGB(214, 0, 0, 0)),
     ),
   );
@@ -187,7 +189,7 @@ class _SignUpPageState extends State<SignUpPage> {
           _formKey.currentState!.save();
           await context
               .read<UserAuthProvider>()
-              .signUp(firstName!, lastName!, email!, password!);
+              .signUp(firstName!, lastName!, email!, password!, username!);
 
           if (mounted) {
             Navigator.push(
@@ -200,4 +202,20 @@ class _SignUpPageState extends State<SignUpPage> {
       child: const Text("Sign Up", style: TextStyle(fontSize: 16)),
     ),
   );
+
+  Widget get usernameField => Padding(
+  padding: const EdgeInsets.only(bottom: 30),
+  child: TextFormField(
+    style: const TextStyle(color: Colors.black),
+    decoration: _inputDecoration("Username", "juan_dlc"),
+    onSaved: (value) => username = value,
+    validator: (value) {
+      if (value == null || value.isEmpty) {
+        return "Please enter a username";
+      }
+      return null;
+    },
+  ),
+);
+
 }
