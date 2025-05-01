@@ -174,15 +174,28 @@ class MainPage extends StatelessWidget {
               ),
             ],
             onTap: (index) {
+               print('Selected index: $index');
               // Handle navigation based on the selected index
               switch (index) {
                 case 0:
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(builder: (context) => const MainPage()),
+                  );
                   break;
                 case 1:
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => const FindSimilarPeople()));
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const FindSimilarPeople()),
+                  );
+                  // Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const FindSimilarPeople()));
                   break;
                 case 2:
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => const Profile()));
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(builder: (context) => const FindSimilarPeople()),
+                  );
+                  // Navigator.push(context, MaterialPageRoute(builder: (context) => const Profile()));
                   break;
               }
             },
