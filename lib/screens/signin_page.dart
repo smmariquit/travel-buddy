@@ -26,6 +26,7 @@ class _SignInPageState extends State<SignInPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        surfaceTintColor: Colors.white,
         leading: IconButton(
           icon: const Icon(Icons.arrow_back),
           onPressed: () {
@@ -52,8 +53,9 @@ class _SignInPageState extends State<SignInPage> {
                 passwordField,
                 if (showSignInErrorMessage) signInErrorMessage,
                 submitButton,
-                googleSignInButton,
                 signUpButton,
+                orConnect,  
+                googleSignInButton,
               ],
             ),
           ),
@@ -65,7 +67,7 @@ class _SignInPageState extends State<SignInPage> {
   Widget get heading => const Center(
     child: Text(
       "Sign in now",
-      style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
+      style: TextStyle(fontSize: 30, fontWeight: FontWeight.w400),
     ),
   );
 
@@ -146,14 +148,14 @@ class _SignInPageState extends State<SignInPage> {
 
   Widget get submitButton => Container(
     width: double.infinity,
-    height: 50,
+    height: 60,
     margin: const EdgeInsets.symmetric(vertical: 10),
     child: ElevatedButton(
        style: ElevatedButton.styleFrom(
         backgroundColor: const Color(0xFF3CC08E), // green
         foregroundColor: Colors.white, // text color
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(15),
         ),
       ),
       onPressed: () async {
@@ -181,43 +183,58 @@ class _SignInPageState extends State<SignInPage> {
     ),
   );
 
-    Widget get googleSignInButton => Container(
-    width: double.infinity,
-    height: 50,
-    margin: const EdgeInsets.symmetric(vertical: 10),
-    child: ElevatedButton.icon(
-      icon: const Icon(Icons.login, color: Colors.white),
-      label: const Text("Sign in with Google", style: TextStyle(color: Colors.white)),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: const Color.fromARGB(255, 32, 141, 208),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
+  Widget get googleSignInButton => Center(
+    child: Container(
+      width: 200,
+      height: 50,
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      child: TextButton.icon(
+      icon: Image.network(
+        'https://img.icons8.com/color/48/000000/google-logo.png',
+        height: 24,
+        width: 24,
       ),
-      onPressed: () async {
-        final authProvider = context.read<UserAuthProvider>();
-        final travelProvider = context.read<TravelTrackerProvider>();
+        label: const Text("Sign in with Google", style: TextStyle(color: Color.fromARGB(255, 0, 0, 0))),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(30),
+          ),
+        ),
+        onPressed: () async {
+          final authProvider = context.read<UserAuthProvider>();
+          final travelProvider = context.read<TravelTrackerProvider>();
 
-        String? result = await authProvider.signInWithGoogle();
+          String? result = await authProvider.signInWithGoogle();
 
-        if (result == null) {
-          travelProvider.setUser(authProvider.uid);
-        } else {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(result)),
-          );
-        }
-      },
+          if (result == null) {
+            travelProvider.setUser(authProvider.uid);
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text(result)),
+            );
+          }
+        },
+      ),
     ),
-  );
+);
 
-
-  Widget get signUpButton => Padding(
-    padding: const EdgeInsets.all(30),
+  Widget get orConnect => Padding(
+    padding: const EdgeInsets.all(10),
     child: Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Text("Don't have an account?"),
+        const Text("Or connect with", style: TextStyle(color: Colors.grey)),
+      ],
+    ),
+  );
+
+  Widget get signUpButton => Padding(
+    padding: const EdgeInsets.all(10),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        const Text("Don't have an account?", style: TextStyle(color: Colors.grey)),
         TextButton(
           onPressed: () {
             Navigator.push(
