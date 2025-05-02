@@ -22,6 +22,8 @@
 // Firebase imports
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:travel_app/models/user_model.dart';
+import 'package:travel_app/providers/user_provider.dart';
 import 'firebase_options.dart';
 
 // Provider for state management
@@ -48,6 +50,9 @@ Future<void> main() async {
 
         /// Provides the `UserAuthProvider` for managing user authentication state.
         ChangeNotifierProvider(create: ((context) => UserAuthProvider())),
+
+
+        ChangeNotifierProvider(create: ((context) => AppUserProvider())),
       ],
       child: const MyApp(),
     ),

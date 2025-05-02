@@ -13,7 +13,10 @@ class SignUpPage extends StatefulWidget {
 class _SignUpPageState extends State<SignUpPage> {
   final _formKey = GlobalKey<FormState>();
   String? firstName;
+  String? middleName;
   String? lastName;
+  String? username;
+  String? phoneNumber;
   String? email;
   String? password;
   bool _obscurePassword = true;
@@ -40,7 +43,10 @@ class _SignUpPageState extends State<SignUpPage> {
                 subtitle,
                 const SizedBox(height: 40),
                 firstNameField,
+                middleNameField,
                 lastNameField,
+                usernameField,
+                phoneNumberField,
                 emailField,
                 passwordField,
                 submitButton,
@@ -53,25 +59,25 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 
   Widget get heading => const Center(
-    child: Text(
-      "Sign up now",
-      style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
-    ),
-  );
+        child: Text(
+          "Sign up now",
+          style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
+        ),
+      );
 
   Widget get subtitle => const Center(
-    child: Text(
-      "Please fill the details and create account",
-      style: TextStyle(fontSize: 16, color: Color.fromARGB(214, 0, 0, 0)),
-    ),
-  );
+        child: Text(
+          "Please fill the details and create account",
+          style: TextStyle(fontSize: 16, color: Color.fromARGB(214, 0, 0, 0)),
+        ),
+      );
 
   InputDecoration _inputDecoration(String label, String hint) {
     return InputDecoration(
       filled: true,
       fillColor: const Color.fromARGB(174, 238, 238, 238),
       labelText: label,
-      labelStyle: TextStyle(color: Color.fromARGB(255, 55, 55, 55)),
+      labelStyle: const TextStyle(color: Color.fromARGB(255, 55, 55, 55)),
       hintText: hint,
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
@@ -80,124 +86,166 @@ class _SignUpPageState extends State<SignUpPage> {
       focusedBorder: OutlineInputBorder(
         borderRadius: BorderRadius.circular(8),
         borderSide: const BorderSide(color: Colors.blue, width: 2.0),
-      )
+      ),
     );
   }
 
   Widget get firstNameField => Padding(
-    padding: const EdgeInsets.only(bottom: 30),
-    child: TextFormField(
-      
-      style: const TextStyle(color: Colors.black),
-      decoration: _inputDecoration("First Name", "Juan"),
-      onSaved: (value) => firstName = value,
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return "Please enter your first name";
-        }
-        return null;
-      },
-    ),
-  );
-
-  Widget get lastNameField => Padding(
-    padding: const EdgeInsets.only(bottom: 30),
-    child: TextFormField(
-      style: const TextStyle(color: Colors.black),
-      decoration: _inputDecoration("Last Name", "Dela Cruz"),
-      onSaved: (value) => lastName = value,
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return "Please enter your last name";
-        }
-        return null;
-      },
-    ),
-  );
-
-  Widget get emailField => Padding(
-    padding: const EdgeInsets.only(bottom: 30),
-    child: TextFormField(
-      style: const TextStyle(color: Colors.black),
-      decoration: _inputDecoration("Email", "juandelacruz09@gmail.com"),
-      onSaved: (value) => email = value,
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return "Please enter your email";
-        }
-        final emailRegex = RegExp(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]+$");
-        if (!emailRegex.hasMatch(value)) {
-          return 'Please enter a valid email address';
-        }
-        return null;
-      },
-    ),
-  );
-
-  Widget get passwordField => Padding(
-    padding: const EdgeInsets.only(bottom: 30),
-    child: TextFormField(
-      style: const TextStyle(color: Colors.black),
-      obscureText: _obscurePassword,
-      decoration: _inputDecoration("Password", "At least 6 characters").copyWith(
-        suffixIcon: IconButton(
-          icon: Icon(
-            _obscurePassword ? Icons.visibility_off : Icons.visibility,
-          ),
-          onPressed: () {
-            setState(() {
-              _obscurePassword = !_obscurePassword;
-            });
+        padding: const EdgeInsets.only(bottom: 30),
+        child: TextFormField(
+          style: const TextStyle(color: Colors.black),
+          decoration: _inputDecoration("First Name", "Juan"),
+          onSaved: (value) => firstName = value,
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return "Please enter your first name";
+            }
+            return null;
           },
         ),
-      ),
-      onSaved: (value) => password = value,
-      validator: (value) {
-        if (value == null || value.isEmpty) {
-          return "Please enter a valid password";
-        }
-        if (value.length < 6) {
-          return "Password must be at least 6 characters long";
-        }
-        String pattern =
-            r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,}$';
-        RegExp regex = RegExp(pattern);
-        if (!regex.hasMatch(value)) {
-          return "Password must contain uppercase, lowercase, digit, and special character";
-        }
-        return null;
-      },
-    ),
-  );
+      );
+
+  Widget get middleNameField => Padding(
+        padding: const EdgeInsets.only(bottom: 30),
+        child: TextFormField(
+          style: const TextStyle(color: Colors.black),
+          decoration: _inputDecoration("Middle Name", "Optional"),
+          onSaved: (value) => middleName = value,
+        ),
+      );
+
+  Widget get lastNameField => Padding(
+        padding: const EdgeInsets.only(bottom: 30),
+        child: TextFormField(
+          style: const TextStyle(color: Colors.black),
+          decoration: _inputDecoration("Last Name", "Dela Cruz"),
+          onSaved: (value) => lastName = value,
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return "Please enter your last name";
+            }
+            return null;
+          },
+        ),
+      );
+
+  Widget get usernameField => Padding(
+        padding: const EdgeInsets.only(bottom: 30),
+        child: TextFormField(
+          style: const TextStyle(color: Colors.black),
+          decoration: _inputDecoration("Username", "juandelacruz"),
+          onSaved: (value) => username = value,
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return "Please enter a username";
+            }
+            return null;
+          },
+        ),
+      );
+
+  Widget get phoneNumberField => Padding(
+        padding: const EdgeInsets.only(bottom: 30),
+        child: TextFormField(
+          style: const TextStyle(color: Colors.black),
+          decoration: _inputDecoration("Phone Number", "09XXXXXXXXX"),
+          onSaved: (value) => phoneNumber = value,
+        ),
+      );
+
+  Widget get emailField => Padding(
+        padding: const EdgeInsets.only(bottom: 30),
+        child: TextFormField(
+          style: const TextStyle(color: Colors.black),
+          decoration:
+              _inputDecoration("Email", "juandelacruz09@gmail.com"),
+          onSaved: (value) => email = value,
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return "Please enter your email";
+            }
+            final emailRegex = RegExp(
+                r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]+$");
+            if (!emailRegex.hasMatch(value)) {
+              return 'Please enter a valid email address';
+            }
+            return null;
+          },
+        ),
+      );
+
+  Widget get passwordField => Padding(
+        padding: const EdgeInsets.only(bottom: 30),
+        child: TextFormField(
+          style: const TextStyle(color: Colors.black),
+          obscureText: _obscurePassword,
+          decoration:
+              _inputDecoration("Password", "At least 6 characters").copyWith(
+            suffixIcon: IconButton(
+              icon: Icon(
+                _obscurePassword ? Icons.visibility_off : Icons.visibility,
+              ),
+              onPressed: () {
+                setState(() {
+                  _obscurePassword = !_obscurePassword;
+                });
+              },
+            ),
+          ),
+          onSaved: (value) => password = value,
+          validator: (value) {
+            if (value == null || value.isEmpty) {
+              return "Please enter a valid password";
+            }
+            if (value.length < 6) {
+              return "Password must be at least 6 characters long";
+            }
+            String pattern =
+                r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,}$';
+            RegExp regex = RegExp(pattern);
+            if (!regex.hasMatch(value)) {
+              return "Password must contain uppercase, lowercase, digit, and special character";
+            }
+            return null;
+          },
+        ),
+      );
 
   Widget get submitButton => Container(
-    width: double.infinity,
-    height: 50,
-    margin: const EdgeInsets.symmetric(vertical: 10),
-    child: ElevatedButton(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFF3CC08E),
-        foregroundColor: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
-        ),
-      ),
-      onPressed: () async {
-        if (_formKey.currentState!.validate()) {
-          _formKey.currentState!.save();
-          await context
-              .read<UserAuthProvider>()
-              .signUp(firstName!, lastName!, email!, password!);
+        width: double.infinity,
+        height: 50,
+        margin: const EdgeInsets.symmetric(vertical: 10),
+        child: ElevatedButton(
+          style: ElevatedButton.styleFrom(
+            backgroundColor: const Color(0xFF3CC08E),
+            foregroundColor: Colors.white,
+            shape: RoundedRectangleBorder(
+              borderRadius: BorderRadius.circular(8),
+            ),
+          ),
+          onPressed: () async {
+            if (_formKey.currentState!.validate()) {
+              _formKey.currentState!.save();
+              await context.read<UserAuthProvider>().signUp(
+                    firstName!,
+                    lastName!,
+                    email!,
+                    password!,
+                    middleName,
+                    username!,
+                    phoneNumber,
+                  );
 
-          if (mounted) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const InterestsPage()),
-            );
-          };
-        }
-      },
-      child: const Text("Sign Up", style: TextStyle(fontSize: 16)),
-    ),
-  );
+              if (mounted) {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                      builder: (context) => const InterestsPage()),
+                );
+              }
+            }
+          },
+          child: const Text("Sign Up", style: TextStyle(fontSize: 16)),
+        ),
+      );
 }
