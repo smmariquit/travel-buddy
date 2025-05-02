@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:travel_app/providers/travel_app_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:travel_app/screens/main_page.dart';
-import 'package:travel_app/screens/profile.dart';
+import 'package:travel_app/screens/profile_screen.dart';
 import 'signin_page.dart';
 import '../providers/auth_provider.dart';
 import 'package:travel_app/screens/interests_page.dart';
@@ -98,7 +98,7 @@ class FindSimilarPeople extends StatelessWidget {
                 // Navigate to Search
                 break;
               case 2:
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => const Profile()));
+                  Navigator.push(context, MaterialPageRoute(builder: (context) => const ProfileScreen()));
                 break;
               }
             },

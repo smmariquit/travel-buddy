@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:travel_app/providers/travel_app_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:travel_app/screens/find_similar_people.dart';
-import 'package:travel_app/screens/profile.dart';
+import 'package:travel_app/screens/profile_screen.dart';
 import 'signin_page.dart';
 import '../providers/auth_provider.dart';
 import 'package:travel_app/screens/interests_page.dart';
@@ -174,7 +174,7 @@ class MainPage extends StatelessWidget {
               ),
             ],
             onTap: (index) {
-               print('Selected index: $index');
+              print('Selected index: $index');
               // Handle navigation based on the selected index
               switch (index) {
                 case 0:
@@ -193,7 +193,7 @@ class MainPage extends StatelessWidget {
                 case 2:
                   Navigator.push(
                     context,
-                    MaterialPageRoute(builder: (context) => const FindSimilarPeople()),
+                    MaterialPageRoute(builder: (context) => const ProfileScreen()),
                   );
                   // Navigator.push(context, MaterialPageRoute(builder: (context) => const Profile()));
                   break;

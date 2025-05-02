@@ -28,11 +28,22 @@ class UserAuthProvider with ChangeNotifier {
   return message;
 }
 
-Future<String?> signUp(String firstName, String lastName, String email, String password) async {
+Future<String?> signUp(
+  String firstName,
+  String lastName,
+  String email,
+  String password,
+  String? middleName, 
+  String? username,    
+  String? phoneNumber, 
+) async {
+
   String? message = await authService.signUp(email, password);
   User? user = FirebaseAuth.instance.currentUser;
+
   if (user != null) {
     _uid = user.uid;
+
     await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
       'firstName': firstName,
       'lastName': lastName,
@@ -40,10 +51,24 @@ Future<String?> signUp(String firstName, String lastName, String email, String p
       'createdAt': Timestamp.now(),
       'uid': user.uid,
     });
+
+  
+    await FirebaseFirestore.instance.collection('appUsers').doc(user.uid).set({
+      'uid': user.uid,
+      'firstName': firstName,
+      'middleName': middleName,  
+      'lastName': lastName,
+      'username': username,      
+      'phoneNumber': phoneNumber, 
+      'isPrivate': false,       
+      'email': email,
+    });
   }
+
   notifyListeners();
   return message;
 }
+
 
 Future<String?> signInWithGoogle() async {
   String? message = await authService.signInWithGoogle();
