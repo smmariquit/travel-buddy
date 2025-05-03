@@ -9,6 +9,7 @@ Stream<QuerySnapshot>? _userStream;
 class AppUserProvider with ChangeNotifier {
   final FirebaseAuthAPI authService = FirebaseAuthAPI();
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  
   String? _uid;
   String? _firstName;
   Stream<User?> get userStream => _auth.authStateChanges();

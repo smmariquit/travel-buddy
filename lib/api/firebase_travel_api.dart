@@ -1,15 +1,14 @@
+/// Since this travel app uses Cloud Firestore, this file serves as an interface to the document database.
+/// Here, we retrieve, add, edit, delete, and share travel records.
 import 'package:cloud_firestore/cloud_firestore.dart';
-import '../models/travel_plan_model.dart';  // Import the TravelPlan model
-
+import 'package:travel_app/models/travel_plan_model.dart';
+// TODO: Correct the comments
 /// Encapsulate the functionality of Cloud Firestore
 class FirebaseTravelAPI {
   /// A static instance of the Firestore database
   static final FirebaseFirestore db = FirebaseFirestore.instance;
 
-  /// Retrieves a stream of travel records for a specific user.
-  ///
-  /// This method queries the `travel` collection in Firestore. We filter by the `uid`
-  /// and order the results in descending order of the `createdOn` variable.
+  /// Retrieves a stream of travel records created by or shared with the user.
   ///
   /// Parameters:
   /// - [uid]: The user ID to filter the travel records.
@@ -19,7 +18,7 @@ class FirebaseTravelAPI {
   Stream<QuerySnapshot> getUserTravels(String uid) {
     return db
         .collection('travel')
-        .where('uid', isEqualTo: uid)
+        .where('sharedWith', arrayContains: uid) // Includes shared travels
         .orderBy('createdOn', descending: true)
         .snapshots();
   }
@@ -27,18 +26,22 @@ class FirebaseTravelAPI {
   /// Adds a new travel record to the Firestore database.
   ///
   /// Parameters:
-  /// - [travelPlan]: A [TravelPlan] object containing the travel details to be added.
+  /// - [travel]: A map containing the travel details to be added.
+  ///
+  /// Required fields: name, date (can be range), location, uid, createdOn  
+  /// Optional fields: flightDetails, accommodation, notes, checklist (List), itinerary (List or Map), sharedWith (List)
   ///
   /// Returns:
   /// - A [String] message indicating success or the error encountered.
-  Future<String> addTravelPlan(TravelPlan travelPlan) async {
-    try {
-      await db.collection('travel').add(travelPlan.toJson());
-      return "Success";
-    } on FirebaseException catch (e) {
-      return "Error on ${e.message}";
-    }
+  Future<String> addTravel(Travel travel) async {
+  try {
+    final docRef = await db.collection('travel').add(travel.toJson());
+    return docRef.id; 
+  } on FirebaseException catch (e) {
+    return "Error on ${e.message}";
   }
+}
+
 
   /// Deletes a travel record from the Firestore database.
   ///
@@ -58,33 +61,17 @@ class FirebaseTravelAPI {
 
   /// Edits an existing travel record in the Firestore database.
   ///
+  /// Only the owner (creator) should be allowed to perform this action.
+  ///
   /// Parameters:
   /// - [id]: The document ID of the travel record to be updated.
-  /// - [newName]: The new name of the travel record.
-  /// - [newDesc]: The new description of the travel record.
-  /// - [newLocation]: The new location of the travel record.
-  /// - [newStartDate]: The new start date for the travel record.
-  /// - [newEndDate]: The new end date for the travel record.
+  /// - [newData]: A map containing the updated fields and values.
   ///
   /// Returns:
   /// - A [String] message indicating success or the error encountered.
-  Future<String> editTravel(
-    String id,
-    String newName,
-    String newDesc,
-    String newLocation,
-    DateTime newStartDate,
-    DateTime newEndDate,
-  ) async {
+  Future<String> editTravel(String id, Travel updatedTravel) async {
     try {
-      await db.collection('travel').doc(id).update({
-        'name': newName,
-        'description': newDesc,
-        'location': newLocation,
-        'startDate': newStartDate,
-        'endDate': newEndDate,
-      });
-
+      await db.collection('travel').doc(id).update(updatedTravel.toJson());
       return "Travel updated!";
     } on FirebaseException catch (e) {
       return "Error updating travel: $e";
@@ -108,24 +95,73 @@ class FirebaseTravelAPI {
     }
   }
 
-  /// Retrieves a stream of travel records for a specific user, mapped to TravelPlan.
-  ///
-  /// This method queries the `travel` collection in Firestore. We filter by the `uid`
-  /// and order the results in descending order of the `createdOn` variable, then map
-  /// the query snapshots to [TravelPlan] objects.
+  /// Shares a travel plan with another user by adding their UID to `sharedWith`.
   ///
   /// Parameters:
-  /// - [uid]: The user ID to filter the travel records.
+  /// - [id]: The document ID of the travel record.
+  /// - [friendUid]: The UID of the user to share the plan with.
   ///
   /// Returns:
-  /// - A [Stream] of a list of [TravelPlan] objects.
-  Stream<List<TravelPlan>> getUserTravelPlans(String uid) {
-    return db
-        .collection('travel')
-        .where('uid', isEqualTo: uid)
-        .orderBy('createdOn', descending: true)
-        .snapshots()
-        .map((snapshot) =>
-            snapshot.docs.map((doc) => TravelPlan.fromJson(doc.data(), doc.id)).toList());
+  /// - A [String] message indicating success or failure.
+  Future<String> shareTravelWithUser(String travelId, String friendUid) async {
+    try {
+      await db.collection('travel').doc(travelId).update({
+        'sharedWith': FieldValue.arrayUnion([friendUid]),
+      });
+      return "Shared successfully";
+    } on FirebaseException catch (e) {
+      return "Error: ${e.message}";
+    }
+  }
+
+  /// Removes a user from a shared travel plan.
+  ///
+  /// Parameters:
+  /// - [id]: The travel plan document ID.
+  /// - [uidToRemove]: The UID to remove from the sharedWith array.
+  ///
+  /// Returns:
+  /// - A [String] message indicating success or error.
+  Future<String> removeSharedUser(String travelId, String friendUid) async {
+    try {
+      await db.collection('travel').doc(travelId).update({
+        'sharedWith': FieldValue.arrayRemove([friendUid]),
+      });
+      return "User removed";
+    } on FirebaseException catch (e) {
+      return "Error: ${e.message}";
+    }
+  }
+
+  /// Adds or updates the itinerary for a travel plan.
+  ///
+  /// Parameters:
+  /// - [id]: The travel plan document ID.
+  /// - [itinerary]: A list or map of itinerary details (e.g., daily plans or time-based schedule).
+  ///
+  /// Returns:
+  /// - A [String] message indicating success or error.
+  Future<String> updateItinerary(String id, dynamic itinerary) async {
+    try {
+      await db.collection('travel').doc(id).update({
+        'itinerary': itinerary,
+      });
+      return "Itinerary updated";
+    } on FirebaseException catch (e) {
+      return "Error updating itinerary: ${e.message}";
+    }
+  }
+
+  /// Generates a shareable QR code string for a travel plan ID.
+  ///
+  /// Parameters:
+  /// - [id]: The travel plan ID to encode.
+  ///
+  /// Returns:
+  /// - A [String] representing the encoded QR value (usually just the ID or link).
+  String generateQRCodeValue(String id) {
+    return "travelplan:$id"; // Could be just the ID, or a deep link format
   }
 }
+
+

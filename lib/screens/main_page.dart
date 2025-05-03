@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:travel_app/providers/travel_app_provider.dart';
+import 'package:travel_app/providers/travel_plans_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:travel_app/screens/find_similar_people.dart';
 import 'package:travel_app/screens/profile_screen.dart';
@@ -157,10 +157,10 @@ class MainPage extends StatelessWidget {
                                 child: Container(
                                   margin: const EdgeInsets.all(8.0),
                                   decoration: BoxDecoration(
-                                    image: const DecorationImage(
-                                      image: NetworkImage("https://placeholder.co/240x286"),
-                                      fit: BoxFit.fill,
-                                    ),
+                                    // image: const DecorationImage(
+                                    //   image: NetworkImage("https://placeholder.co/240x286"),
+                                    //   fit: BoxFit.fill,
+                                    // ),
                                     borderRadius: BorderRadius.circular(20),
                                   ),
                                 ),
@@ -243,7 +243,7 @@ class MainPage extends StatelessWidget {
             onPressed: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const AddTravelPlanPage()),
+                MaterialPageRoute(builder: (context) => AddTravelPlanPage()),
               );
             },
             child: const Icon(Icons.add),
