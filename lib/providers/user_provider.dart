@@ -3,7 +3,6 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:travel_app/api/firebase_auth_api.dart';
 import 'package:travel_app/models/user_model.dart'; 
-import 'package:cloud_firestore/cloud_firestore.dart';
 
 Stream<QuerySnapshot>? _userStream;
 
@@ -18,7 +17,7 @@ class AppUserProvider with ChangeNotifier {
   String? get firstName => _firstName; 
 
   AppUserProvider() {
-    AppUserProvider();
+    fetchUserForCurrentUser();
   }
 
   void setUser(String? userId) {
@@ -138,6 +137,14 @@ class AppUserProvider with ChangeNotifier {
     }
 
     return message;
+  }
+
+  void loadUserStream(String uid) {
+    _userStream = FirebaseFirestore.instance
+        .collection('users')
+        .where('uid', isEqualTo: uid)
+        .snapshots();
+    notifyListeners();
   }
 
   Future<void> signOut() async {

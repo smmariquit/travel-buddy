@@ -80,6 +80,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Profile updated')),
       );
+      provider.loadUserStream(uid);
     }
   }
 
