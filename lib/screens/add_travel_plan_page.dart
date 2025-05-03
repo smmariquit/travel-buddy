@@ -4,7 +4,6 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:travel_app/models/travel_plan_model.dart';
 import 'package:travel_app/api/firebase_travel_api.dart';
-import 'package:flutter_google_places/flutter_google_places.dart';
 import 'package:google_maps_webservice/places.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
@@ -41,11 +40,6 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
 
   final places = GoogleMapsPlaces(apiKey: "AIzaSyDEBqD6XjeQ23H-XB0LOkcL73oy931VAYE");
 
-  void _onLocationSelected(String location) {
-    setState(() {
-      _locationController.text = location;
-    });
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -72,8 +66,11 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
                   Expanded(
                     child: GestureDetector(
                       onTap: _handleLocationAutocomplete,
-                      child: AbsorbPointer(
-                        child: _buildTextField('Location', _locationController, (value) => value!.isEmpty ? 'Enter a location' : null, onSaved: (v) => _location = v!),
+                      child: _buildTextField(
+                        'Location', 
+                        _locationController, 
+                        (value) => value!.isEmpty ? 'Enter a location' : null, 
+                        onSaved: (v) => _location = v!,
                       ),
                     ),
                   ),
@@ -84,6 +81,7 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
                   ),
                 ],
               ),
+
 
               Row(
                 children: [
@@ -155,8 +153,15 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
         suffixIcon: Icon(Icons.calendar_today, color: primaryColor),
       ),
       onTap: () => _selectDate(context, isStart),
+      validator: (value) {
+        if (value!.isEmpty) {
+          return 'Please select a date';
+        }
+        return null;
+      },
     );
   }
+
 
   void _selectDate(BuildContext context, bool isStartDate) async {
     final picked = await showDatePicker(
@@ -181,7 +186,17 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
 
   void _submitForm() async {
     if (_formKey.currentState!.validate()) {
-      if (_startDate != null && _endDate != null && _endDate!.isBefore(_startDate!)) {
+      // Check if both start and end dates are provided
+      if (_startDate == null || _endDate == null) {
+        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content: Text("Please select both start and end dates", style: TextStyle(color: backgroundColor)),
+          backgroundColor: errorColor,
+        ));
+        return;
+      }
+
+      // Check if the end date is before the start date
+      if (_endDate!.isBefore(_startDate!)) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text("End date can't be before start date", style: TextStyle(color: backgroundColor)),
           backgroundColor: errorColor,
@@ -221,6 +236,7 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
     }
   }
 
+
   void showQR(String travelId) {
     showDialog(
       context: context,
@@ -229,10 +245,15 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
         content: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            QrImageView(
-              data: _firebaseTravelAPI.generateQRCodeValue(travelId),
-              version: QrVersions.auto,
-              size: 200.0,
+            // Replace Expanded with SizedBox to give the QR code a defined size
+            SizedBox(
+              height: 200.0, // Set height as needed
+              width: 200.0,  // Set width as needed
+              child: QrImageView(
+                data: _firebaseTravelAPI.generateQRCodeValue(travelId),
+                version: QrVersions.auto,
+                size: 200.0,
+              ),
             ),
             const SizedBox(height: 16),
             Text("Scan or share this QR to invite others", style: TextStyle(color: textColor)),
@@ -253,24 +274,42 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
     );
   }
 
+
   Future<void> _handleLocationAutocomplete() async {
-    Prediction? p = await PlacesAutocomplete.show(
-      context: context,
-      apiKey: "AIzaSyDEBqD6XjeQ23H-XB0LOkcL73oy931VAYE",
-      mode: Mode.overlay,
-      language: "en",
-      components: [Component(Component.country, "PH")],
-    );
+    // Print to debug the input and check if it's being sent properly.
+    print("Location input: ${_locationController.text}");
+    
+    final response = await places.autocomplete(_locationController.text);
+    if (response.isOkay) {
+      if (response.predictions.isNotEmpty) {
+        final prediction = response.predictions.first;
+        print("Prediction found: ${prediction.description}");
 
-    if (p != null) {
-      final detail = await places.getDetailsByPlaceId(p.placeId!);
-      final location = detail.result.formattedAddress ?? p.description;
+        final placeId = prediction.placeId;
+        final details = await places.getDetailsByPlaceId(placeId!);
 
-      setState(() {
-        _locationController.text = location!;
-      });
+        final location = details.result.formattedAddress ?? prediction.description;
+
+        setState(() {
+          _locationController.text = location!;
+        });
+      } else {
+        // If no predictions, allow manual input and show message
+        print("No predictions found");
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("No location suggestions found, please enter manually.")),
+        );
+      }
+    } else {
+      // Handle API error response
+      print("Failed to get autocomplete suggestions: ${response.errorMessage}");
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Failed to get location suggestions")),
+      );
     }
   }
+
+
 
   Future<void> _openMapPicker() async {
     LatLng selectedLatLng = LatLng(14.5995, 120.9842); // Default to Manila
@@ -304,15 +343,17 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
                   Navigator.of(context).pop();
 
                   setState(() {
-                    _locationController.text = "Lat: ${selectedLatLng.latitude}, Lng: ${selectedLatLng.longitude}";
+                    _locationController.text = 
+                        "Lat: ${selectedLatLng.latitude}, Lng: ${selectedLatLng.longitude}";
                   });
                 },
                 child: Text("Select Location", style: TextStyle(color: primaryColor)),
-              )
+              ),
             ],
           ),
         ),
       ),
     );
   }
+
 }
