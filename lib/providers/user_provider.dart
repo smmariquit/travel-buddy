@@ -7,14 +7,15 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 Stream<QuerySnapshot>? _userStream;
 
-
 class AppUserProvider with ChangeNotifier {
   final FirebaseAuthAPI authService = FirebaseAuthAPI();
   final FirebaseAuth _auth = FirebaseAuth.instance;
   String? _uid;
+  String? _firstName;
   Stream<User?> get userStream => _auth.authStateChanges();
 
   String? get uid => _uid;
+  String? get firstName => _firstName; 
 
   AppUserProvider() {
     AppUserProvider();
@@ -33,6 +34,18 @@ class AppUserProvider with ChangeNotifier {
           .collection('appUsers')
           .where('uid', isEqualTo: currentUser.uid)
           .snapshots();
+
+      // Fetch user's data from Firestore
+      FirebaseFirestore.instance
+          .collection('appUsers')
+          .doc(currentUser.uid)
+          .get()
+          .then((userDoc) {
+        if (userDoc.exists) {
+          _firstName = userDoc['firstName'];
+          // notifyListeners(); // Notify listeners to update the UI
+        }
+      });
     } else {
       _userStream = Stream.empty();
     }
@@ -130,14 +143,12 @@ class AppUserProvider with ChangeNotifier {
   Future<void> signOut() async {
     await authService.signOut();
     _uid = null;
+    _firstName = null; 
     _userStream = Stream.empty();
     notifyListeners();
   }
 
-  // -----------------------
   // Edit Profile Methods
-  // -----------------------
-
   Future<void> updateField(String uid, String field, dynamic value) async {
     await FirebaseFirestore.instance
         .collection('appUsers')

@@ -4,6 +4,9 @@ import 'package:travel_app/providers/user_provider.dart';
 import 'package:travel_app/models/user_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
+// TO DO: AFTER EDITING THE PROFILE, HINDI NAGA-UPDATE SA 
+//MAIN PAGE YUNG FIRSTNAME SA APPBAR UNTIL PINDUTIN ULIT YUNG HOME BUTTON
+
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
