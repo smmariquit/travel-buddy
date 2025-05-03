@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:travel_app/providers/travel_app_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'signin_page.dart';
-import '../providers/auth_provider.dart';
+import 'package:travel_app/providers/user_provider.dart';
 import 'package:travel_app/screens/interests_page.dart';
 
 class MainPage extends StatelessWidget {
@@ -11,7 +11,7 @@ class MainPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final userStream = context.watch<UserAuthProvider>().userStream;
+    final userStream = context.watch<AppUserProvider>().userStream;
 
     return StreamBuilder<User?>(
       stream: userStream,

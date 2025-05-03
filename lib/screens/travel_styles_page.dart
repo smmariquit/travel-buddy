@@ -37,7 +37,7 @@ class _TravelStylesPageState extends State<TravelStylesPage> {
           .toList();
 
       try {
-        await _firestore.collection('users').doc(user.uid).update({
+        await _firestore.collection('appUsers').doc(user.uid).update({
           'travelStyles': selectedStyles,
         });
       } catch (e) {

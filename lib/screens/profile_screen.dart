@@ -1,8 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-
-import 'package:travel_app/models/user_model.dart';
 import 'package:travel_app/providers/user_provider.dart';
+import 'package:travel_app/models/user_model.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -23,26 +24,32 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   void initState() {
     super.initState();
-    // Wait for stream to deliver data and pre-fill controllers
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      final userStream =
-          context.read<AppUserProvider>().userStream;
 
-      userStream.listen((snapshot) {
-        if (snapshot.docs.isNotEmpty) {
-          final data = snapshot.docs.first.data() as Map<String, dynamic>;
-          final user = AppUser.fromJson(data);
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final provider = context.read<AppUserProvider>();
+      final userStream = provider.userStream;
 
-          setState(() {
-            _currentUserData = user;
-            _firstNameController.text = user.firstName;
-            _lastNameController.text = user.lastName;
-            _phoneController.text = user.phoneNumber ?? '';
-          });
+      userStream.listen((firebaseUser) async {
+        if (firebaseUser != null) {
+          final uid = firebaseUser.uid;
+          final doc = await FirebaseFirestore.instance.collection('appUsers').doc(uid).get();
+
+          if (doc.exists) {
+            final data = doc.data()!;
+            final user = AppUser.fromJson(data);
+
+            setState(() {
+              _currentUserData = user;
+              _firstNameController.text = user.firstName;
+              _lastNameController.text = user.lastName;
+              _phoneController.text = user.phoneNumber ?? '';
+            });
+          }
         }
       });
     });
   }
+
 
   @override
   void dispose() {

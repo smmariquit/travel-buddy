@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:travel_app/screens/interests_page.dart';
-import '../providers/auth_provider.dart';
+import 'package:travel_app/providers/user_provider.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -128,7 +128,7 @@ class _SignUpPageState extends State<SignUpPage> {
           },
         ),
       );
-      
+
   Widget get phoneNumberField => Padding(
         padding: const EdgeInsets.only(bottom: 30),
         child: TextFormField(
@@ -212,8 +212,14 @@ class _SignUpPageState extends State<SignUpPage> {
         if (_formKey.currentState!.validate()) {
           _formKey.currentState!.save();
           await context
-              .read<UserAuthProvider>()
-              .signUp(firstName!, lastName!, email!, password!, username!);
+              .read<AppUserProvider>()
+              .signUp(firstName!, 
+              lastName!, 
+              email!, 
+              password!, 
+              middleName,
+              username!,
+              phoneNumber,);
 
           if (mounted) {
             Navigator.push(
