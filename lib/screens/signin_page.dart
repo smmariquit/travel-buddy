@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import '../providers/auth_provider.dart';
+import 'package:travel_app/providers/user_provider.dart';
 import 'signup_page.dart';
 import 'package:travel_app/providers/travel_app_provider.dart';
 
@@ -165,7 +165,7 @@ class _SignInPageState extends State<SignInPage> {
         if (_formKey.currentState!.validate()) {
           _formKey.currentState!.save();
 
-          final authProvider = context.read<UserAuthProvider>();
+          final authProvider = context.read<AppUserProvider>();
           final travelProvider = context.read<TravelTrackerProvider>();
 
           String message = await authProvider.signIn(username!, password!);
@@ -205,7 +205,7 @@ class _SignInPageState extends State<SignInPage> {
           ),
         ),
         onPressed: () async {
-          final authProvider = context.read<UserAuthProvider>();
+          final authProvider = context.read<AppUserProvider>();
           final travelProvider = context.read<TravelTrackerProvider>();
 
           String? result = await authProvider.signInWithGoogle();

@@ -8,13 +8,14 @@ import 'signin_page.dart';
 import '../providers/auth_provider.dart';
 import 'package:travel_app/screens/interests_page.dart';
 import 'main_page.dart';
+import 'package:travel_app/providers/user_provider.dart';
 
 class FindSimilarPeople extends StatelessWidget {
   const FindSimilarPeople({super.key});
 
   @override
   Widget build(BuildContext context) {
-    final userStream = context.watch<UserAuthProvider>().userStream;
+    final userStream = context.watch<AppUserProvider>().userStream;
 
     // return StreamBuilder<User?>(
     //   stream: userStream,

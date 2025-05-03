@@ -39,7 +39,7 @@ class _InterestsPageState extends State<InterestsPage> {
         .toList();
 
     try {
-      await _firestore.collection('users').doc(user.uid).update({
+      await _firestore.collection('appUsers').doc(user.uid).update({
         'interests': selectedInterests,
       });
     } catch (e) {
