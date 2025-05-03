@@ -8,6 +8,7 @@ import 'signin_page.dart';
 import 'package:travel_app/providers/user_provider.dart';
 import 'package:travel_app/screens/interests_page.dart';
 import 'package:travel_app/screens/notifications.dart';
+import 'add_travel_plan_page.dart';
 
 class MainPage extends StatelessWidget {
    const MainPage({super.key});
@@ -30,11 +31,12 @@ class MainPage extends StatelessWidget {
          } else if (!snapshot.hasData) {
            return const SignInPage();
          }
+         
  
         final user = snapshot.data!;
         final travelProvider = Provider.of<TravelTrackerProvider>(context, listen: false);
         final userProvider = Provider.of<AppUserProvider>(context, listen: false);
-
+        
         // Load user data once
         travelProvider.setUser(user.uid);
         userProvider.fetchUserForCurrentUser();
@@ -191,34 +193,60 @@ class MainPage extends StatelessWidget {
               ],
             ),
           ),
-          bottomNavigationBar: BottomNavigationBar(
-            items: const [
-              BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-              BottomNavigationBarItem(icon: Icon(Icons.handshake), label: 'Connect'),
-              BottomNavigationBarItem(icon: Icon(Icons.person), label: 'Profile'),
-            ],
-            onTap: (index) {
-              switch (index) {
-                case 0:
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (context) => const MainPage()),
-                  );
-                  break;
-                case 1:
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const FindSimilarPeople()),
-                  );
-                  break;
-                case 2:
-                  Navigator.push(
-                    context,
-                    MaterialPageRoute(builder: (context) => const ProfileScreen()),
-                  );
-                  break;
-              }
+          bottomNavigationBar: BottomAppBar(
+            shape: const CircularNotchedRectangle(),
+            notchMargin: 8.0,
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                IconButton(
+                  icon: Icon(Icons.home, color: Colors.green),
+                  onPressed: () {
+                    Navigator.pushReplacement(
+                      context,
+                      MaterialPageRoute(builder: (context) => const MainPage()),
+                    );
+                  },
+                ),
+                IconButton(
+                  icon: Icon(Icons.map, color: Colors.grey),
+                  onPressed: () {
+                    // TODO: Replace with Plans page
+                  },
+                ),
+                const SizedBox(width: 48), // space for FAB
+                IconButton(
+                  icon: Icon(Icons.handshake, color: Colors.grey),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const FindSimilarPeople()),
+                    );
+                  },
+                ),
+                IconButton(
+                  icon: Icon(Icons.person, color: Colors.grey),
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(builder: (context) => const ProfileScreen()),
+                    );
+                  },
+                ),
+              ],
+            ),
+          ),
+          floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+          floatingActionButton: FloatingActionButton(
+            backgroundColor: Colors.green,
+            shape: const CircleBorder(),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const AddTravelPlanPage()),
+              );
             },
+            child: const Icon(Icons.add),
           ),
         );
 
