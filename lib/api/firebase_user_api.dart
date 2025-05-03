@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 
 class FirebaseAppUserApi {
   final FirebaseFirestore db = FirebaseFirestore.instance;
+  final String _collection = 'appUsers';
 
   Stream<QuerySnapshot> getAllAppUsers() {
     return db.collection('appUsers').snapshots();
@@ -109,4 +110,13 @@ class FirebaseAppUserApi {
     }
   }
 
+  // Generic update field method
+  Future<String> updateAppUserField(String uid, String field, dynamic value) async {
+    try {
+      await db.collection(_collection).doc(uid).update({field: value});
+      return "Successfully updated $field!";
+    } on FirebaseException catch (e) {
+      return "Error on ${e.code}: ${e.message}";
+    }
+  }
 }

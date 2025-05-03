@@ -30,7 +30,7 @@ import 'firebase_options.dart';
 import 'package:provider/provider.dart';
 
 // Import other necessary classes
-import 'providers/travel_app_provider.dart';
+import 'providers/travel_plans_provider.dart';
 import 'providers/auth_provider.dart';
 import 'screens/main_page.dart';
 

@@ -41,6 +41,16 @@ dependencies:
   cloud_firestore: ^5.6.6
   google_sign_in: ^6.3.0
   flutter_launcher_icons: ^0.14.3
+  async: ^2.12.0
+  flutter_google_places: ^0.3.0
+  google_maps_flutter: ^2.12.1
+  qr_flutter: ^4.1.0
+  map_picker: ^0.0.3
+  flutter_map: ^4.0.0
+  latlong2: ^0.8.2
+  geocoding: ^3.0.0
+  google_maps_webservice: ^0.0.20-nullsafety.5
+  geolocator: ^14.0.0
 
 dev_dependencies:
   flutter_test:
@@ -114,6 +124,6 @@ flutter_native_splash:
 
 flutter_icons:
   android: true
-  ios: trueH
+  ios: true
   image_path: "assets/splash_screen/logo_placeholder.png"
     

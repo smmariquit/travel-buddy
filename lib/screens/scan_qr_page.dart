@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:travel_app/providers/travel_app_provider.dart';
+import 'package:travel_app/providers/travel_plans_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'signin_page.dart';
 import '../providers/auth_provider.dart';
