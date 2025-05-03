@@ -2,6 +2,8 @@
 // reference indian guy https://www.youtube.com/watch?v=yB_ysDytI9k
 import 'package:flutter/material.dart';
 import 'package:travel_app/screens/main_page.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class TravelStylesPage extends StatefulWidget {
   const TravelStylesPage({super.key});
@@ -22,8 +24,29 @@ class _TravelStylesPageState extends State<TravelStylesPage> {
     {"style": 'Adventure Travel', "selected": false}
   ];
 
-  // List selectedInterests = [];
-  // No need yet for functionality
+ final FirebaseAuth _auth = FirebaseAuth.instance;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
+
+  Future<void> saveTravelStyles() async {
+    User? user = _auth.currentUser;
+
+    if (user != null) {
+      List<String> selectedStyles = travelStyles
+          .where((style) => style['selected'])
+          .map<String>((style) => style['style'] as String)
+          .toList();
+
+      try {
+        await _firestore.collection('users').doc(user.uid).update({
+          'travelStyles': selectedStyles,
+        });
+      } catch (e) {
+        print("Error saving travel styles: $e");
+      }
+    } else {
+      print("No signed-in user found.");
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -42,8 +65,10 @@ class _TravelStylesPageState extends State<TravelStylesPage> {
           children: [
             Column(
               children: [
-                Text("Help us know you better.", style: TextStyle(fontSize: 40)),
-                Text("Select your travel styles", style: TextStyle(fontSize: 20)),
+                Text("Help us know you better.", style: TextStyle(fontSize: 25)),
+                const SizedBox(height: 10),
+                Text("Select your travel styles", style: TextStyle(fontSize: 16, color: Colors.grey)),
+                const SizedBox(height: 10),
                 interestChips,
               ],
             ),
@@ -55,14 +80,14 @@ class _TravelStylesPageState extends State<TravelStylesPage> {
   }
 
   Widget get saveOrSkipButton => ElevatedButton(
-      onPressed: () {
-        // Handle save or skip logic here
-        if (travelStyles.any((interest) => interest['selected'])) {
-          // Save selected interests
-        } else {
-          // Skip
-        }
-        Navigator.pushReplacement(context, MaterialPageRoute(builder: (context) => const MainPage() )); 
+      onPressed: () async {
+        if (travelStyles.any((style) => style['selected'])) {
+            await saveTravelStyles(); // Save travel styles
+          }
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const MainPage()),
+        );
       },
       style: ElevatedButton.styleFrom(
         minimumSize: const Size(double.infinity, 50), // Full-width button
@@ -72,7 +97,7 @@ class _TravelStylesPageState extends State<TravelStylesPage> {
       ),
       child: Text(
         travelStyles.any((interest) => interest['selected']) ? "Save" : "Skip",
-        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        style: const TextStyle(fontSize: 17, fontWeight: FontWeight.w400, color: Colors.black),
       ),
     );
 

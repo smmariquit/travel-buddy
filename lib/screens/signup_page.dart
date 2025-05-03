@@ -59,18 +59,18 @@ class _SignUpPageState extends State<SignUpPage> {
   }
 
   Widget get heading => const Center(
-        child: Text(
-          "Sign up now",
-          style: TextStyle(fontSize: 30, fontWeight: FontWeight.bold),
-        ),
-      );
+    child: Text(
+      "Create an account",
+      style: TextStyle(fontSize: 30, fontWeight: FontWeight.w400),
+    ),
+  );
 
   Widget get subtitle => const Center(
-        child: Text(
-          "Please fill the details and create account",
-          style: TextStyle(fontSize: 16, color: Color.fromARGB(214, 0, 0, 0)),
-        ),
-      );
+    child: Text(
+      "Tell us a bit about yourself",
+      style: TextStyle(fontSize: 16, color: Color.fromARGB(214, 0, 0, 0)),
+    ),
+  );
 
   InputDecoration _inputDecoration(String label, String hint) {
     return InputDecoration(
@@ -128,22 +128,7 @@ class _SignUpPageState extends State<SignUpPage> {
           },
         ),
       );
-
-  Widget get usernameField => Padding(
-        padding: const EdgeInsets.only(bottom: 30),
-        child: TextFormField(
-          style: const TextStyle(color: Colors.black),
-          decoration: _inputDecoration("Username", "juandelacruz"),
-          onSaved: (value) => username = value,
-          validator: (value) {
-            if (value == null || value.isEmpty) {
-              return "Please enter a username";
-            }
-            return null;
-          },
-        ),
-      );
-
+      
   Widget get phoneNumberField => Padding(
         padding: const EdgeInsets.only(bottom: 30),
         child: TextFormField(
@@ -212,40 +197,49 @@ class _SignUpPageState extends State<SignUpPage> {
       );
 
   Widget get submitButton => Container(
-        width: double.infinity,
-        height: 50,
-        margin: const EdgeInsets.symmetric(vertical: 10),
-        child: ElevatedButton(
-          style: ElevatedButton.styleFrom(
-            backgroundColor: const Color(0xFF3CC08E),
-            foregroundColor: Colors.white,
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(8),
-            ),
-          ),
-          onPressed: () async {
-            if (_formKey.currentState!.validate()) {
-              _formKey.currentState!.save();
-              await context.read<UserAuthProvider>().signUp(
-                    firstName!,
-                    lastName!,
-                    email!,
-                    password!,
-                    middleName,
-                    username!,
-                    phoneNumber,
-                  );
-
-              if (mounted) {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                      builder: (context) => const InterestsPage()),
-                );
-              }
-            }
-          },
-          child: const Text("Sign Up", style: TextStyle(fontSize: 16)),
+    width: double.infinity,
+    height: 50,
+    margin: const EdgeInsets.symmetric(vertical: 10),
+    child: ElevatedButton(
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xFF3CC08E),
+        foregroundColor: Colors.white,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(8),
         ),
-      );
+      ),
+      onPressed: () async {
+        if (_formKey.currentState!.validate()) {
+          _formKey.currentState!.save();
+          await context
+              .read<UserAuthProvider>()
+              .signUp(firstName!, lastName!, email!, password!, username!);
+
+          if (mounted) {
+            Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const InterestsPage()),
+            );
+          };
+        }
+      },
+      child: const Text("Sign Up", style: TextStyle(fontSize: 16)),
+    ),
+  );
+
+  Widget get usernameField => Padding(
+  padding: const EdgeInsets.only(bottom: 30),
+  child: TextFormField(
+    style: const TextStyle(color: Colors.black),
+    decoration: _inputDecoration("Username", "juan_dlc"),
+    onSaved: (value) => username = value,
+    validator: (value) {
+      if (value == null || value.isEmpty) {
+        return "Please enter a username";
+      }
+      return null;
+    },
+  ),
+);
+
 }
