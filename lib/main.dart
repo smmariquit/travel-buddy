@@ -48,8 +48,8 @@ Future<void> main() async {
         /// Provides the `TravelTrackerProvider` for managing travel-related state.
         ChangeNotifierProvider(create: ((context) => TravelTrackerProvider())),
 
-        /// Provides the `UserAuthProvider` for managing user authentication state.
-        ChangeNotifierProvider(create: ((context) => UserAuthProvider())),
+        /// Provides the `AppUserProvider` for managing user authentication state.
+        // ChangeNotifierProvider(create: ((context) => AppUserProvider())),
 
 
         ChangeNotifierProvider(create: ((context) => AppUserProvider())),
@@ -74,22 +74,22 @@ class MyApp extends StatefulWidget {
 class _MyAppState extends State<MyApp> {
   /// Initializes the app's state and listens to whether the user changes.
   /// 
-  /// When the users do somehow change within the app, it updates the `UserAuthProvider`
+  /// When the users do somehow change within the app, it updates the `AppUserProvider`
   /// and `TravelTrackerProvider` with the current user's information.
   @override
   void initState() {
     super.initState();
     FirebaseAuth.instance.authStateChanges().listen((User? user) {
-      final userAuthProvider = context.read<UserAuthProvider>();
+      final appUserProvider = context.read<AppUserProvider>();
       final travelProvider = context.read<TravelTrackerProvider>();
 
       if (user != null) {
         /// Sets the user ID in both providers when a user is logged in.
-        userAuthProvider.setUser(user.uid);
+        appUserProvider.setUser(user.uid);
         travelProvider.setUser(user.uid);
       } else {
         /// Clears the user ID in both providers when no user is logged in.
-        userAuthProvider.setUser(null);
+        appUserProvider.setUser(null);
         travelProvider.setUser(null);
       }
     });

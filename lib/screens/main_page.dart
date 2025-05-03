@@ -30,35 +30,37 @@ class MainPage extends StatelessWidget {
            return const SignInPage();
          }
  
-         final user = snapshot.data!;
-         final provider = Provider.of<TravelTrackerProvider>(
-           context,
-           listen: false,
-         );
-         provider.setUser(user.uid);
- 
+        final user = snapshot.data!;
+        final travelProvider = Provider.of<TravelTrackerProvider>(context, listen: false);
+        final userProvider = Provider.of<AppUserProvider>(context, listen: false);
+
+        // Load user data once
+        travelProvider.setUser(user.uid);
+        userProvider.fetchUserForCurrentUser();
+
          return Scaffold(
            appBar: AppBar(
-             backgroundColor: Colors.transparent,
-             elevation: 0,
-             title: const Text(
-               "Travel App",
-               style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
-             ),
-             actions: [
-               IconButton(
-                 icon: const Icon(Icons.exit_to_app),
-                 color: Colors.red,
-                 onPressed: () async {
-                   _showSignOutDialog(context);
-                   Provider.of<TravelTrackerProvider>(
-                     context,
-                     listen: false,
-                   ).clearUser();
-                 },
-               ),
-             ],
-           ),
+            title: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  Row(
+                    children: [
+                      
+                      const SizedBox(width: 8),
+                      Text(
+                        'Hello, ${userProvider.firstName}', // Display the first name here
+                        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+                      ),
+                    ],
+                  ),
+
+                ],
+              ),
+            ),
+          ),
+
            body: Column(
              children: [
                Padding(
