@@ -4,9 +4,8 @@ import 'package:travel_app/providers/user_provider.dart';
 import 'package:travel_app/models/user_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
-// TO DO: AFTER EDITING THE PROFILE, HINDI NAGA-UPDATE SA 
+// TO DO: AFTER EDITING THE PROFILE, HINDI NAGA-UPDATE SA
 //MAIN PAGE YUNG FIRSTNAME SA APPBAR UNTIL PINDUTIN ULIT YUNG HOME BUTTON
-
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -22,6 +21,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final TextEditingController _lastNameController = TextEditingController();
   final TextEditingController _phoneController = TextEditingController();
 
+  bool isTapped = false;
   AppUser? _currentUserData;
 
   @override
@@ -35,7 +35,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
       userStream.listen((firebaseUser) async {
         if (firebaseUser != null) {
           final uid = firebaseUser.uid;
-          final doc = await FirebaseFirestore.instance.collection('appUsers').doc(uid).get();
+          final doc =
+              await FirebaseFirestore.instance
+                  .collection('appUsers')
+                  .doc(uid)
+                  .get();
 
           if (doc.exists) {
             final data = doc.data()!;
@@ -52,7 +56,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       });
     });
   }
-
 
   @override
   void dispose() {
@@ -77,9 +80,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
         await provider.editPhoneNumber(uid, _phoneController.text.trim());
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profile updated')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Profile updated')));
       provider.loadUserStream(uid);
     }
   }
@@ -87,63 +90,113 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     if (_currentUserData == null) {
-      return const Scaffold(
-        body: Center(child: CircularProgressIndicator()),
-      );
+      return const Scaffold(body: Center(child: CircularProgressIndicator()));
     }
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Profile')),
+      appBar: AppBar(title: Text('Profile')),
       body: Padding(
-        padding: const EdgeInsets.all(16.0),
+        padding: EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
           child: ListView(
             children: [
-              const Text("User Details", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
-              const SizedBox(height: 20),
+              const SizedBox(height: 10),
+              Center(
+                child: Stack(
+                  children: [
+                    ClipOval(
+                      child: Image.asset(
+                        'assets/placeholderpfp.jpg',
+                        width: 150,
+                        height: 150,
+                        fit: BoxFit.cover,
+                      ),
+                    ),
+                    Positioned(
+                      bottom: 0,
+                      right: 0,
+                      child: GestureDetector(
+                        onTap: () {
+                          setState(() {
+                            isTapped = !isTapped;
+                          });
+                        },
+                        child: Container(
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            color: Colors.black54,
+                          ),
+                          padding: EdgeInsets.all(6),
+                          child: Icon(
+                            Icons.camera_alt,
+                            size: 20,
+                            color:
+                                isTapped         // pangcheck lang wahahaha if napipindot since wala pa functionality
+                                    ? Colors.green
+                                    : Colors.white, 
+                          ),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              Center(
+                child: Column(
+                  children: [
+                    Text(
+                      _currentUserData!.username,
+                      style: TextStyle(
+                        fontSize: 18,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    Text(
+                      _currentUserData!.email,
+                      style: TextStyle(
+                        fontSize: 13,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              SizedBox(height: 20),
 
               TextFormField(
                 controller: _firstNameController,
-                decoration: const InputDecoration(labelText: 'First Name'),
-                validator: (value) =>
-                    value == null || value.isEmpty ? 'First name required' : null,
+                decoration: InputDecoration(labelText: 'First Name'),
+                validator:
+                    (value) =>
+                        value == null || value.isEmpty
+                            ? 'First name required'
+                            : null,
               ),
-              const SizedBox(height: 10),
+              SizedBox(height: 10),
 
               TextFormField(
                 controller: _lastNameController,
-                decoration: const InputDecoration(labelText: 'Last Name'),
-                validator: (value) =>
-                    value == null || value.isEmpty ? 'Last name required' : null,
+                decoration: InputDecoration(labelText: 'Last Name'),
+                validator:
+                    (value) =>
+                        value == null || value.isEmpty
+                            ? 'Last name required'
+                            : null,
               ),
-              const SizedBox(height: 10),
-
-              TextFormField(
-                initialValue: _currentUserData!.username,
-                decoration: const InputDecoration(labelText: 'Username'),
-                enabled: false,
-              ),
-              const SizedBox(height: 10),
+              SizedBox(height: 10),
 
               TextFormField(
                 controller: _phoneController,
-                decoration: const InputDecoration(labelText: 'Phone Number'),
+                decoration: InputDecoration(labelText: 'Phone Number'),
                 keyboardType: TextInputType.phone,
               ),
-              const SizedBox(height: 10),
+              SizedBox(height: 10),
 
-              TextFormField(
-                initialValue: _currentUserData!.email,
-                decoration: const InputDecoration(labelText: 'Email'),
-                enabled: false,
-              ),
-              const SizedBox(height: 30),
-
-              ElevatedButton(
-                onPressed: _saveChanges,
-                child: const Text("Save Changes"),
-              ),
+              ElevatedButton(onPressed: _saveChanges, child: Text("Save")),
             ],
           ),
         ),
