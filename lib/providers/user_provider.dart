@@ -173,4 +173,5 @@ class AppUserProvider with ChangeNotifier {
   Future<void> editPhoneNumber(String uid, String phoneNumber) => updateField(uid, 'phoneNumber', phoneNumber);
   Future<void> editPrivacyStatus(String uid, bool isPrivate) => updateField(uid, 'isPrivate', isPrivate);
   Future<void> editLocation(String uid, String location) => updateField(uid, 'location', location);
+
 }
