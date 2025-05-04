@@ -25,6 +25,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:travel_app/models/user_model.dart';
 import 'package:travel_app/providers/user_provider.dart';
 import 'firebase_options.dart';
+import 'package:travel_app/screens/trip_details_page.dart';
+import 'package:travel_app/screens/signin_page.dart';
 
 // Provider for state management
 import 'package:provider/provider.dart';
@@ -106,7 +108,7 @@ class _MyAppState extends State<MyApp> {
       initialRoute: '/',
       routes: {
         /// The initial route of the app, which loads the `MainPage`. This is basically the app's home page.
-        '/': (context) => const MainPage(),
+        '/': (context) => SignInPage(),
       },
       theme: ThemeData(primaryColor: const Color(0xFF3b665c)),
     );

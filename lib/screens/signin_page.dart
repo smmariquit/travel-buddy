@@ -22,75 +22,111 @@ class _SignInPageState extends State<SignInPage> {
   String? username;
   String? password;
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        surfaceTintColor: Colors.white,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back),
-          onPressed: () {
-            SystemNavigator.pop(); // Closes the app
-          },
+ @override
+Widget build(BuildContext context) {
+  return Scaffold(
+    body: Stack(
+      children: [
+        // Background Image
+        SizedBox.expand(
+          child: Image.asset(
+            'assets/images/hike_bg.jpg',
+            fit: BoxFit.cover,
+          ),
         ),
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.black,
-      ),
-      body: SingleChildScrollView(
-        child: Container(
-          margin: const EdgeInsets.symmetric(vertical: 40, horizontal: 30),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                heading,
-                const SizedBox(height: 10),
-                subtitle,
-                const SizedBox(height: 40),
-                usernameField,
-                passwordField,
-                if (showSignInErrorMessage) signInErrorMessage,
-                submitButton,
-                signUpButton,
-                orConnect,  
-                googleSignInButton,
-              ],
+
+        // Dark overlay
+        Container(
+          color: Colors.black.withOpacity(0.5),
+        ),
+
+        // Content
+        SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 100),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const Text(
+                    "Sign In",
+                    style: TextStyle(
+                      fontSize: 32,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 10),
+                  const Text(
+                    "Welcome back! Log in to plan your next trip.",
+                    style: TextStyle(
+                      fontSize: 16,
+                      color: Colors.white70,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 50),
+                  usernameField,
+                  passwordField,
+                  if (showSignInErrorMessage) signInErrorMessage,
+                  const SizedBox(height: 10),
+                  submitButton,
+                  const SizedBox(height: 20),
+                  orConnect,
+                  googleSignInButton,
+                  signUpButton,
+                ],
+              ),
             ),
           ),
         ),
-      ),
-    );
-  }
+      ],
+    ),
+  );
+}
+
+
 
   Widget get heading => const Center(
     child: Text(
-      "Sign in now",
-      style: TextStyle(fontSize: 30, fontWeight: FontWeight.w400),
+      "Sign In",
+      style: TextStyle(
+        fontSize: 28,
+        fontWeight: FontWeight.bold,
+        color: Color(0xFF3CC08E),
+      ),
     ),
   );
+
 
   Widget get subtitle => const Center(
     child: Text(
-      "Please sign in to continue our app",
+      "Welcome back! Please log in to continue.",
       style: TextStyle(fontSize: 16, color: Colors.grey),
+      textAlign: TextAlign.center,
     ),
   );
 
 
+
   InputDecoration _inputDecoration(String label, String hint) {
-    return InputDecoration(
+  return InputDecoration(
       filled: true,
-      fillColor: const Color.fromARGB(174, 238, 238, 238),
+      fillColor: Colors.white.withOpacity(0.15),
       labelText: label,
       hintText: hint,
+      labelStyle: const TextStyle(color: Colors.white),
+      hintStyle: const TextStyle(color: Colors.white70),
       border: OutlineInputBorder(
-      borderRadius: BorderRadius.circular(8),
-      borderSide: BorderSide.none,
+        borderRadius: BorderRadius.circular(12),
+        borderSide: BorderSide.none,
       ),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 18),
     );
   }
+
+
 
   Widget get usernameField => Padding(
     padding: const EdgeInsets.only(bottom: 30),
@@ -151,25 +187,21 @@ class _SignInPageState extends State<SignInPage> {
 
   Widget get submitButton => Container(
     width: double.infinity,
-    height: 60,
-    margin: const EdgeInsets.symmetric(vertical: 10),
+    height: 55,
     child: ElevatedButton(
-       style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFF3CC08E), // green
-        foregroundColor: Colors.white, // text color
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color(0xFF3CC08E), 
+        foregroundColor: Colors.white,
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(15),
+          borderRadius: BorderRadius.circular(20),
         ),
       ),
       onPressed: () async {
         if (_formKey.currentState!.validate()) {
           _formKey.currentState!.save();
-
           final authProvider = context.read<AppUserProvider>();
           final travelProvider = context.read<TravelTrackerProvider>();
-
           String message = await authProvider.signIn(username!, password!);
-
           if (message == "Signed in successfully") {
             travelProvider.setUser(authProvider.uid);
             setState(() {
@@ -182,9 +214,10 @@ class _SignInPageState extends State<SignInPage> {
           }
         }
       },
-      child: const Text("Sign In"),
+      child: const Text("Sign In", style: TextStyle(fontSize: 16)),
     ),
   );
+
 
   Widget get googleSignInButton => Center(
     child: Container(
