@@ -5,9 +5,8 @@ import 'package:travel_app/models/user_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:convert';
-import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
-
+import 'package:google_fonts/google_fonts.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -44,72 +43,65 @@ class _ProfileScreenState extends State<ProfileScreen> {
   ];
 
   AppUser? _currentUserData;
-  bool _isTapped = false;
   bool _isPrivate = false;
 
   @override
-void initState() {
-  super.initState();
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) async {
+      final provider = context.read<AppUserProvider>();
+      final userStream = provider.userStream;
 
-  WidgetsBinding.instance.addPostFrameCallback((_) async {
-    final provider = context.read<AppUserProvider>();
-    final userStream = provider.userStream;
+      userStream.listen((firebaseUser) async {
+        if (firebaseUser != null) {
+          final uid = firebaseUser.uid;
+          final doc = await FirebaseFirestore.instance.collection('appUsers').doc(uid).get();
 
-    userStream.listen((firebaseUser) async {
-      if (firebaseUser != null) {
-        final uid = firebaseUser.uid;
-        final doc = await FirebaseFirestore.instance
-            .collection('appUsers')
-            .doc(uid)
-            .get();
+          if (doc.exists) {
+            final data = doc.data()!;
+            final user = AppUser.fromJson(data);
 
-        if (doc.exists) {
-          final data = doc.data()!;
-          final user = AppUser.fromJson(data);
+            final masterInterests = [
+              'Adventure', 'Culture', 'Food', 'Nature',
+              'Relaxation', 'Shopping', 'Sightseeing', 'Sports'
+            ];
 
-          // Master lists
-          final masterInterests = [
-            'Adventure', 'Culture', 'Food', 'Nature',
-            'Relaxation', 'Shopping', 'Sightseeing', 'Sports'
-          ];
+            final masterStyles = [
+              'Backpacker', 'Luxury', 'Adventure',
+              'Cultural', 'Business'
+            ];
 
-          final masterStyles = [
-            'Backpacker', 'Luxury', 'Adventure',
-            'Cultural', 'Business'
-          ];
+            final selectedInterests = user.interests ?? [];
+            final selectedStyles = user.travelStyles ?? [];
 
-          final selectedInterests = user.interests ?? [];
-          final selectedStyles = user.travelStyles ?? [];
+            setState(() {
+              _currentUserData = user;
+              _firstNameController.text = user.firstName;
+              _middleNameController.text = user.middleName ?? '';
+              _lastNameController.text = user.lastName;
+              _phoneController.text = user.phoneNumber ?? '';
+              _locationController.text = user.location ?? '';
+              _isPrivate = user.isPrivate;
 
-          setState(() {
-            _currentUserData = user;
-            _firstNameController.text = user.firstName;
-            _middleNameController.text = user.middleName ?? '';
-            _lastNameController.text = user.lastName;
-            _phoneController.text = user.phoneNumber ?? '';
-            _locationController.text = user.location ?? '';
-            _isPrivate = user.isPrivate;
+              _interests = masterInterests.map((interest) {
+                return {
+                  "interest": interest,
+                  "selected": selectedInterests.contains(interest)
+                };
+              }).toList();
 
-            _interests = masterInterests.map((interest) {
-              return {
-                "interest": interest,
-                "selected": selectedInterests.contains(interest)
-              };
-            }).toList();
-
-            _travelStyles = masterStyles.map((style) {
-              return {
-                "style": style,
-                "selected": selectedStyles.contains(style)
-              };
-            }).toList();
-          });
+              _travelStyles = masterStyles.map((style) {
+                return {
+                  "style": style,
+                  "selected": selectedStyles.contains(style)
+                };
+              }).toList();
+            });
+          }
         }
-      }
+      });
     });
-  });
-}
-
+  }
 
   @override
   void dispose() {
@@ -134,8 +126,10 @@ void initState() {
       if ((_currentUserData!.phoneNumber ?? '') != _phoneController.text) {
         await provider.editPhoneNumber(uid, _phoneController.text.trim());
       }
+      if ((_currentUserData!.location ?? '') != _locationController.text) {
+        await provider.editLocation(uid, _locationController.text.trim());
+      }
 
-      // Save interests and travel styles
       List<String> selectedInterests = _interests
           .where((interest) => interest['selected'])
           .map<String>((interest) => interest['interest'] as String)
@@ -158,14 +152,15 @@ void initState() {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Profile updated')),
       );
+
       provider.loadUserStream(uid);
       final doc = await FirebaseFirestore.instance.collection('appUsers').doc(uid).get();
-        if (doc.exists) {
-          final updatedUser = AppUser.fromJson(doc.data()!);
-          setState(() {
-            _currentUserData = updatedUser;
-          });
-        }  
+      if (doc.exists) {
+        final updatedUser = AppUser.fromJson(doc.data()!);
+        setState(() {
+          _currentUserData = updatedUser;
+        });
+      }
     }
   }
 
@@ -176,36 +171,67 @@ void initState() {
     }
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('My Profile'),
-        centerTitle: true,
-      ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            children: [
-              // Avatar + Username
-              Center(
+      body: Container(
+        color: Colors.grey[100],
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: Colors.green,
+                borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
+              ),
+              child: Row(
+                children: [
+                  IconButton(
+                    icon: Icon(Icons.arrow_back, color: Colors.white),
+                    onPressed: () => Navigator.pop(context),
+                  ),
+                  Expanded(
+                    child: Text(
+                      _currentUserData!.username,
+                      style: GoogleFonts.poppins(
+                        fontSize: 20,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.white,
+                      ),
+                      textAlign: TextAlign.center,
+                    ),
+                  ),
+                  SizedBox(width: 40),
+                ],
+              ),
+            ),
+
+            Transform.translate(
+              offset: Offset(0, -30),
+              child: Center(
                 child: Stack(
                   children: [
-                      CircleAvatar(
-                        radius: 70,
-                        backgroundImage: _currentUserData!.profileImageUrl != ''
-                          ? MemoryImage(base64Decode(_currentUserData!.profileImageUrl!))
-                          : const AssetImage('assets/default_avatar.jpg') as ImageProvider,
-
+                    Container(
+                      padding: EdgeInsets.all(3),
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        shape: BoxShape.circle,
                       ),
+                      child: CircleAvatar(
+                        radius: 40,
+                        backgroundColor: Colors.grey[300],
+                        backgroundImage: _currentUserData!.profileImageUrl != null &&
+                                _currentUserData!.profileImageUrl!.isNotEmpty
+                            ? MemoryImage(base64Decode(_currentUserData!.profileImageUrl!))
+                            : null,
+                        child: _currentUserData!.profileImageUrl == null ||
+                                _currentUserData!.profileImageUrl!.isEmpty
+                            ? Icon(Icons.person, size: 50, color: Colors.white)
+                            : null,
+                      ),
+                    ),
                     Positioned(
                       bottom: 0,
                       right: 4,
                       child: GestureDetector(
                         onTap: () async {
-                          setState(() {
-                            _isTapped = !_isTapped;
-                          });
-
                           final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
                           if (picked != null) {
                             final bytes = await picked.readAsBytes();
@@ -215,7 +241,7 @@ void initState() {
                             final uid = _currentUserData!.uid;
 
                             await provider.editProfileImageUrl(uid, base64Image);
-                            provider.loadUserStream(uid); // refresh data
+                            provider.loadUserStream(uid);
 
                             final doc = await FirebaseFirestore.instance.collection('appUsers').doc(uid).get();
                             if (doc.exists) {
@@ -223,17 +249,16 @@ void initState() {
                               setState(() {
                                 _currentUserData = updatedUser;
                               });
-                            }  
+                            }
                           }
                         },
-
                         child: CircleAvatar(
                           radius: 18,
                           backgroundColor: Colors.black54,
                           child: Icon(
                             Icons.camera_alt,
-                            color: _isTapped ? Colors.green : Colors.white,
-                            size: 20,
+                            color: Colors.white,
+                            size: 16,
                           ),
                         ),
                       ),
@@ -241,127 +266,157 @@ void initState() {
                   ],
                 ),
               ),
-              const SizedBox(height: 10),
+            ),
 
-              Text(
-                _currentUserData!.username,
-                style: const TextStyle(
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-              Text(
-                _currentUserData!.email,
-                style: const TextStyle(
-                  color: Colors.grey,
-                  fontSize: 14,
-                ),
-              ),
+            SizedBox(height: 5),
+            Expanded(
+              child: Transform.translate(
+                offset: Offset(0, -30),
+                child: Container(
+                  padding: EdgeInsets.symmetric(horizontal: 16),
+                  child: Form(
+                    key: _formKey,
+                    child: ListView(
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(child: _buildProfileField(icon: Icons.person_outline, label: "First Name", controller: _firstNameController)),
+                            SizedBox(width: 10),
+                            Expanded(child: _buildProfileField(icon: Icons.badge, label: "Last Name", controller: _lastNameController)),
+                          ],
+                        ),
+                        _buildProfileField(icon: Icons.account_circle_outlined, label: _currentUserData!.username, editable: false),
+                        _buildProfileField(icon: Icons.email_outlined, label: _currentUserData!.email, editable: false),
+                        _buildProfileField(icon: Icons.phone_outlined, label: "Phone number", controller: _phoneController),
+                        _buildProfileField(icon: Icons.location_on_outlined, label: "Location", controller: _locationController),
 
-              const SizedBox(height: 30),
+                        SizedBox(height: 8),
+                        Text('Interests', style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey)),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: _interests.map((item) {
+                            final isSelected = item['selected'];
+                            return InputChip(
+                              label: Text(
+                                item['interest'],
+                                style: TextStyle(fontSize: 12, color: isSelected ? Colors.white : Colors.black),
+                              ),
+                              selected: isSelected,
+                              onSelected: (selected) {
+                                setState(() {
+                                  item['selected'] = selected;
+                                });
+                              },
+                              selectedColor: Colors.green,
+                              checkmarkColor: Colors.white,
+                              visualDensity: VisualDensity.compact,
+                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            );
+                          }).toList(),
+                        ),
 
-              // Editable Fields
-              _buildProfileInputField(
-                label: "First Name",
-                controller: _firstNameController,
-                validatorMsg: "First name required",
-              ),
-              const SizedBox(height: 15),
+                        SizedBox(height: 8),
+                        Text('Travel Styles', style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey)),
+                        Wrap(
+                          spacing: 8,
+                          runSpacing: 8,
+                          children: _travelStyles.map((item) {
+                            final isSelected = item['selected'];
+                            return InputChip(
+                              label: Text(
+                                item['style'],
+                                style: TextStyle(fontSize: 12, color: isSelected ? Colors.white : Colors.black),
+                              ),
+                              selected: isSelected,
+                              onSelected: (selected) {
+                                setState(() {
+                                  item['selected'] = selected;
+                                });
+                              },
+                              selectedColor: Colors.green,
+                              checkmarkColor: Colors.white,
+                              visualDensity: VisualDensity.compact,
+                              materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            );
+                          }).toList(),
+                        ),
 
-              _buildProfileInputField(
-                label: "Last Name",
-                controller: _lastNameController,
-                validatorMsg: "Last name required",
-              ),
-              const SizedBox(height: 15),
-
-              _buildProfileInputField(
-                label: "Phone Number",
-                controller: _phoneController,
-                inputType: TextInputType.phone,
-              ),
-              const SizedBox(height: 15),
-
-              _buildProfileInputField(
-                label: "Location",
-                controller: _locationController,
-              ),
-              const SizedBox(height: 30),
-
-              // Interests Chips
-              Text('Select your Interests'),
-              Wrap(
-                spacing: 10,
-                children: List.generate(_interests.length, (index) {
-                  return InputChip(
-                    label: Text(_interests[index]['interest']),
-                    selected: _interests[index]['selected'],
-                    onPressed: () {
-                      setState(() {
-                        _interests[index]['selected'] = !_interests[index]['selected'];
-                      });
-                    },
-                    selectedColor: Colors.blue,
-                  );
-                }),
-              ),
-              const SizedBox(height: 30),
-
-              // Travel Styles Chips
-              Text('Select your Travel Styles'),
-              Wrap(
-                spacing: 10,
-                children: List.generate(_travelStyles.length, (index) {
-                  return InputChip(
-                    label: Text(_travelStyles[index]['style']),
-                    selected: _travelStyles[index]['selected'],
-                    onPressed: () {
-                      setState(() {
-                        _travelStyles[index]['selected'] = !_travelStyles[index]['selected'];
-                      });
-                    },
-                    selectedColor: Colors.blue,
-                  );
-                }),
-              ),
-              const SizedBox(height: 30),
-
-              // Save Button
-              ElevatedButton.icon(
-                onPressed: _saveChanges,
-                icon: const Icon(Icons.save),
-                label: const Text("Save Changes"),
-                style: ElevatedButton.styleFrom(
-                  padding: const EdgeInsets.symmetric(vertical: 14),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
+                        SizedBox(height: 20),
+                        SizedBox(
+                          width: double.infinity,
+                          child: OutlinedButton(
+                            onPressed: _saveChanges,
+                            style: OutlinedButton.styleFrom(
+                              foregroundColor: Colors.green[700],
+                              side: BorderSide(color: Colors.green[700]!),
+                              padding: EdgeInsets.symmetric(vertical: 16),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30),
+                              ),
+                            ),
+                            child: Text(
+                              "Edit profile",
+                              style: GoogleFonts.poppins(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.green[700],
+                              ),
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
-            ],
-          ),
+            ),
+          ],
         ),
       ),
     );
   }
 
-  Widget _buildProfileInputField({
+  Widget _buildProfileField({
+    required IconData icon,
     required String label,
-    required TextEditingController controller,
-    String? validatorMsg,
-    TextInputType? inputType,
+    TextEditingController? controller,
+    bool editable = true,
   }) {
-    return TextFormField(
-      controller: controller,
-      keyboardType: inputType,
-      validator: validatorMsg != null
-          ? (value) => value == null || value.isEmpty ? validatorMsg : null
-          : null,
-      decoration: InputDecoration(
-        labelText: label,
-        filled: true,
-        fillColor: Colors.grey[100],
-        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+    return Container(
+      margin: EdgeInsets.only(bottom: 6),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(10),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.grey.withAlpha(26),
+            spreadRadius: 1,
+            blurRadius: 2,
+            offset: Offset(0, 1),
+          ),
+        ],
+      ),
+      child: ListTile(
+        dense: true,
+        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 3),
+        leading: Icon(icon, color: Colors.grey),
+        title: editable
+            ? TextField(
+                controller: controller,
+                decoration: InputDecoration(
+                  hintText: label,
+                  border: InputBorder.none,
+                  hintStyle: TextStyle(color: Colors.grey),
+                ),
+                style: GoogleFonts.poppins(fontSize: 14, color: Colors.black87),
+              )
+            : Text(
+                label,
+                style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey),
+              ),
       ),
     );
   }
