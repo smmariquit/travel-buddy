@@ -29,6 +29,36 @@ class AppUser {
     this.travelStyles,
   });
 
+  AppUser copyWith({
+    String? uid,
+    String? username,
+    String? email,
+    String? firstName,
+    String? middleName,
+    String? lastName,
+    String? phoneNumber,
+    String? location,
+    String? profileImageUrl,
+    List<String>? interests,
+    List<String>? travelStyles,
+    bool? isPrivate,
+  }) {
+    return AppUser(
+      uid: uid ?? this.uid,
+      username: username ?? this.username,
+      email: email ?? this.email,
+      firstName: firstName ?? this.firstName,
+      middleName: middleName ?? this.middleName,
+      lastName: lastName ?? this.lastName,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
+      location: location ?? this.location,
+      profileImageUrl: profileImageUrl ?? this.profileImageUrl,
+      interests: interests ?? this.interests,
+      travelStyles: travelStyles ?? this.travelStyles,
+      isPrivate: isPrivate ?? this.isPrivate,
+    );
+  }
+
   factory AppUser.fromJson(Map<String, dynamic> json) {
     return AppUser(
       uid: json['uid'],
@@ -37,7 +67,7 @@ class AppUser {
       lastName: json['lastName'],
       username: json['username'],
       //friendUIDs: List<String>.from(json['friendUIDs'] ?? []),
-      profileImageUrl: json['avatar'],
+      profileImageUrl: json['profileImageUrl'],
       phoneNumber: json['phoneNumber'],
       isPrivate: json['isPrivate'] ?? false,
       email: json['email'],

@@ -4,6 +4,10 @@ import 'package:travel_app/providers/user_provider.dart';
 import 'package:travel_app/models/user_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'dart:convert';
+import 'dart:convert';
+import 'package:image_picker/image_picker.dart';
+
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -155,6 +159,13 @@ void initState() {
         const SnackBar(content: Text('Profile updated')),
       );
       provider.loadUserStream(uid);
+      final doc = await FirebaseFirestore.instance.collection('appUsers').doc(uid).get();
+        if (doc.exists) {
+          final updatedUser = AppUser.fromJson(doc.data()!);
+          setState(() {
+            _currentUserData = updatedUser;
+          });
+        }  
     }
   }
 
@@ -179,23 +190,43 @@ void initState() {
               Center(
                 child: Stack(
                   children: [
-                    CircleAvatar(
-                      radius: 70,
-                      backgroundImage: _currentUserData!.profileImageUrl != null
-                          ? NetworkImage(_currentUserData!.profileImageUrl!)
-                          : const AssetImage('assets/placeholderpfp.jpg')
-                              as ImageProvider,
-                    ),
+                      CircleAvatar(
+                        radius: 70,
+                        backgroundImage: _currentUserData!.profileImageUrl != ''
+                          ? MemoryImage(base64Decode(_currentUserData!.profileImageUrl!))
+                          : const AssetImage('assets/default_avatar.jpg') as ImageProvider,
+
+                      ),
                     Positioned(
                       bottom: 0,
                       right: 4,
                       child: GestureDetector(
-                        onTap: () {
+                        onTap: () async {
                           setState(() {
                             _isTapped = !_isTapped;
                           });
-                          // TODO: Add image upload logic
+
+                          final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
+                          if (picked != null) {
+                            final bytes = await picked.readAsBytes();
+                            final base64Image = base64Encode(bytes);
+
+                            final provider = context.read<AppUserProvider>();
+                            final uid = _currentUserData!.uid;
+
+                            await provider.editProfileImageUrl(uid, base64Image);
+                            provider.loadUserStream(uid); // refresh data
+
+                            final doc = await FirebaseFirestore.instance.collection('appUsers').doc(uid).get();
+                            if (doc.exists) {
+                              final updatedUser = AppUser.fromJson(doc.data()!);
+                              setState(() {
+                                _currentUserData = updatedUser;
+                              });
+                            }  
+                          }
                         },
+
                         child: CircleAvatar(
                           radius: 18,
                           backgroundColor: Colors.black54,
