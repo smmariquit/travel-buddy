@@ -24,8 +24,8 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:travel_app/models/user_model.dart';
 import 'package:travel_app/providers/user_provider.dart';
+import 'package:travel_app/screens/interests_page%20copy.dart';
 import 'firebase_options.dart';
-import 'package:travel_app/screens/trip_details_page.dart';
 import 'package:travel_app/screens/signin_page.dart';
 
 // Provider for state management
@@ -105,10 +105,10 @@ class _MyAppState extends State<MyApp> {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
       title: 'TravelBuddy',
-      initialRoute: '/',
+      initialRoute: '/signin',
       routes: {
-        /// The initial route of the app, which loads the `MainPage`. This is basically the app's home page.
-        '/': (context) => SignInPage(),
+        '/signin': (context) => const SignInPage(), // Sign-in page
+        '/main': (context) => const MainPage(), // Main page after sign-inR
       },
       theme: ThemeData(primaryColor: const Color(0xFF3b665c)),
     );

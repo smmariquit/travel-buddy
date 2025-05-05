@@ -207,6 +207,7 @@ Widget build(BuildContext context) {
             setState(() {
               showSignInErrorMessage = false;
             });
+            Navigator.pushReplacementNamed(context, '/main'); // Navigate to main page
           } else {
             setState(() {
               showSignInErrorMessage = true;
@@ -276,7 +277,9 @@ Widget build(BuildContext context) {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const SignUpPage()),
-            );
+            ).then((_) {
+              Navigator.pushReplacementNamed(context, '/interests'); // Navigate to interests page after signup
+            });
           },
           child: const Text("Sign Up", style: TextStyle(color: Color(0xFFFF7029))),
         ),

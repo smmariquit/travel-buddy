@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:travel_app/providers/travel_plans_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:travel_app/widgets/bottom_navigation_bar.dart';
 import 'signin_page.dart';
 import '../providers/auth_provider.dart';
 import 'package:travel_app/screens/interests_page.dart';
@@ -71,36 +72,7 @@ class MainPage extends StatelessWidget {
                 ),
               ],
             ),
-            bottomNavigationBar: BottomNavigationBar(
-            items: const [
-              BottomNavigationBarItem(
-              icon: Icon(Icons.home),
-              label: 'Home',
-              ),
-              BottomNavigationBarItem(
-              icon: Icon(Icons.search),
-              label: 'Search',
-              ),
-              BottomNavigationBarItem(
-              icon: Icon(Icons.person),
-              label: 'Profile',
-              ),
-            ],
-            onTap: (index) {
-              // Handle navigation based on the selected index
-              switch (index) {
-              case 0:
-                // Navigate to Home
-                break;
-              case 1:
-                // Navigate to Search
-                break;
-              case 2:
-                // Navigate to Profile
-                break;
-              }
-            },
-            ),
+            bottomNavigationBar: BottomNavBar()
           );
       }
       );

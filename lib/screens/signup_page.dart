@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:travel_app/screens/interests_page.dart';
 import 'package:travel_app/providers/user_provider.dart';
+import 'package:travel_app/screens/main_page.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -224,9 +225,9 @@ class _SignUpPageState extends State<SignUpPage> {
           if (mounted) {
             Navigator.push(
               context,
-              MaterialPageRoute(builder: (context) => const InterestsPage()),
+              MaterialPageRoute(builder: (context) => const InterestsPage()), // Navigate to MainPage
             );
-          };
+          }
         }
       },
       child: const Text("Sign Up", style: TextStyle(fontSize: 16)),

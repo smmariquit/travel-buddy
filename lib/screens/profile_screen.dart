@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:travel_app/providers/user_provider.dart';
 import 'package:travel_app/models/user_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:travel_app/widgets/bottom_navigation_bar.dart';
 
 // TO DO: AFTER EDITING THE PROFILE, HINDI NAGA-UPDATE SA
 //MAIN PAGE YUNG FIRSTNAME SA APPBAR UNTIL PINDUTIN ULIT YUNG HOME BUTTON
@@ -201,6 +202,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
       ),
+      bottomNavigationBar: BottomNavBar()
     );
   }
 }
