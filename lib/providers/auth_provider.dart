@@ -93,32 +93,42 @@ Future<String?> signUp(
 }
 
 
-Future<String?> signInWithGoogle() async {
-  String? message = await authService.signInWithGoogle();
-  User? user = FirebaseAuth.instance.currentUser;
+signInWithGoogle() async {
+  try {
+    // Attempt to sign in with Google
+    await authService.signInWithGoogle();
+    
+    // Get the current user after sign-in
+    User? user = FirebaseAuth.instance.currentUser;
 
-  if (message == null && user != null) {
-    _uid = user.uid;
+    if (user != null) {
+      _uid = user.uid;
 
-    final userDoc = FirebaseFirestore.instance.collection('users').doc(user.uid);
-    final docSnapshot = await userDoc.get();
+      final userDoc = FirebaseFirestore.instance.collection('users').doc(user.uid);
+      final docSnapshot = await userDoc.get();
 
-    if (!docSnapshot.exists) {
-      await userDoc.set({
-        'firstName': user.displayName?.split(' ').first ?? '',
-        'lastName': user.displayName!.split(' ').length > 1
-            ? user.displayName!.split(' ').sublist(1).join(' ')
-            : '',
-        'email': user.email,
-        'createdAt': Timestamp.now(),
-        'uid': user.uid,
-      });
+      // If user document does not exist, create one
+      if (!docSnapshot.exists) {
+        await userDoc.set({
+          'firstName': user.displayName?.split(' ').first ?? '',
+          'lastName': user.displayName!.split(' ').length > 1
+              ? user.displayName!.split(' ').sublist(1).join(' ')
+              : '',
+          'email': user.email,
+          'createdAt': Timestamp.now(),
+          'uid': user.uid,
+        });
+      }
     }
-  }
 
-  notifyListeners();
-  return message;
+    notifyListeners();
+  } catch (e) {
+    print("Error during sign-in: ${e.toString()}");
+    // Optionally notify listeners about the error, or return the error message.
+    notifyListeners();
+  }
 }
+
 
 
 

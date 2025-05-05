@@ -8,8 +8,8 @@ import '../providers/auth_provider.dart';
 import 'package:travel_app/screens/interests_page.dart';
 import 'package:travel_app/providers/user_provider.dart';
 
-class MainPage extends StatelessWidget {
-  const MainPage({super.key});
+class ConnectPage extends StatelessWidget {
+  const ConnectPage({super.key});
 
   @override
   Widget build(BuildContext context) {
