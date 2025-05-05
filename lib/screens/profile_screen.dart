@@ -181,8 +181,8 @@ void initState() {
                   children: [
                     CircleAvatar(
                       radius: 70,
-                      backgroundImage: _currentUserData!.avatar != null
-                          ? NetworkImage(_currentUserData!.avatar!)
+                      backgroundImage: _currentUserData!.profileImageUrl != null
+                          ? NetworkImage(_currentUserData!.profileImageUrl!)
                           : const AssetImage('assets/placeholderpfp.jpg')
                               as ImageProvider,
                     ),

@@ -2,7 +2,14 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:travel_app/screens/interests_page.dart';
 import 'package:travel_app/providers/user_provider.dart';
-import 'package:travel_app/screens/main_page.dart';
+import 'dart:io';
+import 'package:image_picker/image_picker.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'dart:convert';
+import 'dart:typed_data';
+import 'dart:io';
+import 'package:flutter/services.dart'; 
+
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -11,69 +18,192 @@ class SignUpPage extends StatefulWidget {
   State<SignUpPage> createState() => _SignUpPageState();
 }
 
-class _SignUpPageState extends State<SignUpPage> {
-  final _formKey = GlobalKey<FormState>();
+class SignUpData {
+  File? profileImage;
   String? firstName;
   String? middleName;
   String? lastName;
   String? username;
-  String? phoneNumber;
   String? email;
+  String? phone;
   String? password;
-  bool _obscurePassword = true;
+}
+
+class _SignUpPageState extends State<SignUpPage> {
+  final PageController _pageController = PageController();
+  final _formKey = GlobalKey<FormState>();
+  final SignUpData _signUpData = SignUpData();
+  File? _profileImage;
+  String? password;
+  String? confirmPassword;
+
+
+  File? _pickedImage;
+
+  void _goToNextPage() {
+    if (_formKey.currentState!.validate()) {
+      _formKey.currentState!.save();
+      _pageController.nextPage(
+        duration: const Duration(milliseconds: 300),
+        curve: Curves.easeInOut,
+      );
+    }
+  }
+
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        leading: BackButton(onPressed: () => Navigator.pop(context)),
-        elevation: 0,
-        backgroundColor: Colors.transparent,
-        foregroundColor: Colors.black,
-      ),
-      body: SingleChildScrollView(
-        child: Container(
-          margin: const EdgeInsets.symmetric(vertical: 40, horizontal: 30),
-          child: Form(
-            key: _formKey,
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+      body: Stack(
+        children: [
+          // Background image
+          Positioned.fill(
+            child: Image.asset(
+              'assets/images/hike_bg.jpg',
+              fit: BoxFit.cover,
+            ),
+          ),
+          // Semi-transparent overlay
+          Positioned.fill(
+            child: Container(
+              color: Colors.black.withOpacity(0.4),
+            ),
+          ),
+          // Form content
+          SafeArea(
+            child: PageView(
+              controller: _pageController,
+              physics: const NeverScrollableScrollPhysics(),
               children: [
-                heading,
-                const SizedBox(height: 10),
-                subtitle,
-                const SizedBox(height: 40),
-                firstNameField,
-                middleNameField,
-                lastNameField,
-                usernameField,
-                phoneNumberField,
-                emailField,
-                passwordField,
-                submitButton,
+                _buildPersonalInfoPage(),
+                _buildAccountInfoPage(),
+                _buildSecurityInfoPage(),
               ],
             ),
           ),
-        ),
+        ],
       ),
     );
   }
 
-  Widget get heading => const Center(
-    child: Text(
-      "Create an account",
-      style: TextStyle(fontSize: 30, fontWeight: FontWeight.w400),
-    ),
-  );
 
-  Widget get subtitle => const Center(
-    child: Text(
-      "Tell us a bit about yourself",
-      style: TextStyle(fontSize: 16, color: Color.fromARGB(214, 0, 0, 0)),
-    ),
-  );
+  Widget _buildPersonalInfoPage() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
+      child: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.7),
+          borderRadius: BorderRadius.circular(16),
+        ),
+        child: Form(
+          key: _formKey,
+          child: Column(
+            children: [
+              const Text(
+                "Step 1 of 3",
+                style: TextStyle(fontSize: 14, color: Colors.grey),
+              ),
+              const SizedBox(height: 10),
+              const Text(
+                "Tell us about yourself",
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+              ),
+              const SizedBox(height: 20),
+              Center(
+                child: Column(
+                  children: [
+                    GestureDetector(
+                      onTap: _pickImage,
+                      child: CircleAvatar(
+                        radius: 50,
+                        backgroundColor: const Color(0xFF218463),
+                        backgroundImage: _pickedImage != null
+                            ? FileImage(_pickedImage!)
+                            : const AssetImage("assets/default_avatar.jpg") as ImageProvider,
+                        child: _pickedImage == null
+                            ? const Icon(Icons.camera_alt, color: Colors.white, size: 30)
+                            : null,
+                      ),
+                    ),
+                    const SizedBox(height: 10),
+                    const Text("Tap to upload a profile picture",
+                        style: TextStyle(fontSize: 14, color: Colors.grey)),
+                    const SizedBox(height: 30),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 30),
+              _buildTextField(
+                label: "First Name",
+                hint: "e.g. Juan",
+                onSaved: (val) => _signUpData.firstName = val,
+                validator: (val) =>
+                    val == null || val.isEmpty ? "Required" : null,
+              ),
+              const SizedBox(height: 16),
+              _buildTextField(
+                label: "Middle Name (optional)",
+                hint: "e.g. Santos",
+                onSaved: (val) => _signUpData.middleName = val,
+              ),
+              const SizedBox(height: 16),
+              _buildTextField(
+                label: "Last Name",
+                hint: "e.g. Dela Cruz",
+                onSaved: (val) => _signUpData.lastName = val,
+                validator: (val) =>
+                    val == null || val.isEmpty ? "Required" : null,
+              ),
+              const Spacer(),
+              SizedBox(
+                width: double.infinity,
+                height: 55,
+                child: ElevatedButton(
+                  onPressed: _goToNextPage,
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF218463),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                  ),
+                  child: const Text("Next", style: TextStyle(fontSize: 16)),
+                ),
+              )
+            ],
+          ),
+        ),
+      ), 
+    );
+  }
 
-  InputDecoration _inputDecoration(String label, String hint) {
+  Widget _buildTextField({
+    required String label,
+    required String hint,
+    bool obscureText = false,
+    FormFieldSetter<String>? onSaved,
+    FormFieldValidator<String>? validator,
+    Widget? suffixIcon,
+  }) {
+    return TextFormField(
+      obscureText: obscureText,
+      onSaved: onSaved,
+      validator: validator,
+      decoration: InputDecoration(
+        labelText: label,
+        hintText: hint,
+        filled: true,
+        fillColor: Colors.grey[200],
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(10),
+          borderSide: BorderSide.none,
+        ),
+        suffixIcon: suffixIcon,
+      ),
+    );
+  }
+
+   InputDecoration _inputDecoration(String label, String hint) {
     return InputDecoration(
       filled: true,
       fillColor: const Color.fromARGB(174, 238, 238, 238),
@@ -91,162 +221,310 @@ class _SignUpPageState extends State<SignUpPage> {
     );
   }
 
-  Widget get firstNameField => Padding(
-        padding: const EdgeInsets.only(bottom: 30),
-        child: TextFormField(
-          style: const TextStyle(color: Colors.black),
-          decoration: _inputDecoration("First Name", "Juan"),
-          onSaved: (value) => firstName = value,
-          validator: (value) {
-            if (value == null || value.isEmpty) {
-              return "Please enter your first name";
-            }
-            return null;
-          },
-        ),
-      );
 
-  Widget get middleNameField => Padding(
-        padding: const EdgeInsets.only(bottom: 30),
-        child: TextFormField(
-          style: const TextStyle(color: Colors.black),
-          decoration: _inputDecoration("Middle Name", "Optional"),
-          onSaved: (value) => middleName = value,
-        ),
-      );
+Widget _buildAccountInfoPage() {
+  final _formKey2 = GlobalKey<FormState>();
 
-  Widget get lastNameField => Padding(
-        padding: const EdgeInsets.only(bottom: 30),
-        child: TextFormField(
-          style: const TextStyle(color: Colors.black),
-          decoration: _inputDecoration("Last Name", "Dela Cruz"),
-          onSaved: (value) => lastName = value,
-          validator: (value) {
-            if (value == null || value.isEmpty) {
-              return "Please enter your last name";
-            }
-            return null;
-          },
+  return Padding(
+    padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
+    child: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: Colors.white.withOpacity(0.7),
+          borderRadius: BorderRadius.circular(16),
         ),
-      );
-
-  Widget get phoneNumberField => Padding(
-        padding: const EdgeInsets.only(bottom: 30),
-        child: TextFormField(
-          style: const TextStyle(color: Colors.black),
-          decoration: _inputDecoration("Phone Number", "09XXXXXXXXX"),
-          onSaved: (value) => phoneNumber = value,
-        ),
-      );
-
-  Widget get emailField => Padding(
-        padding: const EdgeInsets.only(bottom: 30),
-        child: TextFormField(
-          style: const TextStyle(color: Colors.black),
-          decoration:
-              _inputDecoration("Email", "juandelacruz09@gmail.com"),
-          onSaved: (value) => email = value,
-          validator: (value) {
-            if (value == null || value.isEmpty) {
-              return "Please enter your email";
-            }
-            final emailRegex = RegExp(
-                r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]+$");
-            if (!emailRegex.hasMatch(value)) {
-              return 'Please enter a valid email address';
-            }
-            return null;
-          },
-        ),
-      );
-
-  Widget get passwordField => Padding(
-        padding: const EdgeInsets.only(bottom: 30),
-        child: TextFormField(
-          style: const TextStyle(color: Colors.black),
-          obscureText: _obscurePassword,
-          decoration:
-              _inputDecoration("Password", "At least 6 characters").copyWith(
-            suffixIcon: IconButton(
-              icon: Icon(
-                _obscurePassword ? Icons.visibility_off : Icons.visibility,
-              ),
-              onPressed: () {
-                setState(() {
-                  _obscurePassword = !_obscurePassword;
-                });
+      child: Form(
+        key: _formKey2,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            const Text(
+              "Step 2 of 3",
+              style: TextStyle(fontSize: 14, color: Colors.grey),
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              "Set up your account",
+              style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 30),
+            _buildTextField(
+              label: "Username",
+              hint: "e.g. juan_dlc",
+              onSaved: (val) => _signUpData.username = val,
+              validator: (val) => val == null || val.isEmpty ? "Required" : null,
+            ),
+            const SizedBox(height: 16),
+            _buildTextField(
+              label: "Email",
+              hint: "e.g. juan@gmail.com",
+              onSaved: (val) => _signUpData.email = val,
+              validator: (val) {
+                if (val == null || val.isEmpty) return "Required";
+                final emailRegex = RegExp(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]+$");
+                if (!emailRegex.hasMatch(val)) return "Enter a valid email";
+                return null;
               },
             ),
-          ),
-          onSaved: (value) => password = value,
-          validator: (value) {
-            if (value == null || value.isEmpty) {
-              return "Please enter a valid password";
-            }
-            if (value.length < 6) {
-              return "Password must be at least 6 characters long";
-            }
-            String pattern =
-                r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,}$';
-            RegExp regex = RegExp(pattern);
-            if (!regex.hasMatch(value)) {
-              return "Password must contain uppercase, lowercase, digit, and special character";
-            }
-            return null;
-          },
-        ),
-      );
+            const SizedBox(height: 16),
+            _buildTextField(
+              label: "Phone Number",
+              hint: "e.g. 09XXXXXXXXX",
+              onSaved: (val) => _signUpData.phone = val,
+            ),
+            const Spacer(),
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: () => _pageController.previousPage(
+                      duration: const Duration(milliseconds: 300),
+                      curve: Curves.easeInOut,
+                    ),
+                    child: const Text("Back"),
+                  ),
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () async {
+                      if (_formKey2.currentState!.validate()) {
+                        _formKey2.currentState!.save();
 
-  Widget get submitButton => Container(
-    width: double.infinity,
-    height: 50,
-    margin: const EdgeInsets.symmetric(vertical: 10),
-    child: ElevatedButton(
-      style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFF3CC08E),
-        foregroundColor: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(8),
+                        final email = _signUpData.email!;
+                        final username = _signUpData.username!;
+                        final userSnapshot = await FirebaseFirestore.instance
+                            .collection('appUsers')
+                            .where('email', isEqualTo: email)
+                            .get();
+
+                        final usernameSnapshot = await FirebaseFirestore.instance
+                            .collection('appUsers')
+                            .where('username', isEqualTo: username)
+                            .get();
+
+                        if (userSnapshot.docs.isNotEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('This email is already in use.')),
+                          );
+                        } else if (usernameSnapshot.docs.isNotEmpty) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('This username is already taken.')),
+                          );
+                        } else {
+                          // Proceed if both email and username are unique
+                          _pageController.nextPage(
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeInOut,
+                          );
+                        }
+                      }
+                    },
+
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF218463),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    child: const Text("Next"),
+                  ),
+                )
+              ],
+            ),
+          ],
         ),
       ),
-      onPressed: () async {
-        if (_formKey.currentState!.validate()) {
-          _formKey.currentState!.save();
-          await context
-              .read<AppUserProvider>()
-              .signUp(firstName!, 
-              lastName!, 
-              email!, 
-              password!, 
-              middleName,
-              username!,
-              phoneNumber,);
-
-          if (mounted) {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const InterestsPage()), // Navigate to MainPage
-            );
-          }
-        }
-      },
-      child: const Text("Sign Up", style: TextStyle(fontSize: 16)),
-    ),
+    ),  
   );
+}
 
-  Widget get usernameField => Padding(
-  padding: const EdgeInsets.only(bottom: 30),
-  child: TextFormField(
-    style: const TextStyle(color: Colors.black),
-    decoration: _inputDecoration("Username", "juan_dlc"),
-    onSaved: (value) => username = value,
-    validator: (value) {
-      if (value == null || value.isEmpty) {
-        return "Please enter a username";
-      }
-      return null;
+Widget _buildSecurityInfoPage() {
+  final _formKey3 = GlobalKey<FormState>();
+  final TextEditingController _passwordController = TextEditingController();
+  final TextEditingController _confirmPasswordController = TextEditingController();
+  bool _obscurePassword = true;
+  bool _obscureConfirmPassword = true;
+  String? password;
+
+  return StatefulBuilder(
+    builder: (context, setState) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
+        child: Container(
+          padding: const EdgeInsets.all(24),
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.7),
+            borderRadius: BorderRadius.circular(16),
+          ),
+          child: Form(
+            key: _formKey3,
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text("Step 3 of 3",
+                    style: TextStyle(fontSize: 14, color: Colors.grey)),
+                const SizedBox(height: 10),
+                const Text("Secure your account",
+                    style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                const SizedBox(height: 30),
+
+                // Password field
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 30),
+                  child: TextFormField(
+                    controller: _passwordController,
+                    style: const TextStyle(color: Colors.black),
+                    obscureText: _obscurePassword,
+                    decoration: _inputDecoration("Password", "At least 6 characters").copyWith(
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscurePassword ? Icons.visibility_off : Icons.visibility,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _obscurePassword = !_obscurePassword;
+                          });
+                        },
+                      ),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return "Please enter a valid password";
+                      }
+                      if (value.length < 6) {
+                        return "Password must be at least 6 characters long";
+                      }
+                      String pattern =
+                          r'^(?=.*[a-z])(?=.*[A-Z])(?=.*\d)(?=.*[@$!%*?&])[A-Za-z\d@$!%*?&]{6,}$';
+                      RegExp regex = RegExp(pattern);
+                      if (!regex.hasMatch(value)) {
+                        return "Password must contain uppercase, lowercase, digit, and special character";
+                      }
+                      return null;
+                    },
+                  ),
+                ),
+
+                // Confirm password field
+                Padding(
+                  padding: const EdgeInsets.only(bottom: 30),
+                  child: TextFormField(
+                    controller: _confirmPasswordController,
+                    style: const TextStyle(color: Colors.black),
+                    obscureText: _obscureConfirmPassword,
+                    decoration: _inputDecoration("Confirm Password", "Repeat password").copyWith(
+                      suffixIcon: IconButton(
+                        icon: Icon(
+                          _obscureConfirmPassword ? Icons.visibility_off : Icons.visibility,
+                        ),
+                        onPressed: () {
+                          setState(() {
+                            _obscureConfirmPassword = !_obscureConfirmPassword;
+                          });
+                        },
+                      ),
+                    ),
+                    validator: (value) {
+                      if (value == null || value.isEmpty) {
+                        return "Repeat your password";
+                      }
+                      if (value != _passwordController.text) {
+                        return "Passwords do not match";
+                      }
+                      return null;
+                    },
+                  ),
+                ),
+
+                const Spacer(),
+                Row(
+                  children: [
+                    Expanded(
+                      child: OutlinedButton(
+                        onPressed: () => _pageController.previousPage(
+                          duration: const Duration(milliseconds: 300),
+                          curve: Curves.easeInOut,
+                        ),
+                        child: const Text("Back"),
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: () async {
+                          if (_formKey3.currentState!.validate()) {
+                            password = _passwordController.text;
+                            _signUpData.password = password!;
+                            _signUpData.profileImage ??= File("assets/default_avatar.jpg");
+                            _submitSignUp();
+                          }
+                        },
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF218463),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                        child: const Text("Sign Up"),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
     },
-  ),
-);
+  );
+}
 
+
+void _submitSignUp() async {
+  File? profileImage = _signUpData.profileImage;
+
+  String? base64Image;
+  if (profileImage != null && await profileImage.exists()) {
+    base64Image = await _convertImageToBase64(profileImage);
+  } else {
+    final byteData = await rootBundle.load('assets/default_avatar.jpg');
+    base64Image = base64Encode(byteData.buffer.asUint8List());
+  }
+
+
+    await context.read<AppUserProvider>().signUp(
+      _signUpData.firstName!,
+      _signUpData.lastName!,
+      _signUpData.email!,
+      _signUpData.password!,
+      _signUpData.middleName,
+      _signUpData.username!,
+      _signUpData.phone,
+      base64Image,
+    );
+
+    if (mounted) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (_) => const InterestsPage()),
+      );
+    }
+}
+
+  Future<void> _pickImage() async {
+    final picker = ImagePicker();
+    final picked = await picker.pickImage(source: ImageSource.gallery);
+    if (picked != null) {
+      setState(() {
+        _profileImage = File(picked.path);
+        _signUpData.profileImage = _profileImage;
+      });
+    }
+  }  
+
+  Future<String> _convertImageToBase64(File imageFile) async {
+    final bytes = await imageFile.readAsBytes();
+    return base64Encode(bytes);
+  }
 }
