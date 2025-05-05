@@ -134,6 +134,30 @@ class TravelTrackerProvider with ChangeNotifier {
     }
   }
 
+  // Method to fetch all travel plans
+  Future<List<Travel>> getTravelPlans() async {
+    try {
+      final querySnapshot = await FirebaseFirestore.instance
+          .collection('travel')
+          .get();
+
+      return querySnapshot.docs.map((doc) {
+        final data = doc.data();
+        return Travel(
+          uid: doc.id,
+          name: data['name'] ?? '',
+          startDate: (data['startDate'] as Timestamp?)?.toDate(), // Convert Timestamp to DateTime
+          endDate: (data['endDate'] as Timestamp?)?.toDate(), // Convert Timestamp to DateTime
+          location: data['destination'] ?? '',
+          createdOn: (data['createdOn'] as Timestamp).toDate(), // Convert Timestamp to DateTime
+        );
+      }).toList();
+    } catch (e) {
+      print("Error fetching travel plans: $e");
+      return [];
+    }
+  }
+
   // Helper to clear the user context and reset stream
   void clearUser() {
     currentUserId = null;

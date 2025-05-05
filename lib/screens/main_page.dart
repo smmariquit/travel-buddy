@@ -1,42 +1,60 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:travel_app/models/travel_plan_model.dart';
 import 'package:travel_app/providers/travel_plans_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:travel_app/screens/find_similar_people.dart';
 import 'package:travel_app/screens/profile_screen.dart';
+import 'package:travel_app/widgets/bottom_navigation_bar.dart';
+import 'package:travel_app/widgets/travel_plan_card.dart';
 import 'signin_page.dart';
 import 'package:travel_app/providers/user_provider.dart';
 import 'package:travel_app/screens/interests_page.dart';
 import 'package:travel_app/screens/notifications.dart';
 import 'add_travel_plan_page.dart';
 
-class MainPage extends StatelessWidget {
-   const MainPage({super.key});
- 
-   @override
-   Widget build(BuildContext context) {
-     final userStream = context.watch<AppUserProvider>().userStream;
- 
-     return StreamBuilder<User?>(
-       stream: userStream,
-       builder: (context, snapshot) {
-         if (snapshot.hasError) {
-           return Scaffold(
-             body: Center(child: Text("Error: ${snapshot.error}")),
-           );
-         } else if (snapshot.connectionState == ConnectionState.waiting) {
-           return const Scaffold(
-             body: Center(child: CircularProgressIndicator()),
-           );
-         } else if (!snapshot.hasData) {
-           return const SignInPage();
-         }
-         
- 
+final NUM_PLANS = 5;
+
+class MainPage extends StatefulWidget {
+  const MainPage({super.key});
+
+  @override
+  _MainPageState createState() => _MainPageState();
+}
+
+class _MainPageState extends State<MainPage> {
+  List<Travel> _travelPlans = [];
+
+  @override
+  Widget build(BuildContext context) {
+    final newTravelPlan = ModalRoute.of(context)?.settings.arguments as Travel?;
+    if (newTravelPlan != null) {
+      setState(() {
+        _travelPlans.add(newTravelPlan); // Add the new travel plan to the list
+      });
+    }
+
+    final userStream = context.watch<AppUserProvider>().userStream;
+
+    return StreamBuilder<User?>(
+      stream: userStream,
+      builder: (context, snapshot) {
+        if (snapshot.hasError) {
+          return Scaffold(
+            body: Center(child: Text("Error: ${snapshot.error}")),
+          );
+        } else if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
+        } else if (!snapshot.hasData) {
+          return const SignInPage();
+        }
+
         final user = snapshot.data!;
         final travelProvider = Provider.of<TravelTrackerProvider>(context, listen: false);
         final userProvider = Provider.of<AppUserProvider>(context, listen: false);
-        
+
         // Load user data once
         travelProvider.setUser(user.uid);
         userProvider.fetchUserForCurrentUser();
@@ -131,111 +149,43 @@ class MainPage extends StatelessWidget {
                 ),
 
                 // Featured box
-                Expanded(
+                SingleChildScrollView(
+                  scrollDirection: Axis.horizontal,
                   child: Row(
                     children: [
-                      Expanded(
-                        flex: 5,
-                        child: Container(
-                          margin: const EdgeInsets.all(16.0),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(24),
-                            boxShadow: const [
-                              BoxShadow(
-                                color: Color(0x1EB3BCC8),
-                                blurRadius: 16,
-                                offset: Offset(0, 6),
-                                spreadRadius: 0,
-                              ),
-                            ],
-                          ),
-                          child: Column(
-                            children: [
-                              Expanded(
-                                flex: 3,
-                                child: Container(
-                                  margin: const EdgeInsets.all(8.0),
-                                  decoration: BoxDecoration(
-                                    // image: const DecorationImage(
-                                    //   image: NetworkImage("https://placeholder.co/240x286"),
-                                    //   fit: BoxFit.fill,
-                                    // ),
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                ),
-                              ),
-                              Expanded(
-                                flex: 1,
-                                child: Align(
-                                  alignment: Alignment.centerRight,
-                                  child: Opacity(
-                                    opacity: 0.20,
-                                    child: Container(
-                                      margin: const EdgeInsets.only(right: 8.0),
-                                      width: 40,
-                                      height: 40,
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFF1B1E28),
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                    ),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
+                      FutureBuilder<List<Travel>>(
+                        future: travelProvider.getTravelPlans(),
+                        builder: (context, snapshot) {
+                          if (snapshot.connectionState == ConnectionState.waiting) {
+                            return const CircularProgressIndicator();
+                          } else if (snapshot.hasError) {
+                            return Text('Error: ${snapshot.error}');
+                          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                            return const Text('No travel plans available.');
+                          } else {
+                            return Row(
+                              children: snapshot.data!.map((travel) {
+                                return TravelPlanCard(
+                                  uid: travel.uid,
+                                  name: travel.name,
+                                  startDate: travel.startDate ?? DateTime.now(),
+                                  endDate: travel.endDate ?? DateTime.now(),
+                                  image: 'assets/sample_image.jpg', // Corrected image initialization
+                                  location: travel.location,
+                                  createdOn: travel.createdOn,
+                                );
+                              }).toList(),
+                            );
+                          }
+                        },
                       ),
                     ],
                   ),
-                ),
+                )
               ],
             ),
           ),
-          bottomNavigationBar: BottomAppBar(
-            shape: const CircularNotchedRectangle(),
-            notchMargin: 8.0,
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                IconButton(
-                  icon: Icon(Icons.home, color: Colors.green),
-                  onPressed: () {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(builder: (context) => const MainPage()),
-                    );
-                  },
-                ),
-                IconButton(
-                  icon: Icon(Icons.map, color: Colors.grey),
-                  onPressed: () {
-                    // TODO: Replace with Plans page
-                  },
-                ),
-                const SizedBox(width: 48), // space for FAB
-                IconButton(
-                  icon: Icon(Icons.handshake, color: Colors.grey),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const FindSimilarPeople()),
-                    );
-                  },
-                ),
-                IconButton(
-                  icon: Icon(Icons.person, color: Colors.grey),
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const ProfileScreen()),
-                    );
-                  },
-                ),
-              ],
-            ),
-          ),
+          bottomNavigationBar: BottomNavBar(),
           floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
           floatingActionButton: FloatingActionButton(
             backgroundColor: Colors.green,
@@ -249,35 +199,7 @@ class MainPage extends StatelessWidget {
             child: const Icon(Icons.add),
           ),
         );
-
-       },
-     );
-   }
- 
-  //  void _showSignOutDialog(BuildContext context) {
-  //    showDialog(
-  //      context: context,
-  //      builder: (BuildContext context) {
-  //        return AlertDialog(
-  //          title: const Text('Are you sure you want to sign out?'),
-  //          actions: <Widget>[
-  //            TextButton(
-  //              onPressed: () {
-  //                Navigator.of(context).pop();
-  //              },
-  //              child: const Text('Cancel'),
-  //            ),
-  //            TextButton(
-  //              onPressed: () async {
-  //                await FirebaseAuth.instance.signOut();
-  //                Navigator.of(context).pop();
-  //                Navigator.pushReplacementNamed(context, '/signin');
-  //              },
-  //              child: const Text('Sign Out'),
-  //            ),
-  //          ],
-  //        );
-  //      },
-  //    );
-  //  }
- }
+      },
+    );
+  }
+}

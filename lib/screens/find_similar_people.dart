@@ -4,6 +4,7 @@ import 'package:travel_app/providers/travel_plans_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:travel_app/screens/main_page.dart';
 import 'package:travel_app/screens/profile_screen.dart';
+import 'package:travel_app/widgets/bottom_navigation_bar.dart';
 import 'signin_page.dart';
 import '../providers/auth_provider.dart';
 import 'package:travel_app/screens/interests_page.dart';
@@ -74,36 +75,7 @@ class FindSimilarPeople extends StatelessWidget {
                 ),
               ],
             ),
-            bottomNavigationBar: BottomNavigationBar(
-            items: const [
-              BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.handshake),
-                label: 'Connect',
-              ),
-              BottomNavigationBarItem(
-                icon: Icon(Icons.person),
-                label: 'Profile',
-              ),
-            ],
-            onTap: (index) {
-              // Handle navigation based on the selected index
-              switch (index) {
-              case 0:
-                  Navigator.pushReplacement(
-                    context,
-                    MaterialPageRoute(builder: (context) => const MainPage()),
-                  );
-                break;
-              case 1:
-                // Navigate to Search
-                break;
-              case 2:
-                  Navigator.push(context, MaterialPageRoute(builder: (context) => const ProfileScreen()));
-                break;
-              }
-            },
-            ),
+            bottomNavigationBar: BottomNavBar()
           );
       }
       // );

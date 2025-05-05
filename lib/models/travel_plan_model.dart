@@ -1,5 +1,34 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_maps_webservice/places.dart';
 import 'package:latlong2/latlong.dart';
+
+class Activity {
+  final String title;
+  final DateTime startDate;
+  final DateTime endDate;
+
+  Activity({
+    required this.title,
+    required this.startDate,
+    required this.endDate,
+  });
+
+  factory Activity.fromJson(Map<String, dynamic> json) {
+    return Activity(
+      title: json['title'],
+      startDate: (json['startDate'] as Timestamp).toDate(),
+      endDate: (json['endDate'] as Timestamp).toDate(),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'title': title,
+      'startDate': startDate,
+      'endDate': endDate,
+    };
+  }
+}
 
 class Travel {
   String? id;
@@ -16,6 +45,7 @@ class Travel {
   final List<Map<String, dynamic>>? itinerary;
   final List<String>? sharedWith;
   final DateTime createdOn;
+  final List<Activity>? activities;
 
   Travel({
     this.id,
@@ -32,6 +62,7 @@ class Travel {
     this.itinerary,
     this.sharedWith,
     required this.createdOn,
+    this.activities,
   });
 
   factory Travel.fromJson(Map<String, dynamic> json, [String? id]) {
@@ -55,6 +86,9 @@ class Travel {
       itinerary: (json['itinerary'] as List?)?.cast<Map<String, dynamic>>(),
       sharedWith: List<String>.from(json['sharedWith'] ?? []),
       createdOn: (json['createdOn'] as Timestamp).toDate(),
+      activities: (json['activities'] as List<dynamic>?)
+          ?.map((activity) => Activity.fromJson(activity))
+          .toList(),
     );
   }
 
@@ -75,6 +109,7 @@ class Travel {
       'itinerary': itinerary,
       'sharedWith': sharedWith,
       'createdOn': createdOn,
+      'activities': activities?.map((activity) => activity.toJson()).toList(),
     };
   }
 }
