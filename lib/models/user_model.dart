@@ -12,8 +12,8 @@ class AppUser {
   bool isPrivate;
   String email;
   String? location;
-  //List<String>? interests;
-  //List<String>? travelStyles;
+  List<String>? interests;
+  List<String>? travelStyles;
 
   AppUser({
     required this.uid,
@@ -27,8 +27,8 @@ class AppUser {
     required this.isPrivate,
     required this.email,
     this.location,
-    //this.interests,
-    //this.travelStyles,
+    this.interests,
+    this.travelStyles,
   });
 
   factory AppUser.fromJson(Map<String, dynamic> json) {
@@ -44,8 +44,8 @@ class AppUser {
       isPrivate: json['isPrivate'] ?? false,
       email: json['email'],
       location: json['location'],
-      //interests: json['interests'] != null ? List<String>.from(json['interests']) : null,
-      //travelStyles: json['travelStyles'] != null ? List<String>.from(json['travelStyles']) : null,
+      interests: json['interests'] != null ? List<String>.from(json['interests']) : null,
+      travelStyles: json['travelStyles'] != null ? List<String>.from(json['travelStyles']) : null,
     );
   }
 
@@ -62,8 +62,8 @@ class AppUser {
       'isPrivate': isPrivate,
       'email': email,
       'location': location,
-      //'interests': interests,
-      //'travelStyles': travelStyles,
+      'interests': interests,
+      'travelStyles': travelStyles,
     };
   }
 

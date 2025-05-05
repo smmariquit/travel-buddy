@@ -50,6 +50,7 @@ dependencies:
   geocoding: ^3.0.0
   google_maps_webservice: ^0.0.18
   geolocator: ^14.0.0
+  multi_select_flutter: ^4.1.3
 
 
 

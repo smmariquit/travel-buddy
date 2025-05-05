@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:travel_app/providers/user_provider.dart';
+import 'package:travel_app/screens/friends_list.dart';
 import 'signup_page.dart';
 import 'package:travel_app/providers/travel_plans_provider.dart';
+import 'package:travel_app/screens/main_page.dart';
 
 class SignInPage extends StatefulWidget {
   const SignInPage({super.key});
@@ -221,40 +223,50 @@ Widget build(BuildContext context) {
 
 
   Widget get googleSignInButton => Center(
-    child: Container(
-      width: 200,
-      height: 50,
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      child: TextButton.icon(
+  child: Container(
+    width: 200,
+    height: 50,
+    margin: const EdgeInsets.symmetric(vertical: 8),
+    child: TextButton.icon(
       icon: Image.network(
         'https://img.icons8.com/color/48/000000/google-logo.png',
         height: 24,
         width: 24,
       ),
-        label: const Text("Sign in with Google", style: TextStyle(color: Color.fromARGB(255, 0, 0, 0))),
-        style: ElevatedButton.styleFrom(
-          backgroundColor: const Color.fromARGB(255, 255, 255, 255),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(30),
-          ),
+      label: const Text("Sign in with Google", style: TextStyle(color: Color.fromARGB(255, 0, 0, 0))),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(30),
         ),
-        onPressed: () async {
-          final authProvider = context.read<AppUserProvider>();
-          final travelProvider = context.read<TravelTrackerProvider>();
-
-          String? result = await authProvider.signInWithGoogle();
-
-          if (result == null) {
-            travelProvider.setUser(authProvider.uid);
-          } else {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(result)),
-            );
-          }
-        },
       ),
+      onPressed: () async {
+        final authProvider = context.read<AppUserProvider>();
+        final travelProvider = context.read<TravelTrackerProvider>();
+
+        // Attempt to sign in
+        String? result = await authProvider.signInWithGoogle();
+
+        if (result == null) {
+          // Successful sign-in, navigate to the next page
+          travelProvider.setUser(authProvider.uid);
+
+          // Navigate to the next page (e.g., home or profile)
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => MainPage()), // Replace `HomePage()` with the actual page
+          );
+        } else {
+          // If sign-in fails, show error message
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(result)),
+          );
+        }
+      },
     ),
+  ),
 );
+
 
   Widget get orConnect => Padding(
     padding: const EdgeInsets.all(10),

@@ -3,6 +3,10 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:travel_app/api/firebase_auth_api.dart';
 import 'package:travel_app/models/user_model.dart'; 
+import 'package:google_sign_in/google_sign_in.dart'; 
+import 'package:flutter/foundation.dart';
+
+
 
 Stream<QuerySnapshot>? _userStream;
 
@@ -108,37 +112,41 @@ class AppUserProvider with ChangeNotifier {
     return message;
   }
 
-  Future<String?> signInWithGoogle() async {
-    String? message = await authService.signInWithGoogle();
-    User? user = _auth.currentUser;
+  signInWithGoogle() async {
+  try {
+    // Attempt to sign in with Google
+    await authService.signInWithGoogle();
+    
+    // Get the current user after sign-in
+    User? user = FirebaseAuth.instance.currentUser;
 
-    if (message == null && user != null) {
+    if (user != null) {
       _uid = user.uid;
 
-      final userDoc = FirebaseFirestore.instance.collection('appUsers').doc(user.uid);
+      final userDoc = FirebaseFirestore.instance.collection('users').doc(user.uid);
       final docSnapshot = await userDoc.get();
 
+      // If user document does not exist, create one
       if (!docSnapshot.exists) {
         await userDoc.set({
-          'uid': user.uid,
           'firstName': user.displayName?.split(' ').first ?? '',
           'lastName': user.displayName!.split(' ').length > 1
               ? user.displayName!.split(' ').sublist(1).join(' ')
               : '',
-          'middleName': '',
-          'username': user.email?.split('@')[0],
-          'phoneNumber': user.phoneNumber,
-          'isPrivate': false,
           'email': user.email,
           'createdAt': Timestamp.now(),
+          'uid': user.uid,
         });
       }
-
-      fetchUserForCurrentUser();
     }
 
-    return message;
+    notifyListeners();
+  } catch (e) {
+    print("Error during sign-in: ${e.toString()}");
+    // Optionally notify listeners about the error, or return the error message.
+    notifyListeners();
   }
+}
 
   void loadUserStream(String uid) {
     _userStream = FirebaseFirestore.instance

@@ -231,12 +231,12 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
       if (message.isNotEmpty) {
         showQR(message);
 
-        // Pass the new travel plan back to the main page
-        Navigator.pushReplacementNamed(
-          context,
-          '/main',
-          arguments: travel, // Pass the travel object as an argument
-        );
+        // // Pass the new travel plan back to the main page
+        // Navigator.pushReplacementNamed(
+        //   context,
+        //   '/main',
+        //   arguments: travel, // Pass the travel object as an argument
+        // );
       } else {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to save travel plan")));
       }

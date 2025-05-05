@@ -3,10 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:travel_app/providers/user_provider.dart';
 import 'package:travel_app/models/user_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:travel_app/widgets/bottom_navigation_bar.dart';
-
-// TO DO: AFTER EDITING THE PROFILE, HINDI NAGA-UPDATE SA
-//MAIN PAGE YUNG FIRSTNAME SA APPBAR UNTIL PINDUTIN ULIT YUNG HOME BUTTON
+import 'package:firebase_auth/firebase_auth.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -17,56 +14,109 @@ class ProfileScreen extends StatefulWidget {
 
 class _ProfileScreenState extends State<ProfileScreen> {
   final _formKey = GlobalKey<FormState>();
+  final _firstNameController = TextEditingController();
+  final _middleNameController = TextEditingController();
+  final _lastNameController = TextEditingController();
+  final _phoneController = TextEditingController();
+  final _locationController = TextEditingController();
 
-  final TextEditingController _firstNameController = TextEditingController();
-  final TextEditingController _lastNameController = TextEditingController();
-  final TextEditingController _phoneController = TextEditingController();
+  List<Map<String, dynamic>> _interests = [
+    {"interest": 'Adventure', "selected": false},
+    {"interest": 'Culture', "selected": false},
+    {"interest": 'Food', "selected": false},
+    {"interest": 'Nature', "selected": false},
+    {"interest": 'Relaxation', "selected": false},
+    {"interest": 'Shopping', "selected": false},
+    {"interest": 'Sightseeing', "selected": false},
+    {"interest": 'Sports', "selected": false}
+  ];
 
-  bool isTapped = false;
+  List<Map<String, dynamic>> _travelStyles = [
+    {"style": 'Backpacker', "selected": false},
+    {"style": 'Luxury', "selected": false},
+    {"style": 'Adventure', "selected": false},
+    {"style": 'Cultural', "selected": false},
+    {"style": 'Business', "selected": false}
+  ];
+
   AppUser? _currentUserData;
+  bool _isTapped = false;
+  bool _isPrivate = false;
 
   @override
-  void initState() {
-    super.initState();
+void initState() {
+  super.initState();
 
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      final provider = context.read<AppUserProvider>();
-      final userStream = provider.userStream;
+  WidgetsBinding.instance.addPostFrameCallback((_) async {
+    final provider = context.read<AppUserProvider>();
+    final userStream = provider.userStream;
 
-      userStream.listen((firebaseUser) async {
-        if (firebaseUser != null) {
-          final uid = firebaseUser.uid;
-          final doc =
-              await FirebaseFirestore.instance
-                  .collection('appUsers')
-                  .doc(uid)
-                  .get();
+    userStream.listen((firebaseUser) async {
+      if (firebaseUser != null) {
+        final uid = firebaseUser.uid;
+        final doc = await FirebaseFirestore.instance
+            .collection('appUsers')
+            .doc(uid)
+            .get();
 
-          if (doc.exists) {
-            final data = doc.data()!;
-            final user = AppUser.fromJson(data);
+        if (doc.exists) {
+          final data = doc.data()!;
+          final user = AppUser.fromJson(data);
 
-            setState(() {
-              _currentUserData = user;
-              _firstNameController.text = user.firstName;
-              _lastNameController.text = user.lastName;
-              _phoneController.text = user.phoneNumber ?? '';
-            });
-          }
+          // Master lists
+          final masterInterests = [
+            'Adventure', 'Culture', 'Food', 'Nature',
+            'Relaxation', 'Shopping', 'Sightseeing', 'Sports'
+          ];
+
+          final masterStyles = [
+            'Backpacker', 'Luxury', 'Adventure',
+            'Cultural', 'Business'
+          ];
+
+          final selectedInterests = user.interests ?? [];
+          final selectedStyles = user.travelStyles ?? [];
+
+          setState(() {
+            _currentUserData = user;
+            _firstNameController.text = user.firstName;
+            _middleNameController.text = user.middleName ?? '';
+            _lastNameController.text = user.lastName;
+            _phoneController.text = user.phoneNumber ?? '';
+            _locationController.text = user.location ?? '';
+            _isPrivate = user.isPrivate;
+
+            _interests = masterInterests.map((interest) {
+              return {
+                "interest": interest,
+                "selected": selectedInterests.contains(interest)
+              };
+            }).toList();
+
+            _travelStyles = masterStyles.map((style) {
+              return {
+                "style": style,
+                "selected": selectedStyles.contains(style)
+              };
+            }).toList();
+          });
         }
-      });
+      }
     });
-  }
+  });
+}
+
 
   @override
   void dispose() {
     _firstNameController.dispose();
     _lastNameController.dispose();
     _phoneController.dispose();
+    _locationController.dispose();
     super.dispose();
   }
 
-  void _saveChanges() async {
+  Future<void> _saveChanges() async {
     if (_formKey.currentState!.validate() && _currentUserData != null) {
       final provider = context.read<AppUserProvider>();
       final uid = _currentUserData!.uid;
@@ -81,9 +131,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
         await provider.editPhoneNumber(uid, _phoneController.text.trim());
       }
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Profile updated')));
+      // Save interests and travel styles
+      List<String> selectedInterests = _interests
+          .where((interest) => interest['selected'])
+          .map<String>((interest) => interest['interest'] as String)
+          .toList();
+
+      List<String> selectedTravelStyles = _travelStyles
+          .where((style) => style['selected'])
+          .map<String>((style) => style['style'] as String)
+          .toList();
+
+      try {
+        await FirebaseFirestore.instance.collection('appUsers').doc(uid).update({
+          'interests': selectedInterests,
+          'travelStyles': selectedTravelStyles,
+        });
+      } catch (e) {
+        print("Failed to save interests and travel styles: $e");
+      }
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Profile updated')),
+      );
       provider.loadUserStream(uid);
     }
   }
@@ -95,47 +165,44 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     return Scaffold(
-      appBar: AppBar(title: Text('Profile')),
-      body: Padding(
-        padding: EdgeInsets.all(16.0),
+      appBar: AppBar(
+        title: const Text('My Profile'),
+        centerTitle: true,
+      ),
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.all(16.0),
         child: Form(
           key: _formKey,
-          child: ListView(
+          child: Column(
             children: [
-              const SizedBox(height: 10),
+              // Avatar + Username
               Center(
                 child: Stack(
                   children: [
-                    ClipOval(
-                      child: Image.asset(
-                        'assets/placeholderpfp.jpg',
-                        width: 150,
-                        height: 150,
-                        fit: BoxFit.cover,
-                      ),
+                    CircleAvatar(
+                      radius: 70,
+                      backgroundImage: _currentUserData!.avatar != null
+                          ? NetworkImage(_currentUserData!.avatar!)
+                          : const AssetImage('assets/placeholderpfp.jpg')
+                              as ImageProvider,
                     ),
                     Positioned(
                       bottom: 0,
-                      right: 0,
+                      right: 4,
                       child: GestureDetector(
                         onTap: () {
                           setState(() {
-                            isTapped = !isTapped;
+                            _isTapped = !_isTapped;
                           });
+                          // TODO: Add image upload logic
                         },
-                        child: Container(
-                          decoration: BoxDecoration(
-                            shape: BoxShape.circle,
-                            color: Colors.black54,
-                          ),
-                          padding: EdgeInsets.all(6),
+                        child: CircleAvatar(
+                          radius: 18,
+                          backgroundColor: Colors.black54,
                           child: Icon(
                             Icons.camera_alt,
+                            color: _isTapped ? Colors.green : Colors.white,
                             size: 20,
-                            color:
-                                isTapped         // pangcheck lang wahahaha if napipindot since wala pa functionality
-                                    ? Colors.green
-                                    : Colors.white, 
                           ),
                         ),
                       ),
@@ -143,66 +210,128 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ],
                 ),
               ),
+              const SizedBox(height: 10),
 
-              Center(
-                child: Column(
-                  children: [
-                    Text(
-                      _currentUserData!.username,
-                      style: TextStyle(
-                        fontSize: 18,
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    Text(
-                      _currentUserData!.email,
-                      style: TextStyle(
-                        fontSize: 13,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey,
-                      ),
-                    ),
-                  ],
+              Text(
+                _currentUserData!.username,
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Text(
+                _currentUserData!.email,
+                style: const TextStyle(
+                  color: Colors.grey,
+                  fontSize: 14,
                 ),
               ),
 
-              SizedBox(height: 20),
+              const SizedBox(height: 30),
 
-              TextFormField(
+              // Editable Fields
+              _buildProfileInputField(
+                label: "First Name",
                 controller: _firstNameController,
-                decoration: InputDecoration(labelText: 'First Name'),
-                validator:
-                    (value) =>
-                        value == null || value.isEmpty
-                            ? 'First name required'
-                            : null,
+                validatorMsg: "First name required",
               ),
-              SizedBox(height: 10),
+              const SizedBox(height: 15),
 
-              TextFormField(
+              _buildProfileInputField(
+                label: "Last Name",
                 controller: _lastNameController,
-                decoration: InputDecoration(labelText: 'Last Name'),
-                validator:
-                    (value) =>
-                        value == null || value.isEmpty
-                            ? 'Last name required'
-                            : null,
+                validatorMsg: "Last name required",
               ),
-              SizedBox(height: 10),
+              const SizedBox(height: 15),
 
-              TextFormField(
+              _buildProfileInputField(
+                label: "Phone Number",
                 controller: _phoneController,
-                decoration: InputDecoration(labelText: 'Phone Number'),
-                keyboardType: TextInputType.phone,
+                inputType: TextInputType.phone,
               ),
-              SizedBox(height: 10),
+              const SizedBox(height: 15),
 
-              ElevatedButton(onPressed: _saveChanges, child: Text("Save")),
+              _buildProfileInputField(
+                label: "Location",
+                controller: _locationController,
+              ),
+              const SizedBox(height: 30),
+
+              // Interests Chips
+              Text('Select your Interests'),
+              Wrap(
+                spacing: 10,
+                children: List.generate(_interests.length, (index) {
+                  return InputChip(
+                    label: Text(_interests[index]['interest']),
+                    selected: _interests[index]['selected'],
+                    onPressed: () {
+                      setState(() {
+                        _interests[index]['selected'] = !_interests[index]['selected'];
+                      });
+                    },
+                    selectedColor: Colors.blue,
+                  );
+                }),
+              ),
+              const SizedBox(height: 30),
+
+              // Travel Styles Chips
+              Text('Select your Travel Styles'),
+              Wrap(
+                spacing: 10,
+                children: List.generate(_travelStyles.length, (index) {
+                  return InputChip(
+                    label: Text(_travelStyles[index]['style']),
+                    selected: _travelStyles[index]['selected'],
+                    onPressed: () {
+                      setState(() {
+                        _travelStyles[index]['selected'] = !_travelStyles[index]['selected'];
+                      });
+                    },
+                    selectedColor: Colors.blue,
+                  );
+                }),
+              ),
+              const SizedBox(height: 30),
+
+              // Save Button
+              ElevatedButton.icon(
+                onPressed: _saveChanges,
+                icon: const Icon(Icons.save),
+                label: const Text("Save Changes"),
+                style: ElevatedButton.styleFrom(
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+              ),
             ],
           ),
         ),
       ),
-      bottomNavigationBar: BottomNavBar()
+    );
+  }
+
+  Widget _buildProfileInputField({
+    required String label,
+    required TextEditingController controller,
+    String? validatorMsg,
+    TextInputType? inputType,
+  }) {
+    return TextFormField(
+      controller: controller,
+      keyboardType: inputType,
+      validator: validatorMsg != null
+          ? (value) => value == null || value.isEmpty ? validatorMsg : null
+          : null,
+      decoration: InputDecoration(
+        labelText: label,
+        filled: true,
+        fillColor: Colors.grey[100],
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+      ),
     );
   }
 }
