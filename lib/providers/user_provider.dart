@@ -101,7 +101,7 @@ class AppUserProvider with ChangeNotifier {
 
     // Create Firebase account
     String? message = await authService.signUp(email, password);
-    User? user = _auth.currentUser;
+    User? user = _auth.currentUser; 
 
     if (user != null) {
       _uid = user.uid;
