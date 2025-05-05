@@ -253,12 +253,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           }
                         },
                         child: CircleAvatar(
-                          radius: 18,
+                          radius: 14,
                           backgroundColor: Colors.black54,
                           child: Icon(
                             Icons.camera_alt,
                             color: Colors.white,
-                            size: 16,
+                            size: 12,
                           ),
                         ),
                       ),
