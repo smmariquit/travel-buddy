@@ -27,6 +27,7 @@ import 'package:travel_app/providers/user_provider.dart';
 import 'package:travel_app/screens/interests_page%20copy.dart';
 import 'firebase_options.dart';
 import 'package:travel_app/screens/signin_page.dart';
+import 'package:travel_app/screens/signup_page.dart';
 
 // Provider for state management
 import 'package:provider/provider.dart';

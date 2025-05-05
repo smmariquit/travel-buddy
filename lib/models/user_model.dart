@@ -1,5 +1,3 @@
-
-
 class AppUser {
   final String uid;
   String firstName;
@@ -7,7 +5,7 @@ class AppUser {
   String lastName;
   String username;
   //List<String> friendUIDs;
-  String? avatar;
+  String? profileImageUrl;
   String? phoneNumber;
   bool isPrivate;
   String email;
@@ -22,7 +20,7 @@ class AppUser {
     required this.lastName,
     required this.username,
     //required this.friendUIDs,
-    this.avatar,
+    this.profileImageUrl,
     this.phoneNumber,
     required this.isPrivate,
     required this.email,
@@ -39,7 +37,7 @@ class AppUser {
       lastName: json['lastName'],
       username: json['username'],
       //friendUIDs: List<String>.from(json['friendUIDs'] ?? []),
-      avatar: json['avatar'],
+      profileImageUrl: json['avatar'],
       phoneNumber: json['phoneNumber'],
       isPrivate: json['isPrivate'] ?? false,
       email: json['email'],
@@ -57,7 +55,7 @@ class AppUser {
       'lastName': lastName,
       'username': username,
       //'friendUIDs': friendUIDs,
-      'avatar': avatar,
+      'profileImageUrl': profileImageUrl,
       'phoneNumber': phoneNumber,
       'isPrivate': isPrivate,
       'email': email,

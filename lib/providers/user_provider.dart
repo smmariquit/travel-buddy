@@ -2,10 +2,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:travel_app/api/firebase_auth_api.dart';
-import 'package:travel_app/models/user_model.dart'; 
-import 'package:google_sign_in/google_sign_in.dart'; 
+import 'dart:io';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
-
+import 'dart:convert';
 
 
 Stream<QuerySnapshot>? _userStream;
@@ -87,13 +87,26 @@ class AppUserProvider with ChangeNotifier {
     String? middleName,
     String? username,
     String? phoneNumber,
+    String? base64Image,
   ) async {
+    // Check if username already exists
+    final existing = await FirebaseFirestore.instance
+        .collection('appUsers')
+        .where('username', isEqualTo: username)
+        .get();
+
+    if (existing.docs.isNotEmpty) {
+      return "Username already taken";
+    }
+
+    // Create Firebase account
     String? message = await authService.signUp(email, password);
     User? user = _auth.currentUser;
 
     if (user != null) {
       _uid = user.uid;
 
+      // Store user data in Firestore
       await FirebaseFirestore.instance.collection('appUsers').doc(user.uid).set({
         'uid': user.uid,
         'firstName': firstName,
@@ -103,6 +116,7 @@ class AppUserProvider with ChangeNotifier {
         'phoneNumber': phoneNumber,
         'isPrivate': false,
         'email': email,
+        'profileImageUrl': base64Image ?? '',
         'createdAt': Timestamp.now(),
       });
 
@@ -111,6 +125,8 @@ class AppUserProvider with ChangeNotifier {
 
     return message;
   }
+
+
 
   signInWithGoogle() async {
   try {
@@ -138,6 +154,7 @@ class AppUserProvider with ChangeNotifier {
           'uid': user.uid,
         });
       }
+      loadUserStream(user.uid);
     }
 
     notifyListeners();
@@ -177,7 +194,8 @@ class AppUserProvider with ChangeNotifier {
   Future<void> editMiddleName(String uid, String middleName) => updateField(uid, 'middleName', middleName);
   Future<void> editLastName(String uid, String lastName) => updateField(uid, 'lastName', lastName);
   Future<void> editEmail(String uid, String email) => updateField(uid, 'email', email);
-  Future<void> editAvatar(String uid, String avatar) => updateField(uid, 'avatar', avatar);
+  Future<void> editProfileImageUrl(String uid, String profileImageUrl) =>
+    updateField(uid, 'profileImageUrl', profileImageUrl);
   Future<void> editPhoneNumber(String uid, String phoneNumber) => updateField(uid, 'phoneNumber', phoneNumber);
   Future<void> editPrivacyStatus(String uid, bool isPrivate) => updateField(uid, 'isPrivate', isPrivate);
   Future<void> editLocation(String uid, String location) => updateField(uid, 'location', location);
