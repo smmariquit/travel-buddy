@@ -36,11 +36,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
   ];
 
   List<Map<String, dynamic>> _travelStyles = [
-    {"style": 'Backpacker', "selected": false},
-    {"style": 'Luxury', "selected": false},
-    {"style": 'Adventure', "selected": false},
-    {"style": 'Cultural', "selected": false},
-    {"style": 'Business', "selected": false}
+    {"style": 'Backpacking', "selected": false},
+    {"style": 'Luxury Travel', "selected": false},
+    {"style": 'Solo Travel', "selected": false},
+    {"style": 'Family Vacation', "selected": false},
+    {"style": 'Cruise', "selected": false},
+    {"style": 'Road Trip', "selected": false},
+    {"style": 'Eco-Tourism', "selected": false},
+    {"style": 'Adventure Travel', "selected": false}
   ];
 
   AppUser? _currentUserData;
@@ -68,8 +71,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
             ];
 
             final masterStyles = [
-              'Backpacker', 'Luxury', 'Adventure',
-              'Cultural', 'Business'
+              'Backpacking', 'Luxury Travel', 'Solo Travel', "Family Vacation", 
+              "Cruise", 'Road Trip', 'Eco-Tourism', 'Adventure Travel'
             ];
 
             final selectedInterests = user.interests ?? [];
