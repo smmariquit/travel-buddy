@@ -121,10 +121,10 @@ class _SignUpPageState extends State<SignUpPage> {
                       child: CircleAvatar(
                         radius: 50,
                         backgroundColor: const Color(0xFF218463),
-                        backgroundImage: _pickedImage != null
-                            ? FileImage(_pickedImage!)
+                        backgroundImage: _profileImage != null
+                            ? FileImage(_profileImage!)
                             : const AssetImage("assets/default_avatar.jpg") as ImageProvider,
-                        child: _pickedImage == null
+                        child: _profileImage == null
                             ? const Icon(Icons.camera_alt, color: Colors.white, size: 30)
                             : null,
                       ),
