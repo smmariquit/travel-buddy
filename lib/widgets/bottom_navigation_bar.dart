@@ -37,7 +37,7 @@ class BottomNavBar extends StatelessWidget{
                   onPressed: () {
                     Navigator.push(
                       context,
-                      MaterialPageRoute(builder: (context) => const FindSimilarPeople()),
+                      MaterialPageRoute(builder: (context) => const FindSimilarPeopleScreen()),
                     );
                   },
                 ),
