@@ -7,6 +7,8 @@ import 'package:travel_app/api/firebase_travel_api.dart';
 import 'package:google_maps_webservice/places.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'dart:async';
+
 
 class AddTravelPlanPage extends StatefulWidget {
   @override
@@ -14,6 +16,11 @@ class AddTravelPlanPage extends StatefulWidget {
 }
 
 class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
+  Timer? _debounce;
+  List<Prediction> _predictions = [];
+  bool _isSearching = false;
+
+
   final _formKey = GlobalKey<FormState>();
   final FirebaseTravelAPI _firebaseTravelAPI = FirebaseTravelAPI();
   late String _name, _location;
@@ -42,6 +49,18 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
 
 
   @override
+  void dispose() {
+    _nameController.dispose();
+    _locationController.dispose();
+    _flightController.dispose();
+    _accommodationController.dispose();
+    _notesController.dispose();
+    _startDateController.dispose();
+    _endDateController.dispose();
+    _debounce?.cancel();
+    super.dispose();
+  }
+
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: backgroundColor,
@@ -66,12 +85,7 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
                   Expanded(
                     child: GestureDetector(
                       onTap: _handleLocationAutocomplete,
-                      child: _buildTextField(
-                        'Location', 
-                        _locationController, 
-                        (value) => value!.isEmpty ? 'Enter a location' : null, 
-                        onSaved: (v) => _location = v!,
-                      ),
+                      child: _buildLocationFieldWithAutocomplete(),
                     ),
                   ),
                   const SizedBox(width: 8),
@@ -283,7 +297,6 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
 
 
   Future<void> _handleLocationAutocomplete() async {
-    // Print to debug the input and check if it's being sent properly.
     print("Location input: ${_locationController.text}");
     
     final response = await places.autocomplete(_locationController.text);
@@ -362,5 +375,72 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
       ),
     );
   }
+
+  Widget _buildLocationFieldWithAutocomplete() {
+  return Column(
+    children: [
+      TextFormField(
+        controller: _locationController,
+        decoration: InputDecoration(
+          labelText: 'Location',
+          labelStyle: TextStyle(color: primaryColor),
+          border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+          focusedBorder: OutlineInputBorder(borderSide: BorderSide(color: primaryColor, width: 2)),
+          suffixIcon: Icon(Icons.location_on, color: primaryColor),
+        ),
+        validator: (value) => value!.isEmpty ? 'Enter a location' : null,
+        onChanged: (value) {
+          if (_debounce?.isActive ?? false) _debounce!.cancel();
+          _debounce = Timer(const Duration(milliseconds: 500), () async {
+            if (value.isNotEmpty) {
+              final response = await places.autocomplete(value);
+              if (response.isOkay) {
+                setState(() {
+                  _predictions = response.predictions;
+                  _isSearching = true;
+                });
+              }
+            } else {
+              setState(() {
+                _predictions = [];
+                _isSearching = false;
+              });
+            }
+          });
+        },
+        onSaved: (v) => _location = v!,
+      ),
+      if (_isSearching && _predictions.isNotEmpty)
+        Container(
+          height: 200,
+          decoration: BoxDecoration(
+            color: Colors.white,
+            border: Border.all(color: primaryColor),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: ListView.builder(
+            itemCount: _predictions.length,
+            itemBuilder: (context, index) {
+              final prediction = _predictions[index];
+              return ListTile(
+                title: Text(prediction.description ?? ''),
+                onTap: () async {
+                  final placeId = prediction.placeId!;
+                  final details = await places.getDetailsByPlaceId(placeId);
+                  final selectedLocation = details.result.formattedAddress ?? prediction.description;
+
+                  setState(() {
+                    _locationController.text = selectedLocation!;
+                    _isSearching = false;
+                    _predictions.clear();
+                  });
+                },
+              );
+            },
+          ),
+        ),
+    ],
+  );
+}
 
 }
