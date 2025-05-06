@@ -3,10 +3,11 @@ import 'package:provider/provider.dart';
 import 'package:travel_app/providers/user_provider.dart';
 import 'package:travel_app/models/user_model.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:permission_handler/permission_handler.dart';
+
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -232,7 +233,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       right: 4,
                       child: GestureDetector(
                         onTap: () async {
-                          final picked = await ImagePicker().pickImage(source: ImageSource.gallery);
+                          final source = await showModalBottomSheet<ImageSource>(
+                            context: context,
+                            builder: (context) => SafeArea(
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  ListTile(
+                                    leading: const Icon(Icons.camera_alt),
+                                    title: const Text('Take a photo'),
+                                    onTap: () => Navigator.pop(context, ImageSource.camera),
+                                  ),
+                                  ListTile(
+                                    leading: const Icon(Icons.photo_library),
+                                    title: const Text('Choose from gallery'),
+                                    onTap: () => Navigator.pop(context, ImageSource.gallery),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+
+                          if (source == null) return;
+
+                          final permission = source == ImageSource.camera ? Permission.camera : Permission.photos;
+                          final status = await permission.request();
+
+                          if (!status.isGranted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('${permission.toString().split('.').last} permission denied')),
+                            );
+                            return;
+                          }
+
+                          final picked = await ImagePicker().pickImage(source: source);
                           if (picked != null) {
                             final bytes = await picked.readAsBytes();
                             final base64Image = base64Encode(bytes);
@@ -252,6 +286,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             }
                           }
                         },
+
                         child: CircleAvatar(
                           radius: 14,
                           backgroundColor: Colors.black54,

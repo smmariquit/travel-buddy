@@ -6,8 +6,6 @@ import 'dart:io';
 import 'package:image_picker/image_picker.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:convert';
-import 'dart:typed_data';
-import 'dart:io';
 import 'package:flutter/services.dart'; 
 import 'package:permission_handler/permission_handler.dart';
 
@@ -37,9 +35,6 @@ class _SignUpPageState extends State<SignUpPage> {
   File? _profileImage;
   String? password;
   String? confirmPassword;
-
-
-  File? _pickedImage;
 
   void _goToNextPage() {
     if (_formKey.currentState!.validate()) {
