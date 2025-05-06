@@ -9,6 +9,7 @@ import 'dart:convert';
 import 'dart:typed_data';
 import 'dart:io';
 import 'package:flutter/services.dart'; 
+import 'package:permission_handler/permission_handler.dart';
 
 
 class SignUpPage extends StatefulWidget {
@@ -50,7 +51,7 @@ class _SignUpPageState extends State<SignUpPage> {
     }
   }
 
-
+  /////// Main build
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -85,7 +86,9 @@ class _SignUpPageState extends State<SignUpPage> {
       ),
     );
   }
+////////////////////////
 
+/////First page
 
   Widget _buildPersonalInfoPage() {
     return Padding(
@@ -176,7 +179,9 @@ class _SignUpPageState extends State<SignUpPage> {
       ), 
     );
   }
+//////////////////
 
+///// Necessary Widgets
   Widget _buildTextField({
     required String label,
     required String hint,
@@ -221,7 +226,7 @@ class _SignUpPageState extends State<SignUpPage> {
     );
   }
 
-
+/////////////PAGE 2
 Widget _buildAccountInfoPage() {
   final _formKey2 = GlobalKey<FormState>();
 
@@ -339,6 +344,7 @@ Widget _buildAccountInfoPage() {
   );
 }
 
+/////////////PAGE 3
 Widget _buildSecurityInfoPage() {
   final _formKey3 = GlobalKey<FormState>();
   final TextEditingController _passwordController = TextEditingController();
@@ -480,7 +486,7 @@ Widget _buildSecurityInfoPage() {
   );
 }
 
-
+////Submit function
 void _submitSignUp() async {
   File? profileImage = _signUpData.profileImage;
 
@@ -512,16 +518,62 @@ void _submitSignUp() async {
     }
 }
 
-  Future<void> _pickImage() async {
-    final picker = ImagePicker();
-    final picked = await picker.pickImage(source: ImageSource.gallery);
-    if (picked != null) {
-      setState(() {
-        _profileImage = File(picked.path);
-        _signUpData.profileImage = _profileImage;
-      });
+Future<void> _pickImage() async {
+  final picker = ImagePicker();
+
+  // Ask user to choose camera or gallery
+  final source = await showModalBottomSheet<ImageSource>(
+    context: context,
+    builder: (_) => SafeArea(
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            leading: const Icon(Icons.photo_library),
+            title: const Text('Gallery'),
+            onTap: () => Navigator.pop(context, ImageSource.gallery),
+          ),
+          ListTile(
+            leading: const Icon(Icons.camera_alt),
+            title: const Text('Camera'),
+            onTap: () => Navigator.pop(context, ImageSource.camera),
+          ),
+        ],
+      ),
+    ),
+  );
+
+  if (source == null) return;
+
+  // Request permissions
+  if (source == ImageSource.camera) {
+    final status = await Permission.camera.request();
+    if (!status.isGranted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Camera permission denied')),
+      );
+      return;
     }
-  }  
+  } else {
+    final status = await Permission.photos.request();
+    if (!status.isGranted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Gallery access denied')),
+      );
+      return;
+    }
+  }
+
+  // Pick image
+  final pickedFile = await picker.pickImage(source: source);
+  if (pickedFile != null) {
+    _profileImage = File(pickedFile.path);
+    setState(() {
+      _signUpData.profileImage = _profileImage;
+    });
+  }
+}
+
 
   Future<String> _convertImageToBase64(File imageFile) async {
     final bytes = await imageFile.readAsBytes();
