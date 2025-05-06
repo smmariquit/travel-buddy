@@ -4,7 +4,7 @@ class AppUser {
   String? middleName;
   String lastName;
   String username;
-  //List<String> friendUIDs;
+  List<String>? friendUIDs;
   String? profileImageUrl;
   String? phoneNumber;
   bool isPrivate;
@@ -19,7 +19,7 @@ class AppUser {
     this.middleName,
     required this.lastName,
     required this.username,
-    //required this.friendUIDs,
+    this.friendUIDs,
     this.profileImageUrl,
     this.phoneNumber,
     required this.isPrivate,
@@ -42,6 +42,7 @@ class AppUser {
     List<String>? interests,
     List<String>? travelStyles,
     bool? isPrivate,
+    List<String>? friendUIDs
   }) {
     return AppUser(
       uid: uid ?? this.uid,
@@ -56,6 +57,7 @@ class AppUser {
       interests: interests ?? this.interests,
       travelStyles: travelStyles ?? this.travelStyles,
       isPrivate: isPrivate ?? this.isPrivate,
+      friendUIDs: friendUIDs ?? this.friendUIDs,
     );
   }
 
@@ -66,7 +68,7 @@ class AppUser {
       middleName: json['middleName'],
       lastName: json['lastName'],
       username: json['username'],
-      //friendUIDs: List<String>.from(json['friendUIDs'] ?? []),
+      friendUIDs: List<String>.from(json['friendUIDs'] ?? []),
       profileImageUrl: json['profileImageUrl'],
       phoneNumber: json['phoneNumber'],
       isPrivate: json['isPrivate'] ?? false,
@@ -84,7 +86,7 @@ class AppUser {
       'middleName': middleName,
       'lastName': lastName,
       'username': username,
-      //'friendUIDs': friendUIDs,
+      'friendUIDs': friendUIDs,
       'profileImageUrl': profileImageUrl,
       'phoneNumber': phoneNumber,
       'isPrivate': isPrivate,
