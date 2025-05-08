@@ -1,19 +1,19 @@
 import 'package:flutter/material.dart';
 import 'package:travel_app/models/user_model.dart';
-import 'package:travel_app/screens/signin_page.dart';
+import 'package:travel_app/screens/auth/signin_page.dart';
 import 'package:travel_app/providers/user_provider.dart';
 import 'package:provider/provider.dart';
 import 'package:travel_app/providers/user_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:travel_app/providers/travel_plans_provider.dart';
 
-class TripDetailsPage extends StatefulWidget {
+class TravelDetailsPage extends StatefulWidget {
   
   @override
-  _TripDetailsPageState createState() => _TripDetailsPageState();
+  _TravelDetailsPageState createState() => _TravelDetailsPageState();
 }
 
-class _TripDetailsPageState extends State<TripDetailsPage> {
+class _TravelDetailsPageState extends State<TravelDetailsPage> {
     
   final Color primaryColor = const Color(0xFF004225);
   final Color accentColor = const Color(0xFFb7fdfe);

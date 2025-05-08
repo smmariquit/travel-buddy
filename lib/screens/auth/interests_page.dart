@@ -1,7 +1,7 @@
 // Interests
 // reference indian guy https://www.youtube.com/watch?v=yB_ysDytI9k
 import 'package:flutter/material.dart';
-import 'package:travel_app/screens/travel_styles_page.dart';
+import 'package:travel_app/screens/auth/travel_styles_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
