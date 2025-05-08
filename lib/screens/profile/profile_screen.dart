@@ -12,9 +12,6 @@ import 'package:travel_app/utils/image_converter.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
 
-
-
-
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
 

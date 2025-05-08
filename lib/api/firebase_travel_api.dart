@@ -160,7 +160,7 @@ class FirebaseTravelAPI {
   /// Returns:
   /// - A [String] representing the encoded QR value (usually just the ID or link).
   String generateQRCodeValue(String id) {
-    return "travelplan:$id"; // Could be just the ID, or a deep link format
+    return id; // Could be just the ID, or a deep link format
   }
 }
 
