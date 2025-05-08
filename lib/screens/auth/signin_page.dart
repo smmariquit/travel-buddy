@@ -244,17 +244,20 @@ Widget build(BuildContext context) {
         final authProvider = context.read<AppUserProvider>();
         final travelProvider = context.read<TravelTrackerProvider>();
 
-        // Attempt to sign in
+        // Sign out first to clear any cached credentials
+        await authProvider.signOutGoogle(); // You'll need to implement this method
+
+        // Now attempt to sign in with Google
         String? result = await authProvider.signInWithGoogle();
 
         if (result == null) {
           // Successful sign-in, navigate to the next page
           travelProvider.setUser(authProvider.uid);
 
-          // Navigate to the next page (e.g., home or profile)
+          // Navigate to the next page
           Navigator.pushReplacement(
             context,
-            MaterialPageRoute(builder: (context) => MainPage()), // Replace `HomePage()` with the actual page
+            MaterialPageRoute(builder: (context) => MainPage()),
           );
         } else {
           // If sign-in fails, show error message
@@ -262,7 +265,7 @@ Widget build(BuildContext context) {
             SnackBar(content: Text(result)),
           );
         }
-      },
+      }
     ),
   ),
 );

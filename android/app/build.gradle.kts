@@ -10,7 +10,7 @@ plugins {
 }
 
 android {
-    namespace = "com.example.travel_app"
+    namespace = "com.travel.buddy"
     compileSdk = 35
     ndkVersion = "27.0.12077973"
 
@@ -25,7 +25,7 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.travel_app"
+        applicationId = "com.travel.buddy"
         minSdk = 23
         targetSdk = flutter.targetSdkVersion
         versionCode = flutter.versionCode
@@ -39,6 +39,7 @@ android {
     }
 
     dependencies {
+
         coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.0.4")
 
         implementation("org.jetbrains.kotlin:kotlin-stdlib-jdk7:$kotlin_version")

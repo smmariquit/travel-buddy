@@ -6,6 +6,8 @@ import 'dart:io';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:flutter/foundation.dart';
 import 'dart:convert';
+import 'package:google_sign_in/google_sign_in.dart';
+
 
 
 Stream<QuerySnapshot>? _userStream;
@@ -80,56 +82,57 @@ class AppUserProvider with ChangeNotifier {
   }
 
   Future<String?> signUp(
-    String firstName,
-    String lastName,
-    String email,
-    String password,
-    String? middleName,
-    String? username,
-    String? phoneNumber,
-    String? base64Image,
-  ) async {
-    // Check if username already exists
-    final existing = await FirebaseFirestore.instance
-        .collection('appUsers')
-        .where('username', isEqualTo: username)
-        .get();
+  String firstName,
+  String lastName,
+  String email,
+  String password,
+  String? middleName,
+  String? username,
+  String? phoneNumber,
+  String imageUrl, // changed from base64Image to imageUrl
+) async {
+  // Check if username already exists
+  final existing = await FirebaseFirestore.instance
+      .collection('appUsers')
+      .where('username', isEqualTo: username)
+      .get();
 
-    if (existing.docs.isNotEmpty) {
-      return "Username already taken";
-    }
-
-    // Create Firebase account
-    String? message = await authService.signUp(email, password);
-    User? user = _auth.currentUser; 
-
-    if (user != null) {
-      _uid = user.uid;
-
-      // Store user data in Firestore
-      await FirebaseFirestore.instance.collection('appUsers').doc(user.uid).set({
-        'uid': user.uid,
-        'firstName': firstName,
-        'middleName': middleName,
-        'lastName': lastName,
-        'username': username,
-        'phoneNumber': phoneNumber,
-        'isPrivate': false,
-        'email': email,
-        'profileImageUrl': base64Image ?? '',
-        'createdAt': Timestamp.now(),
-      });
-
-      fetchUserForCurrentUser();
-    }
-
-    return message;
+  if (existing.docs.isNotEmpty) {
+    return "Username already taken";
   }
 
+  // Get current user (already created before this function is called)
+  User? user = _auth.currentUser;
+
+  if (user != null) {
+    _uid = user.uid;
+
+    // Store user data in Firestore
+    await FirebaseFirestore.instance.collection('appUsers').doc(user.uid).set({
+      'uid': user.uid,
+      'firstName': firstName,
+      'middleName': middleName,
+      'lastName': lastName,
+      'username': username,
+      'phoneNumber': phoneNumber,
+      'isPrivate': false,
+      'email': email,
+      'profileImageUrl': imageUrl,
+      'createdAt': Timestamp.now(),
+    });
+
+    fetchUserForCurrentUser();
+  }
+
+  return null; 
+}
 
 
   signInWithGoogle() async {
   try {
+    // Clear previous sign-in
+    await signOutGoogle();
+    
     // Attempt to sign in with Google
     await authService.signInWithGoogle();
     
@@ -139,35 +142,75 @@ class AppUserProvider with ChangeNotifier {
     if (user != null) {
       _uid = user.uid;
 
-      final userDoc = FirebaseFirestore.instance.collection('users').doc(user.uid);
+      // Get first and last name from display name
+      String firstName = '';
+      String lastName = '';
+      
+      if (user.displayName != null) {
+        List<String> nameParts = user.displayName!.split(' ');
+        firstName = nameParts.first;
+        lastName = nameParts.length > 1 ? nameParts.sublist(1).join(' ') : '';
+      }
+
+      // Check if user exists in users collection
+      final userDoc = FirebaseFirestore.instance.collection('appUsers').doc(user.uid);
       final docSnapshot = await userDoc.get();
 
       // If user document does not exist, create one
       if (!docSnapshot.exists) {
         await userDoc.set({
-          'firstName': user.displayName?.split(' ').first ?? '',
-          'lastName': user.displayName!.split(' ').length > 1
-              ? user.displayName!.split(' ').sublist(1).join(' ')
-              : '',
+          'firstName': firstName,
+          'lastName': lastName,
           'email': user.email,
           'createdAt': Timestamp.now(),
           'uid': user.uid,
+          'username': user.email?.split('@').first ?? '', // Create a simple username
+        });
+        
+        // Also create entry in appUsers collection for consistency
+        await FirebaseFirestore.instance.collection('appUsers').doc(user.uid).set({
+          'uid': user.uid,
+          'firstName': firstName,
+          'middleName': null,
+          'lastName': lastName,
+          'username': user.email?.split('@').first ?? '',
+          'phoneNumber': user.phoneNumber,
+          'isPrivate': false,
+          'email': user.email,
         });
       }
-      loadUserStream(user.uid);
-    }
 
+      notifyListeners();
+      return null; // Success (no error message)
+    } else {
+      return "Google sign-in failed";
+    }
+  } catch (e) {
+    print("Error during Google sign-in: ${e.toString()}");
+    return e.toString(); // Return error message
+  }
+}
+
+  Future<void> signOutGoogle() async {
+  try {
+    // Sign out from Firebase
+    await authService.signOut();
+    
+    // Sign out from Google
+    final GoogleSignIn googleSignIn = GoogleSignIn();
+    await googleSignIn.signOut();
+    
+    // Clear the user ID
+    _uid = null;
     notifyListeners();
   } catch (e) {
-    print("Error during sign-in: ${e.toString()}");
-    // Optionally notify listeners about the error, or return the error message.
-    notifyListeners();
+    print('Error signing out from Google: $e');
   }
 }
 
   void loadUserStream(String uid) {
     _userStream = FirebaseFirestore.instance
-        .collection('users')
+        .collection('appUsers')
         .where('uid', isEqualTo: uid)
         .snapshots();
     notifyListeners();
