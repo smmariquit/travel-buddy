@@ -275,14 +275,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 return;
                               }
 
-                              final picked = await ImagePicker().pickImage(source: source);
-                              if (picked != null) {
-                                final bytes = await picked.readAsBytes();
-                                final base64Image = base64Encode(bytes);
-
+                              final base64Image = await convertImageToBase64(source);
+                              if (base64Image != null) {
                                 final provider = context.read<AppUserProvider>();
                                 final uid = _currentUserData!.uid;
 
+                                // Upload the Base64 string to Firebase
                                 await provider.editProfileImageUrl(uid, base64Image);
                                 provider.loadUserStream(uid);
 

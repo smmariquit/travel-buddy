@@ -26,8 +26,8 @@ import 'package:travel_app/models/user_model.dart';
 import 'package:travel_app/providers/user_provider.dart';
 import 'package:travel_app/screens/interests_page%20copy.dart';
 import 'firebase_options.dart';
-import 'package:travel_app/screens/signin_page.dart';
-import 'package:travel_app/screens/signup_page.dart';
+import 'package:travel_app/screens/auth/signin_page.dart';
+import 'package:travel_app/screens/auth/signup_page.dart';
 
 // Provider for state management
 import 'package:provider/provider.dart';
@@ -35,7 +35,7 @@ import 'package:provider/provider.dart';
 // Import other necessary classes
 import 'providers/travel_plans_provider.dart';
 import 'providers/auth_provider.dart';
-import 'screens/main_page.dart';
+import 'screens/home/main_page.dart';
 
 // Design system - https://m3.material.io/
 import 'package:flutter/material.dart';
