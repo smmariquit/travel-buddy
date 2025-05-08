@@ -8,7 +8,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'dart:convert';
 import 'package:flutter/services.dart'; 
 import 'package:permission_handler/permission_handler.dart';
-
+import 'package:travel_app/utils/pick_profile_image.dart';
+import 'package:travel_app/api/firebase_auth_api.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:path_provider/path_provider.dart';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -116,13 +120,9 @@ class _SignUpPageState extends State<SignUpPage> {
                       onTap: _pickImage,
                       child: CircleAvatar(
                         radius: 50,
-                        backgroundColor: const Color(0xFF218463),
-                        backgroundImage: _profileImage != null
-                            ? FileImage(_profileImage!)
-                            : const AssetImage("assets/default_avatar.jpg") as ImageProvider,
-                        child: _profileImage == null
-                            ? const Icon(Icons.camera_alt, color: Colors.white, size: 30)
-                            : null,
+                        backgroundImage: _signUpData.profileImage != null
+                            ? FileImage(_signUpData.profileImage!)
+                            : const AssetImage('assets/default_avatar.jpg') as ImageProvider,
                       ),
                     ),
                     const SizedBox(height: 10),
@@ -485,95 +485,115 @@ Widget _buildSecurityInfoPage() {
 
 ////Submit function
 void _submitSignUp() async {
+  final FirebaseAuthAPI authService = FirebaseAuthAPI();
   File? profileImage = _signUpData.profileImage;
+  String imageUrl = '';
+  String uid = '';
 
-  String? base64Image;
-  if (profileImage != null && await profileImage.exists()) {
-    base64Image = await _convertImageToBase64(profileImage);
-  } else {
-    final byteData = await rootBundle.load('assets/default_avatar.jpg');
-    base64Image = base64Encode(byteData.buffer.asUint8List());
-  }
-
-
-    await context.read<AppUserProvider>().signUp(
-      _signUpData.firstName!,
-      _signUpData.lastName!,
+  try {
+    String? signUpMessage = await authService.signUp(
       _signUpData.email!,
       _signUpData.password!,
-      _signUpData.middleName,
-      _signUpData.username!,
-      _signUpData.phone,
-      base64Image,
     );
 
-    if (mounted) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (_) => const InterestsPage()),
+    if (signUpMessage != null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(signUpMessage)),
       );
+      return;
     }
+
+    User? user = FirebaseAuth.instance.currentUser;
+
+    if (user != null) {
+      uid = user.uid;
+
+      final storageRef = FirebaseStorage.instance.ref().child('profile_images/$uid.jpg');
+
+      if (profileImage != null && await profileImage.exists()) {
+        // If the user selected a profile image, upload it
+        await storageRef.putFile(profileImage);
+      } else {
+        // If no profile image is selected, upload a default avatar image
+        final byteData = await rootBundle.load('assets/default_avatar.jpg');
+        final tempDir = await getTemporaryDirectory();
+        final file = File('${tempDir.path}/default_avatar.jpg');
+        await file.writeAsBytes(byteData.buffer.asUint8List());
+        await storageRef.putFile(file);
+      }
+
+      imageUrl = await storageRef.getDownloadURL();
+
+      await context.read<AppUserProvider>().signUp(
+        _signUpData.firstName!,
+        _signUpData.lastName!,
+        _signUpData.email!,
+        _signUpData.password!,
+        _signUpData.middleName,
+        _signUpData.username!,
+        _signUpData.phone,
+        imageUrl, 
+      );
+
+      if (mounted) {
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const InterestsPage()),
+        );
+      }
+    }
+  } catch (e) {
+    print('Error during sign up or image upload: $e');
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Sign-up failed. Please try again.')),
+    );
+  }
 }
 
 Future<void> _pickImage() async {
-  final picker = ImagePicker();
+    final picker = ImagePicker();
+    final source = await _showImageSourcePicker();
+    if (source == null) return;
 
-  // Ask user to choose camera or gallery
-  final source = await showModalBottomSheet<ImageSource>(
-    context: context,
-    builder: (_) => SafeArea(
-      child: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          ListTile(
-            leading: const Icon(Icons.photo_library),
-            title: const Text('Gallery'),
-            onTap: () => Navigator.pop(context, ImageSource.gallery),
-          ),
-          ListTile(
-            leading: const Icon(Icons.camera_alt),
-            title: const Text('Camera'),
-            onTap: () => Navigator.pop(context, ImageSource.camera),
-          ),
-        ],
+    final statusGranted = await _requestPermissions(source);
+    if (!statusGranted) return;
+
+    final pickedFile = await picker.pickImage(source: source);
+    if (pickedFile != null) {
+      setState(() {
+        _signUpData.profileImage = File(pickedFile.path);
+      });
+    }
+  }
+
+  Future<ImageSource?> _showImageSourcePicker() {
+    return showModalBottomSheet<ImageSource>(
+      context: context,
+      builder: (_) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(leading: const Icon(Icons.photo_library), title: const Text('Gallery'), onTap: () => Navigator.pop(context, ImageSource.gallery)),
+            ListTile(leading: const Icon(Icons.camera_alt), title: const Text('Camera'), onTap: () => Navigator.pop(context, ImageSource.camera)),
+          ],
+        ),
       ),
-    ),
-  );
+    );
+  }
 
-  if (source == null) return;
-
-  // Request permissions
-  if (source == ImageSource.camera) {
-    final status = await Permission.camera.request();
-    if (!status.isGranted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Camera permission denied')),
-      );
-      return;
+  Future<bool> _requestPermissions(ImageSource source) async {
+    PermissionStatus status;
+    if (source == ImageSource.camera) {
+      status = await Permission.camera.request();
+    } else {
+      status = await Permission.photos.request();
     }
-  } else {
-    final status = await Permission.photos.request();
+
     if (!status.isGranted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Gallery access denied')),
-      );
-      return;
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Permission denied')));
+      return false;
     }
+    return true;
   }
 
-  // Pick image
-  final pickedFile = await picker.pickImage(source: source);
-  if (pickedFile != null) {
-    _profileImage = File(pickedFile.path);
-    setState(() {
-      _signUpData.profileImage = _profileImage;
-    });
-  }
-}
-
-
-  Future<String> _convertImageToBase64(File imageFile) async {
-    final bytes = await imageFile.readAsBytes();
-    return base64Encode(bytes);
-  }
 }

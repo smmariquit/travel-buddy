@@ -5,13 +5,10 @@ import 'package:qr_flutter/qr_flutter.dart';
 import 'package:travel_app/models/travel_plan_model.dart';
 import 'package:travel_app/api/firebase_travel_api.dart';
 import 'package:google_maps_webservice/places.dart';
-import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'dart:async';
-import 'package:travel_app/utils/responsive_layout.dart';
 import 'package:travel_app/screens/add_travel/scan_qr_page.dart';
 import 'package:travel_app/utils/constants.dart';
-
 
 
 class AddTravelPlanPage extends StatefulWidget {

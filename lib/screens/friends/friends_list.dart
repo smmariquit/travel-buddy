@@ -4,7 +4,6 @@ import 'package:travel_app/providers/travel_plans_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:travel_app/widgets/bottom_navigation_bar.dart';
 import '../auth/signin_page.dart';
-import '../../providers/auth_provider.dart';
 import 'package:travel_app/screens/auth/interests_page.dart';
 import 'package:travel_app/providers/user_provider.dart';
 

@@ -34,7 +34,6 @@ import 'package:provider/provider.dart';
 
 // Import other necessary classes
 import 'providers/travel_plans_provider.dart';
-import 'providers/auth_provider.dart';
 import 'screens/home/main_page.dart';
 
 // Design system - https://m3.material.io/
