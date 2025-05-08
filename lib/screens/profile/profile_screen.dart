@@ -9,6 +9,9 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:travel_app/utils/responsive_layout.dart';
 import 'package:travel_app/utils/image_converter.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+import 'dart:io';
+
 
 
 
@@ -227,10 +230,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           child: CircleAvatar(
                             radius: 40,
                             backgroundColor: Colors.grey[300],
+                            
                             backgroundImage: _currentUserData!.profileImageUrl != null &&
-                                    _currentUserData!.profileImageUrl!.isNotEmpty
-                                ? MemoryImage(base64Decode(_currentUserData!.profileImageUrl!))
-                                : null,
+                                _currentUserData!.profileImageUrl!.isNotEmpty
+                            ? NetworkImage(_currentUserData!.profileImageUrl!) as ImageProvider
+                            : null,
+
                             child: _currentUserData!.profileImageUrl == null ||
                                     _currentUserData!.profileImageUrl!.isEmpty
                                 ? Icon(Icons.person, size: 50, color: Colors.white)
@@ -241,58 +246,70 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           bottom: 0,
                           right: 4,
                           child: GestureDetector(
-                            onTap: () async {
-                              final source = await showModalBottomSheet<ImageSource>(
-                                context: context,
-                                builder: (context) => SafeArea(
-                                  child: Column(
-                                    mainAxisSize: MainAxisSize.min,
-                                    children: [
-                                      ListTile(
-                                        leading: const Icon(Icons.camera_alt),
-                                        title: const Text('Take a photo'),
-                                        onTap: () => Navigator.pop(context, ImageSource.camera),
-                                      ),
-                                      ListTile(
-                                        leading: const Icon(Icons.photo_library),
-                                        title: const Text('Choose from gallery'),
-                                        onTap: () => Navigator.pop(context, ImageSource.gallery),
-                                      ),
-                                    ],
-                                  ),
+                          onTap: () async {
+                            final source = await showModalBottomSheet<ImageSource>(
+                              context: context,
+                              builder: (context) => SafeArea(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    ListTile(
+                                      leading: const Icon(Icons.camera_alt),
+                                      title: const Text('Take a photo'),
+                                      onTap: () => Navigator.pop(context, ImageSource.camera),
+                                    ),
+                                    ListTile(
+                                      leading: const Icon(Icons.photo_library),
+                                      title: const Text('Choose from gallery'),
+                                      onTap: () => Navigator.pop(context, ImageSource.gallery),
+                                    ),
+                                  ],
                                 ),
+                              ),
+                            );
+
+                            if (source == null) return;
+
+                            final permission = source == ImageSource.camera ? Permission.camera : Permission.photos;
+                            final status = await permission.request();
+
+                            if (!status.isGranted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('${permission.toString().split('.').last} permission denied')),
                               );
+                              return;
+                            }
 
-                              if (source == null) return;
+                            final picker = ImagePicker();
+                            final pickedFile = await picker.pickImage(source: source);
+                            if (pickedFile == null) return;
 
-                              final permission = source == ImageSource.camera ? Permission.camera : Permission.photos;
-                              final status = await permission.request();
+                            final uid = _currentUserData!.uid;
+                            final file = File(pickedFile.path);
+                            final storageRef = FirebaseStorage.instance.ref().child('profile_images/$uid.jpg');
 
-                              if (!status.isGranted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(content: Text('${permission.toString().split('.').last} permission denied')),
-                                );
-                                return;
+                            try {
+                              await storageRef.putFile(file);
+                              final imageUrl = await storageRef.getDownloadURL();
+
+                              await FirebaseFirestore.instance.collection('appUsers').doc(uid).update({
+                                'profileImageUrl': imageUrl,
+                              });
+
+                              final doc = await FirebaseFirestore.instance.collection('appUsers').doc(uid).get();
+                              if (doc.exists) {
+                                final updatedUser = AppUser.fromJson(doc.data()!);
+                                setState(() {
+                                  _currentUserData = updatedUser;
+                                });
                               }
-
-                              final base64Image = await convertImageToBase64(source);
-                              if (base64Image != null) {
-                                final provider = context.read<AppUserProvider>();
-                                final uid = _currentUserData!.uid;
-
-                                // Upload the Base64 string to Firebase
-                                await provider.editProfileImageUrl(uid, base64Image);
-                                provider.loadUserStream(uid);
-
-                                final doc = await FirebaseFirestore.instance.collection('appUsers').doc(uid).get();
-                                if (doc.exists) {
-                                  final updatedUser = AppUser.fromJson(doc.data()!);
-                                  setState(() {
-                                    _currentUserData = updatedUser;
-                                  });
-                                }
-                              }
-                            },
+                            } catch (e) {
+                              print('Upload failed: $e');
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Failed to upload image')),
+                              );
+                            }
+                          },
 
                             child: CircleAvatar(
                               radius: 14,

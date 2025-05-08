@@ -44,7 +44,10 @@ import 'package:flutter/material.dart';
 /// This function initializes Firebase and sets up the `MultiProvider` for state management.
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await Firebase.initializeApp(
+    name: 'myApp',
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   runApp(
     MultiProvider(
       providers: [
