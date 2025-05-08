@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:travel_app/screens/main_page.dart';
-import 'package:travel_app/screens/find_similar_people.dart';
-import 'package:travel_app/screens/profile_screen.dart';
+import 'package:travel_app/screens/home/main_page.dart';
+import 'package:travel_app/screens/friends/find_similar_people.dart';
+import 'package:travel_app/screens/profile/profile_screen.dart';
 
 class BottomNavBar extends StatelessWidget{
   BottomNavBar({

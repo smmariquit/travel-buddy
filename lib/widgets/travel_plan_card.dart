@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:google_maps_webservice/places.dart';
 import '../models/travel_plan_model.dart';
-import '../screens/trip_details.dart';
+import '../screens/add_travel/trip_details.dart';
 
 class TravelPlanCard extends StatelessWidget {
   final String uid;

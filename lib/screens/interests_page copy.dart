@@ -1,7 +1,7 @@
 // Interests
 // reference indian guy https://www.youtube.com/watch?v=yB_ysDytI9k
 import 'package:flutter/material.dart';
-import 'package:travel_app/screens/travel_styles_page.dart';
+import 'package:travel_app/screens/auth/travel_styles_page.dart';
 
 class InterestsPage extends StatefulWidget {
   const InterestsPage({super.key});
