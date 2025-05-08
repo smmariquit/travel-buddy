@@ -7,9 +7,9 @@
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:594361835820:android:3a7a1f67163c6dfe71cc89",
+        "mobilesdk_app_id": "1:594361835820:android:0f42dccbf361908871cc89",
         "android_client_info": {
-          "package_name": "com.example.travel_app"
+          "package_name": "com.travel.buddy"
         }
       },
       "oauth_client": [
@@ -29,6 +29,13 @@
             {
               "client_id": "594361835820-b6ee3vr14e0nuh70aoi6dvn48ge2vkej.apps.googleusercontent.com",
               "client_type": 3
+            },
+            {
+              "client_id": "594361835820-6b113iki8j2ruqd5cblc9n88mqa5qnti.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.travelApp"
+              }
             }
           ]
         }
