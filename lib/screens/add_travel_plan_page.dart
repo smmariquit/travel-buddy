@@ -8,6 +8,7 @@ import 'package:google_maps_webservice/places.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'dart:async';
+import 'package:travel_app/screens/responsive_layout.dart';
 
 
 class AddTravelPlanPage extends StatefulWidget {
@@ -63,68 +64,74 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
 
   Widget build(BuildContext context) {
     return Scaffold(
+      resizeToAvoidBottomInset: true,
       backgroundColor: backgroundColor,
       appBar: AppBar(
         backgroundColor: primaryColor,
         title: Text('Create New Trip', style: TextStyle(color: backgroundColor)),
         centerTitle: true,
       ),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-        child: Form(
-          key: _formKey,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeader('Trip Info'),
-              _buildTextField('Trip Name', _nameController, (value) => value!.isEmpty ? 'Enter a name' : null, onSaved: (v) => _name = v!),
-              
-              // Location TextField with Auto-Suggestion and Map Picker
-              Row(
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+            child: Form(
+              key: _formKey,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: _handleLocationAutocomplete,
-                      child: _buildLocationFieldWithAutocomplete(),
+                  _buildHeader('Trip Info'),
+                  _buildTextField('Trip Name', _nameController, (value) => value!.isEmpty ? 'Enter a name' : null, onSaved: (v) => _name = v!),
+                  
+                  // Location TextField with Auto-Suggestion and Map Picker
+                  Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          onTap: _handleLocationAutocomplete,
+                          child: _buildLocationFieldWithAutocomplete(),
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      IconButton(
+                        icon: Icon(Icons.map, color: primaryColor),
+                        onPressed: _openMapPicker,
+                      ),
+                    ],
+                  ),
+
+
+                  Row(
+                    children: [
+                      Expanded(child: _buildDateField('Start Date', _startDateController, true)),
+                      const SizedBox(width: 16),
+                      Expanded(child: _buildDateField('End Date', _endDateController, false)),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+                  _buildHeader('Additional Info'),
+                  _buildTextField('Flight Details', _flightController, null, onSaved: (v) => _flightDetails = v),
+                  _buildTextField('Accommodation', _accommodationController, null, onSaved: (v) => _accommodation = v),
+                  _buildTextField('Notes', _notesController, null, maxLines: 3, onSaved: (v) => _notes = v),
+                  const SizedBox(height: 20),
+                  Center(
+                    child: ElevatedButton(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: primaryColor,
+                        foregroundColor: backgroundColor,
+                        padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                      ),
+                      onPressed: _submitForm,
+                      child: const Text("Save & Continue"),
                     ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton(
-                    icon: Icon(Icons.map, color: primaryColor),
-                    onPressed: _openMapPicker,
-                  ),
+                  )
                 ],
               ),
-
-
-              Row(
-                children: [
-                  Expanded(child: _buildDateField('Start Date', _startDateController, true)),
-                  const SizedBox(width: 16),
-                  Expanded(child: _buildDateField('End Date', _endDateController, false)),
-                ],
-              ),
-              const SizedBox(height: 16),
-              _buildHeader('Additional Info'),
-              _buildTextField('Flight Details', _flightController, null, onSaved: (v) => _flightDetails = v),
-              _buildTextField('Accommodation', _accommodationController, null, onSaved: (v) => _accommodation = v),
-              _buildTextField('Notes', _notesController, null, maxLines: 3, onSaved: (v) => _notes = v),
-              const SizedBox(height: 20),
-              Center(
-                child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: primaryColor,
-                    foregroundColor: backgroundColor,
-                    padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 14),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                    textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
-                  ),
-                  onPressed: _submitForm,
-                  child: const Text("Save & Continue"),
-                ),
-              )
-            ],
-          ),
+            ),
+          ), 
+        
         ),
       ),
     );
