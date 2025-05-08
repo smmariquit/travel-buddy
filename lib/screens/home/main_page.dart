@@ -3,15 +3,15 @@ import 'package:provider/provider.dart';
 import 'package:travel_app/models/travel_plan_model.dart';
 import 'package:travel_app/providers/travel_plans_provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:travel_app/screens/find_similar_people.dart';
-import 'package:travel_app/screens/profile_screen.dart';
+import 'package:travel_app/screens/friends/find_similar_people.dart';
+import 'package:travel_app/screens/profile/profile_screen.dart';
 import 'package:travel_app/widgets/bottom_navigation_bar.dart';
 import 'package:travel_app/widgets/travel_plan_card.dart';
-import 'signin_page.dart';
+import '../auth/signin_page.dart';
 import 'package:travel_app/providers/user_provider.dart';
-import 'package:travel_app/screens/interests_page.dart';
-import 'package:travel_app/screens/notifications.dart';
-import 'add_travel_plan_page.dart';
+import 'package:travel_app/screens/auth/interests_page.dart';
+import 'package:travel_app/screens/home/notifications.dart';
+import '../add_travel/add_travel_plan_page.dart';
 
 final NUM_PLANS = 5;
 

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:travel_app/screens/interests_page.dart';
+import 'package:travel_app/screens/auth/interests_page.dart';
 import 'package:travel_app/providers/user_provider.dart';
 import 'dart:io';
 import 'package:image_picker/image_picker.dart';

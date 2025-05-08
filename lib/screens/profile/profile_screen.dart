@@ -7,7 +7,8 @@ import 'dart:convert';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:travel_app/screens/responsive_layout.dart';
+import 'package:travel_app/utils/responsive_layout.dart';
+import 'package:travel_app/utils/image_converter.dart';
 
 
 

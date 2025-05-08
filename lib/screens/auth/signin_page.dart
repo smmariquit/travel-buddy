@@ -2,10 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import 'package:travel_app/providers/user_provider.dart';
-import 'package:travel_app/screens/friends_list.dart';
+import 'package:travel_app/screens/friends/friends_list.dart';
 import 'signup_page.dart';
 import 'package:travel_app/providers/travel_plans_provider.dart';
-import 'package:travel_app/screens/main_page.dart';
+import 'package:travel_app/screens/home/main_page.dart';
 
 class SignInPage extends StatefulWidget {
   const SignInPage({super.key});

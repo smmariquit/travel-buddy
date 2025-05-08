@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/travel_plan_model.dart';
+import '../../models/travel_plan_model.dart';
 
 class TripDetails extends StatefulWidget {
   final Travel travel;

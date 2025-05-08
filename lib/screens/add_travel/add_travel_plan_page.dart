@@ -8,7 +8,7 @@ import 'package:google_maps_webservice/places.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'dart:async';
-import 'package:travel_app/screens/responsive_layout.dart';
+import 'package:travel_app/utils/responsive_layout.dart';
 
 
 class AddTravelPlanPage extends StatefulWidget {
