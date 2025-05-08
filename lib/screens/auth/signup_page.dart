@@ -96,7 +96,8 @@ class _SignUpPageState extends State<SignUpPage> {
         ),
         child: Form(
           key: _formKey,
-          child: Column(
+          child: SingleChildScrollView(
+            child: Column(
             children: [
               const Text(
                 "Step 1 of 3",
@@ -153,7 +154,7 @@ class _SignUpPageState extends State<SignUpPage> {
                 validator: (val) =>
                     val == null || val.isEmpty ? "Required" : null,
               ),
-              const Spacer(),
+              const SizedBox(height: 140),
               SizedBox(
                 width: double.infinity,
                 height: 55,
@@ -169,6 +170,7 @@ class _SignUpPageState extends State<SignUpPage> {
                 ),
               )
             ],
+          ),
           ),
         ),
       ), 
