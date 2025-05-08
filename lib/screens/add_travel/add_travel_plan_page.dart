@@ -9,6 +9,9 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'dart:async';
 import 'package:travel_app/utils/responsive_layout.dart';
+import 'package:travel_app/screens/add_travel/scan_qr_page.dart';
+import 'package:travel_app/utils/constants.dart';
+
 
 
 class AddTravelPlanPage extends StatefulWidget {
@@ -39,14 +42,7 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
   final _startDateController = TextEditingController();
   final _endDateController = TextEditingController();
 
-  final Color primaryColor = const Color(0xFF004225);
-  final Color accentColor = const Color(0xFFb7fdfe);
-  final Color backgroundColor = const Color(0xFFFFFFFF);
-  final Color errorColor = const Color(0xFFe06666);
-  final Color highlightColor = const Color(0xFFf6b26b);
-  final Color textColor = const Color(0xFF000000);
-
-  final places = GoogleMapsPlaces(apiKey: "AIzaSyDEBqD6XjeQ23H-XB0LOkcL73oy931VAYE");
+  final places = GoogleMapsPlaces(apiKey: apiKey);
 
 
   @override
@@ -80,7 +76,14 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  _buildHeader('Trip Info'),
+                  _buildHeader(
+                    'Trip Info',
+                    trailing: TextButton.icon(
+                      icon: Icon(Icons.qr_code_scanner, color: primaryColor),
+                      label: Text("or scan QR", style: TextStyle(color: primaryColor)),
+                      onPressed: _scanQRCode,
+                    ),
+                  ),
                   _buildTextField('Trip Name', _nameController, (value) => value!.isEmpty ? 'Enter a name' : null, onSaved: (v) => _name = v!),
                   
                   // Location TextField with Auto-Suggestion and Map Picker
@@ -137,12 +140,19 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
     );
   }
 
-  Widget _buildHeader(String text) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 12.0),
-      child: Text(text, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: primaryColor)),
-    );
-  }
+  Widget _buildHeader(String text, {Widget? trailing}) {
+  return Padding(
+    padding: const EdgeInsets.symmetric(vertical: 12.0),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text(text, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: primaryColor)),
+        if (trailing != null) trailing,
+      ],
+    ),
+  );
+}
+
 
   Widget _buildTextField(String label, TextEditingController controller, String? Function(String?)? validator,
       {int maxLines = 1, void Function(String?)? onSaved}) {
@@ -450,4 +460,19 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
   );
 }
 
+void _scanQRCode() async {
+  final result = await Navigator.of(context).push(MaterialPageRoute(
+    builder: (context) => QRScanPage(),
+  ));
+
+  if (result != null && result is String) {
+    final currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser != null) {
+      final message = await _firebaseTravelAPI.shareTravelWithUser(result, currentUser.uid);
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    }
+  }
 }
+
+}
+
