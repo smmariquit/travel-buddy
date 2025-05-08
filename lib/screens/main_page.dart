@@ -29,8 +29,10 @@ class _MainPageState extends State<MainPage> {
   Widget build(BuildContext context) {
     final newTravelPlan = ModalRoute.of(context)?.settings.arguments as Travel?;
     if (newTravelPlan != null) {
-      setState(() {
-        _travelPlans.add(newTravelPlan); // Add the new travel plan to the list
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        setState(() {
+          _travelPlans.add(newTravelPlan);
+        });
       });
     }
 
@@ -40,8 +42,8 @@ class _MainPageState extends State<MainPage> {
       stream: userStream,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return Scaffold(
-            body: Center(child: Text("Error: ${snapshot.error}")),
+          return const Scaffold(
+            body: Center(child: Text("Something went wrong.")),
           );
         } else if (snapshot.connectionState == ConnectionState.waiting) {
           return const Scaffold(
@@ -55,134 +57,122 @@ class _MainPageState extends State<MainPage> {
         final travelProvider = Provider.of<TravelTrackerProvider>(context, listen: false);
         final userProvider = Provider.of<AppUserProvider>(context, listen: false);
 
-        // Load user data once
         travelProvider.setUser(user.uid);
         userProvider.fetchUserForCurrentUser();
 
         return Scaffold(
-          body: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 40.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // 👤 First name row
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Row(
-                      children: [
-                        const Icon(Icons.person, size: 28),
-                        const SizedBox(width: 8),
-                        Text(
-                          userProvider.firstName ?? 'Traveler', // safely handle null
-                          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 18),
-                        ),
-                      ],
-                    ),
-                    // Notification button 
-                    IconButton(
-                      icon: const Icon(Icons.notifications),
-                      onPressed: () {
-                        // Navigator.push(
-                        //   // context,
-                        //   // MaterialPageRoute(builder: (context) => const NotificationPage()),
-                        // );
-                      },
-                    ),
-                  ],
-                ),
+          resizeToAvoidBottomInset: true,
+          body: SafeArea(
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                    child: IntrinsicHeight(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const SizedBox(height: 20),
 
-                const SizedBox(height: 20),
+                          /// Greeting Row
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              Row(
+                                children: [
+                                  const Icon(Icons.person, size: 28),
+                                  const SizedBox(width: 8),
+                                  Text(
+                                    userProvider.firstName ?? 'Traveler',
+                                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 18),
+                                  ),
+                                ],
+                              ),
+                              IconButton(
+                                icon: const Icon(Icons.notifications),
+                                onPressed: () {},
+                              ),
+                            ],
+                          ),
 
-                // Header row
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Flexible(
-                      child: Text(
-                        'Up for a journey, ${userProvider.firstName}?',
-                        style: TextStyle(
-                          color: Color(0xFF1B1E28),
-                          fontSize: 35,
-                          fontFamily: 'SF UI Display',
-                          fontWeight: FontWeight.w600,
-                          height: 1.40,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                          const SizedBox(height: 20),
 
-                const SizedBox(height: 16),
+                          Text(
+                            'Up for a journey, ${userProvider.firstName ?? ''}?',
+                            style: const TextStyle(
+                              color: Color(0xFF1B1E28),
+                              fontSize: 28,
+                              fontWeight: FontWeight.w600,
+                              height: 1.4,
+                            ),
+                          ),
 
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    Flexible(
-                      child: Text(
-                        'Your Plans',
-                        textAlign: TextAlign.right,
-                        style: TextStyle(
-                          color: Color(0xFF1B1E28),
-                          fontSize: 14,
-                          // fontFamily: 'SF UI Display',
-                          fontWeight: FontWeight.w600,
-                          // height: 1.40,
-                        ),
-                      ),
-                    ),
-                    // "View All" Button
-                    TextButton(
-                      onPressed: () {
-                        // Navigate to another page 
-                      },
-                      child: const Text(
-                        'View All',
-                        style: TextStyle(
-                          color: Color(0xFFFF7029), // Orange color
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
+                          const SizedBox(height: 16),
 
-                // Featured box
-                SingleChildScrollView(
-                  scrollDirection: Axis.horizontal,
-                  child: Row(
-                    children: [
-                      FutureBuilder<List<Travel>>(
-                        future: travelProvider.getTravelPlans(),
-                        builder: (context, snapshot) {
-                          if (snapshot.connectionState == ConnectionState.waiting) {
-                            return const CircularProgressIndicator();
-                          } else if (snapshot.hasError) {
-                            return Text('Error: ${snapshot.error}');
-                          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                            return const Text('No travel plans available.');
-                          } else {
-                            return Row(
-                              children: snapshot.data!.map((travel) {
-                                return TravelPlanCard(
-                                  uid: travel.uid,
-                                  name: travel.name,
-                                  startDate: travel.startDate ?? DateTime.now(),
-                                  endDate: travel.endDate ?? DateTime.now(),
-                                  image: 'assets/sample_image.jpg', // Corrected image initialization
-                                  location: travel.location,
-                                  createdOn: travel.createdOn,
+                          /// "Your Plans" Row
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Your Plans',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                              TextButton(
+                                onPressed: () {},
+                                child: const Text(
+                                  'View All',
+                                  style: TextStyle(
+                                    color: Color(0xFFFF7029),
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+
+                          /// Horizontal scroll for Travel Plans
+                          FutureBuilder<List<Travel>>(
+                            future: travelProvider.getTravelPlans(),
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState == ConnectionState.waiting) {
+                                return const Center(child: CircularProgressIndicator());
+                              } else if (snapshot.hasError) {
+                                return Text('Error: ${snapshot.error}');
+                              } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                                return const Text('No travel plans available.');
+                              } else {
+                                return SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  child: Row(
+                                    children: snapshot.data!.map((travel) {
+                                      return TravelPlanCard(
+                                        uid: travel.uid,
+                                        name: travel.name,
+                                        startDate: travel.startDate ?? DateTime.now(),
+                                        endDate: travel.endDate ?? DateTime.now(),
+                                        image: 'assets/sample_image.jpg',
+                                        location: travel.location,
+                                        createdOn: travel.createdOn,
+                                      );
+                                    }).toList(),
+                                  ),
                                 );
-                              }).toList(),
-                            );
-                          }
-                        },
+                              }
+                            },
+                          ),
+
+                          const SizedBox(height: 32),
+                        ],
                       ),
-                    ],
+                    ),
                   ),
-                )
-              ],
+                );
+              },
             ),
           ),
           bottomNavigationBar: BottomNavBar(),
