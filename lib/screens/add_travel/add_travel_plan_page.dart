@@ -474,9 +474,26 @@ void _scanQRCode() async {
     if (currentUser != null) {
       final message = await _firebaseTravelAPI.shareTravelWithUser(result, currentUser.uid);
       ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+
+      // Fetch the travel data using the scanned travel ID 
+      final doc = await FirebaseFirestore.instance.collection('travel').doc(result).get();
+
+      if (doc.exists) {
+        final travel = Travel.fromJson(doc.data()!, doc.id);
+
+        // Navigate to TripDetails page
+        Navigator.of(context).push(MaterialPageRoute(
+          builder: (_) => TripDetails(travel: travel),
+        ));
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Travel plan not found.")),
+        );
+      }
     }
   }
 }
+
 
 }
 
