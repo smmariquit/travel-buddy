@@ -162,6 +162,27 @@ class FirebaseTravelAPI {
   String generateQRCodeValue(String id) {
     return id; // Could be just the ID, or a deep link format
   }
+
+  /// Updates the list of activities for a specific travel plan.
+///
+/// Parameters:
+/// - [travelId]: The ID of the travel document.
+/// - [activities]: A list of [Activity] objects to be saved.
+///
+/// Returns:
+/// - A [String] message indicating success or error.
+Future<String> updateActivities(String travelId, List<Activity> activities) async {
+  try {
+    final activityData = activities.map((a) => a.toJson()).toList();
+    await db.collection('travel').doc(travelId).update({
+      'activities': activityData,
+    });
+    return "Activities updated";
+  } on FirebaseException catch (e) {
+    return "Error updating activities: ${e.message}";
+  }
+}
+
 }
 
 

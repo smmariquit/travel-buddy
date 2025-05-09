@@ -1,38 +1,203 @@
+import 'dart:io';
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import '../../models/travel_plan_model.dart';
 
 class TripDetails extends StatefulWidget {
   final Travel travel;
 
-  TripDetails({
-    Key? super.key,
-    required this.travel,
-  });
+  TripDetails({Key? key, required this.travel}) : super(key: key);
 
   @override
   _TripDetailsState createState() => _TripDetailsState();
 }
 
-class _TripDetailsState extends State<TripDetails> {
-  final _activityTitleController = TextEditingController();
-  DateTime? _activityStartDate;
-  DateTime? _activityEndDate;
+class _TripDetailsState extends State<TripDetails> with SingleTickerProviderStateMixin {
+  File? _coverImage;
+  final picker = ImagePicker();
+  late TabController _tabController;
 
-  void _addActivity() {
-    if (_activityTitleController.text.isNotEmpty &&
-        _activityStartDate != null &&
-        _activityEndDate != null) {
-      setState(() {
-        widget.travel.activities?.add(Activity(
-          title: _activityTitleController.text,
-          startDate: _activityStartDate!,
-          endDate: _activityEndDate!,
-        ));
+  @override
+  void initState() {
+    super.initState();
+    _generateEmptyActivities();
+    _tabController = TabController(length: 2, vsync: this);
+    _tabController.addListener(() {
+      setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _tabController.dispose();
+    super.dispose();
+  }
+
+  void _generateEmptyActivities() {
+    if (widget.travel.activities == null || widget.travel.activities!.isEmpty) {
+      final days = widget.travel.endDate!.difference(widget.travel.startDate!).inDays + 1;
+      widget.travel.activities = List.generate(days, (i) {
+        final date = widget.travel.startDate!.add(Duration(days: i));
+        return Activity(
+          title: "Day ${i + 1} - ${date.toLocal().toString().split(' ')[0]}",
+          startDate: date,
+          checklist: [],
+          notes: '',
+          imageUrl: null,
+        );
       });
-      _activityTitleController.clear();
-      _activityStartDate = null;
-      _activityEndDate = null;
+      setState(() {}); // Refresh UI
     }
+  }
+
+  Future<void> _pickCoverImage() async {
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile != null) {
+      setState(() => _coverImage = File(pickedFile.path));
+    }
+  }
+
+  void _addChecklistItem(int index) {
+    final controller = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text("Add Checklist Item"),
+        content: TextField(controller: controller, decoration: InputDecoration(hintText: "Enter item")),
+        actions: [
+          TextButton(
+            onPressed: () {
+              if (controller.text.trim().isNotEmpty) {
+                setState(() => widget.travel.activities![index].checklist!.add(controller.text.trim()));
+              }
+              Navigator.pop(context);
+            },
+            child: Text("Add"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<void> _pickAndUploadImage(int index) async {
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+    if (pickedFile == null) return;
+
+    final file = File(pickedFile.path);
+    final filename = '${DateTime.now().millisecondsSinceEpoch}.jpg';
+    final ref = FirebaseStorage.instance.ref().child('itinerary_images/$filename');
+
+    try {
+      await ref.putFile(file);
+      final imageUrl = await ref.getDownloadURL();
+      setState(() => widget.travel.activities![index].imageUrl = imageUrl);
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Upload failed: $e")));
+    }
+  }
+
+  Widget buildItineraryCard(Activity activity, int index) {
+    return Card(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      color: Colors.white,
+      margin: EdgeInsets.symmetric(vertical: 10),
+      elevation: 4,
+      child: Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(activity.title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const SizedBox(height: 10),
+            if (activity.imageUrl != null)
+              ClipRRect(
+                borderRadius: BorderRadius.circular(12),
+                child: Image.network(activity.imageUrl!, height: 150, width: double.infinity, fit: BoxFit.cover),
+              ),
+            TextButton.icon(
+              onPressed: () => _pickAndUploadImage(index),
+              icon: Icon(Icons.upload, color: Colors.green.shade700),
+              label: Text('Upload Image', style: TextStyle(color: Colors.green.shade700)),
+            ),
+            const SizedBox(height: 10),
+            Text("Checklist:", style: TextStyle(fontWeight: FontWeight.bold)),
+            ...activity.checklist!.map((item) => Padding(
+              padding: const EdgeInsets.symmetric(vertical: 2.0),
+              child: Row(children: [
+                Icon(Icons.check_box_outline_blank, size: 16),
+                SizedBox(width: 8),
+                Expanded(child: Text(item)),
+              ]),
+            )),
+            TextButton.icon(
+              onPressed: () => _addChecklistItem(index),
+              icon: Icon(Icons.add, color: Colors.green.shade700),
+              label: Text("Add Checklist Item", style: TextStyle(color: Colors.green.shade700)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _addManualItinerary() async {
+    DateTime? selectedDate;
+    TextEditingController titleController = TextEditingController();
+
+    await showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text("Add Custom Itinerary"),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              controller: titleController,
+              decoration: InputDecoration(labelText: "Title"),
+            ),
+            SizedBox(height: 10),
+            ElevatedButton(
+              onPressed: () async {
+                final picked = await showDatePicker(
+                  context: context,
+                  initialDate: widget.travel.startDate ?? DateTime.now(),
+                  firstDate: DateTime(2000),
+                  lastDate: DateTime(2100),
+                );
+                if (picked != null) {
+                  selectedDate = picked;
+                }
+              },
+              child: Text("Pick Date"),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text("Cancel"),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (selectedDate != null && titleController.text.trim().isNotEmpty) {
+                setState(() {
+                  widget.travel.activities!.add(Activity(
+                    title: titleController.text.trim(),
+                    startDate: selectedDate!,
+                    checklist: [],
+                    notes: '',
+                  ));
+                });
+                Navigator.pop(context);
+              }
+            },
+            child: Text("Add"),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -40,107 +205,67 @@ class _TripDetailsState extends State<TripDetails> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.travel.name),
-        backgroundColor: Colors.green,
+        backgroundColor: Color(0xFF2E7D32),
+        bottom: TabBar(
+          controller: _tabController,
+          tabs: [Tab(text: 'Overview'), Tab(text: 'Itineraries')],
+        ),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              widget.travel.name,
-              style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'Destination: ${widget.travel.location}',
-              style: const TextStyle(fontSize: 18, color: Colors.grey),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'Start Date: ${widget.travel.startDate?.toLocal()}',
-              style: const TextStyle(fontSize: 16),
-            ),
-            const SizedBox(height: 10),
-            Text(
-              'End Date: ${widget.travel.endDate?.toLocal()}',
-              style: const TextStyle(fontSize: 16),
-            ),
-            const SizedBox(height: 20),
-            const Text(
-              'Itinerary',
-              style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 10),
-            Expanded(
-              child: ListView.builder(
-                itemCount: widget.travel.activities?.length ?? 0,
-                itemBuilder: (context, index) {
-                  final activity = widget.travel.activities![index];
-                  return ListTile(
-                    title: Text(activity.title),
-                    subtitle: Text(
-                        '${activity.startDate.toLocal()} - ${activity.endDate.toLocal()}'),
-                  );
-                },
-              ),
-            ),
-            const SizedBox(height: 20),
-            TextField(
-              controller: _activityTitleController,
-              decoration: const InputDecoration(labelText: 'Activity Title'),
-            ),
-            Row(
+      body: TabBarView(
+        controller: _tabController,
+        children: [
+          SingleChildScrollView(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Expanded(
-                  child: TextButton(
-                    onPressed: () async {
-                      final picked = await showDatePicker(
-                        context: context,
-                        initialDate: DateTime.now(),
-                        firstDate: DateTime(2023),
-                        lastDate: DateTime(2100),
-                      );
-                      if (picked != null) {
-                        setState(() {
-                          _activityStartDate = picked;
-                        });
-                      }
-                    },
-                    child: Text(_activityStartDate == null
-                        ? 'Select Start Date'
-                        : _activityStartDate!.toLocal().toString()),
-                  ),
-                ),
-                Expanded(
-                  child: TextButton(
-                    onPressed: () async {
-                      final picked = await showDatePicker(
-                        context: context,
-                        initialDate: DateTime.now(),
-                        firstDate: DateTime(2023),
-                        lastDate: DateTime(2100),
-                      );
-                      if (picked != null) {
-                        setState(() {
-                          _activityEndDate = picked;
-                        });
-                      }
-                    },
-                    child: Text(_activityEndDate == null
-                        ? 'Select End Date'
-                        : _activityEndDate!.toLocal().toString()),
+                Text('Destination: ${widget.travel.location}', style: TextStyle(fontSize: 18)),
+                SizedBox(height: 8),
+                Text('Start Date: ${widget.travel.startDate?.toLocal().toString().split(" ")[0]}'),
+                Text('End Date: ${widget.travel.endDate?.toLocal().toString().split(" ")[0]}'),
+                SizedBox(height: 16),
+                Text('Trip Cover Image', style: TextStyle(fontWeight: FontWeight.bold)),
+                GestureDetector(
+                  onTap: _pickCoverImage,
+                  child: Container(
+                    margin: EdgeInsets.only(top: 10),
+                    height: 180,
+                    width: double.infinity,
+                    decoration: BoxDecoration(
+                      color: Colors.grey[200],
+                      borderRadius: BorderRadius.circular(12),
+                      image: _coverImage != null
+                          ? DecorationImage(image: FileImage(_coverImage!), fit: BoxFit.cover)
+                          : null,
+                    ),
+                    child: _coverImage == null
+                        ? Center(child: Icon(Icons.camera_alt, color: Colors.grey[600]))
+                        : null,
                   ),
                 ),
               ],
             ),
-            ElevatedButton(
-              onPressed: _addActivity,
-              child: const Text('Add Activity'),
-            ),
-          ],
-        ),
+          ),
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: widget.travel.activities == null || widget.travel.activities!.isEmpty
+                ? Center(child: Text("No itineraries found."))
+                : ListView.builder(
+                    itemCount: widget.travel.activities!.length,
+                    itemBuilder: (context, index) =>
+                        buildItineraryCard(widget.travel.activities![index], index),
+                  ),
+          ),
+        ],
       ),
+      floatingActionButton: _tabController.index == 1
+          ? FloatingActionButton(
+              onPressed: _addManualItinerary,
+              backgroundColor: Colors.green.shade700,
+              child: Icon(Icons.add),
+              tooltip: 'Add Itinerary',
+            )
+          : null,
     );
   }
 }

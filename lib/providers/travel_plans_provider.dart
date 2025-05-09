@@ -158,6 +158,26 @@ class TravelTrackerProvider with ChangeNotifier {
     }
   }
 
+/// Updates the activities list of a travel plan.
+///
+/// Parameters:
+/// - [travelId]: The ID of the travel plan.
+/// - [activities]: A list of [Activity] to update.
+Future<void> updateActivities(String travelId, List<Activity> activities) async {
+  if (firebaseService == null) {
+    print("Firebase service is not initialized.");
+    return;
+  }
+
+  try {
+    await firebaseService!.updateActivities(travelId, activities);
+    notifyListeners();
+  } catch (e) {
+    print("Error updating activities: $e");
+  }
+}
+
+
   // Helper to clear the user context and reset stream
   void clearUser() {
     currentUserId = null;
