@@ -9,6 +9,8 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'dart:async';
 import 'package:travel_app/screens/add_travel/scan_qr_page.dart';
 import 'package:travel_app/utils/constants.dart';
+import 'package:travel_app/screens/add_travel/trip_details.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 
 class AddTravelPlanPage extends StatefulWidget {
@@ -182,13 +184,15 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
       ),
       onTap: () => _selectDate(context, isStart),
       validator: (value) {
-        if (value!.isEmpty) {
-          return 'Please select a date';
+        if (isStart && (value == null || value.isEmpty)) {
+          return 'Please select a start date';
         }
+        // No validation for end date
         return null;
       },
     );
   }
+
 
 
   void _selectDate(BuildContext context, bool isStartDate) async {
@@ -214,15 +218,6 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
 
   void _submitForm() async {
     if (_formKey.currentState!.validate()) {
-      // Check if both start and end dates are provided
-      if (_startDate == null || _endDate == null) {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content: Text("Please select both start and end dates", style: TextStyle(color: backgroundColor)),
-          backgroundColor: errorColor,
-        ));
-        return;
-      }
-
       // Check if the end date is before the start date
       if (_endDate!.isBefore(_startDate!)) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
@@ -297,12 +292,24 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
         actions: [
           TextButton(
             child: Text("Continue", style: TextStyle(color: primaryColor)),
-            onPressed: () {
-              Navigator.of(context).pop();
-              Navigator.of(context).push(MaterialPageRoute(
-                builder: (_) => Placeholder(), // Replace with TripDetailsPage
-              ));
-            },
+            onPressed: () async {
+              Navigator.of(context).pop(); // Close the QR dialog
+
+              // Fetch travel data from Firestore using the travelId
+              final doc = await FirebaseFirestore.instance.collection('travel').doc(travelId).get();
+
+              if (doc.exists) {
+                final travel = Travel.fromJson(doc.data()!, doc.id);
+
+                Navigator.of(context).push(MaterialPageRoute(
+                  builder: (_) => TripDetails(travel: travel),
+                ));
+              } else {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text("Travel plan not found.")),
+                );
+              }
+            }
           )
         ],
       ),

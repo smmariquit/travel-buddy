@@ -5,19 +5,34 @@ import 'package:latlong2/latlong.dart';
 class Activity {
   final String title;
   final DateTime startDate;
-  final DateTime endDate;
+  DateTime? endDate;
+  final String? place;
+  final String? time; // Can be stored as a formatted string like "10:00 AM"
+  final String? notes;
+  String? imageUrl; // Base64 or Firebase Storage URL
+  final List<String>? checklist;
 
   Activity({
     required this.title,
     required this.startDate,
-    required this.endDate,
+    this.endDate,
+    this.place,
+    this.time,
+    this.notes,
+    this.imageUrl,
+    this.checklist,
   });
 
   factory Activity.fromJson(Map<String, dynamic> json) {
     return Activity(
       title: json['title'],
       startDate: (json['startDate'] as Timestamp).toDate(),
-      endDate: (json['endDate'] as Timestamp).toDate(),
+      endDate: json['endDate'] != null ? (json['endDate'] as Timestamp).toDate() : null,
+      place: json['place'],
+      time: json['time'],
+      notes: json['notes'],
+      imageUrl: json['imageUrl'],
+      checklist: List<String>.from(json['checklist'] ?? []),
     );
   }
 
@@ -26,6 +41,11 @@ class Activity {
       'title': title,
       'startDate': startDate,
       'endDate': endDate,
+      'place': place,
+      'time': time,
+      'notes': notes,
+      'imageUrl': imageUrl,
+      'checklist': checklist,
     };
   }
 }
@@ -37,7 +57,7 @@ class Travel {
   DateTime? startDate;
   DateTime? endDate;
   final String location;
-  final LatLng? locationLatLng;
+  // final LatLng? locationLatLng;
   final String? flightDetails;
   final String? accommodation;
   final String? notes;
@@ -45,7 +65,7 @@ class Travel {
   final List<Map<String, dynamic>>? itinerary;
   final List<String>? sharedWith;
   final DateTime createdOn;
-  final List<Activity>? activities;
+  List<Activity>? activities;
 
   Travel({
     this.id,
@@ -54,7 +74,7 @@ class Travel {
     this.startDate,
     this.endDate,
     required this.location,
-    this.locationLatLng,
+    // this.locationLatLng,
     this.flightDetails,
     this.accommodation,
     this.notes,
@@ -73,12 +93,12 @@ class Travel {
       startDate: (json['startDate'] as Timestamp).toDate(),
       endDate: (json['endDate'] as Timestamp).toDate(),
       location: json['location'],
-      locationLatLng: json['locationLatLng'] != null
-          ? LatLng(
-              json['locationLatLng']['lat'],
-              json['locationLatLng']['lng'],
-            )
-          : null,
+      // locationLatLng: json['locationLatLng'] != null
+      //     ? LatLng(
+      //         json['locationLatLng']['lat'],
+      //         json['locationLatLng']['lng'],
+      //       )
+      //     : null,
       flightDetails: json['flightDetails'],
       accommodation: json['accommodation'],
       notes: json['notes'],
@@ -87,8 +107,9 @@ class Travel {
       sharedWith: List<String>.from(json['sharedWith'] ?? []),
       createdOn: (json['createdOn'] as Timestamp).toDate(),
       activities: (json['activities'] as List<dynamic>?)
-          ?.map((activity) => Activity.fromJson(activity))
-          .toList(),
+        ?.map((activity) => Activity.fromJson(activity))
+        .toList(),
+
     );
   }
 
@@ -99,9 +120,9 @@ class Travel {
       'startDate': startDate,
       'endDate': endDate,
       'location': location,
-      'locationLatLng': locationLatLng != null
-          ? {'lat': locationLatLng!.latitude, 'lng': locationLatLng!.longitude}
-          : null,
+      // 'locationLatLng': locationLatLng != null
+      //     ? {'lat': locationLatLng!.latitude, 'lng': locationLatLng!.longitude}
+      //     : null,
       'flightDetails': flightDetails,
       'accommodation': accommodation,
       'notes': notes,
