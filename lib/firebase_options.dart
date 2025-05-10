@@ -52,7 +52,7 @@ class DefaultFirebaseOptions {
 
   static const FirebaseOptions android = FirebaseOptions(
     apiKey: 'AIzaSyBJua6mzX_YUxeZ-5EWyo7l-crMh7Do0sM',
-    appId: '1:594361835820:android:3a7a1f67163c6dfe71cc89',
+    appId: '1:594361835820:android:0f42dccbf361908871cc89',
     messagingSenderId: '594361835820',
     projectId: 'nth-autumn-458710-t7',
     storageBucket: 'nth-autumn-458710-t7.firebasestorage.app',
@@ -64,6 +64,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '594361835820',
     projectId: 'nth-autumn-458710-t7',
     storageBucket: 'nth-autumn-458710-t7.firebasestorage.app',
+    androidClientId: '594361835820-47ufplfqrpco91g2ht650q10j5nftb8m.apps.googleusercontent.com',
     iosClientId: '594361835820-6b113iki8j2ruqd5cblc9n88mqa5qnti.apps.googleusercontent.com',
     iosBundleId: 'com.example.travelApp',
   );
@@ -74,18 +75,19 @@ class DefaultFirebaseOptions {
     messagingSenderId: '594361835820',
     projectId: 'nth-autumn-458710-t7',
     storageBucket: 'nth-autumn-458710-t7.firebasestorage.app',
+    androidClientId: '594361835820-47ufplfqrpco91g2ht650q10j5nftb8m.apps.googleusercontent.com',
     iosClientId: '594361835820-6b113iki8j2ruqd5cblc9n88mqa5qnti.apps.googleusercontent.com',
     iosBundleId: 'com.example.travelApp',
   );
 
   static const FirebaseOptions windows = FirebaseOptions(
     apiKey: 'AIzaSyAsjtAhjNAAJCHsVhQxq8eLsmWAGDvD2sM',
-    appId: '1:594361835820:web:9e0dcb4a3e0c4e9371cc89',
+    appId: '1:594361835820:web:921c3332d5e37edf71cc89',
     messagingSenderId: '594361835820',
     projectId: 'nth-autumn-458710-t7',
     authDomain: 'nth-autumn-458710-t7.firebaseapp.com',
     storageBucket: 'nth-autumn-458710-t7.firebasestorage.app',
-    measurementId: 'G-B6P6ZXMM9Q',
+    measurementId: 'G-X34VQS5KPV',
   );
 
 }
