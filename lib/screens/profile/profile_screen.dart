@@ -419,17 +419,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         if (_currentUserData != null)
-                                          QrImageView(
-                                            data: _currentUserData!.uid,
-                                            version: QrVersions.auto,
-                                            size: 200.0,
+                                          SizedBox(
+                                            height: 200.0,
+                                            width: 200.0,
+                                            child: QrImageView(
+                                              data: _currentUserData!.uid,
+                                              version: QrVersions.auto,
+                                              size: 200.0,
+                                            ),
                                           ),
                                         SizedBox(height: 10),
-                                        Text(
-                                          _currentUserData!.uid,
-                                          style: TextStyle(fontSize: 12, color: Colors.grey),
-                                          textAlign: TextAlign.center,
-                                        ),
+                                        if (_currentUserData != null)
+                                          Text(
+                                            "Make friends scan your QR",
+                                            style: TextStyle(fontSize: 12, color: Colors.grey),
+                                            textAlign: TextAlign.center,
+                                          ),
                                       ],
                                     ),
                                     actions: [
@@ -450,7 +455,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
                               ),
                             ),
-
+                            
                             SizedBox(
                               width: double.infinity,
                               child: OutlinedButton(
