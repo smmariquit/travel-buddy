@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import '../../models/travel_plan_model.dart';
+import 'package:qr_flutter/qr_flutter.dart';
 
 class TripDetails extends StatefulWidget {
   final Travel travel;
@@ -244,6 +245,52 @@ class _TripDetailsState extends State<TripDetails> with SingleTickerProviderStat
                 Text('Start Date: ${widget.travel.startDate?.toLocal().toString().split(" ")[0]}'),
                 Text('End Date: ${widget.travel.endDate?.toLocal().toString().split(" ")[0]}'),
                 SizedBox(height: 16),
+                ElevatedButton.icon(
+                  onPressed: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: Text('Your QR Code'),
+                        content: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            if ( widget.travel.uid != null)
+                              SizedBox(
+                                height: 200.0,
+                                width: 200.0,
+                                child: QrImageView(
+                                  data:  widget.travel.uid!,
+                                  version: QrVersions.auto,
+                                  size: 200.0,
+                                ),
+                              ),
+                            SizedBox(height: 10),
+                            if ( widget.travel.uid != null)
+                              Text(
+                                "Add friends to your travel",
+                                style: TextStyle(fontSize: 12, color: Colors.grey),
+                                textAlign: TextAlign.center,
+                              ),
+                          ],
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.of(context).pop(),
+                            child: Text('Close'),
+                          ),
+                        ],
+                      ),
+                    );
+                  },
+                  icon: Icon(Icons.qr_code),
+                  label: Text("Generate QR Code"),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.green,
+                    foregroundColor: Colors.white,
+                    padding: EdgeInsets.symmetric(vertical: 14, horizontal: 24),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                  ),
+                ),
               ],
             ),
           ),
