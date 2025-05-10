@@ -219,11 +219,6 @@ class _TripDetailsState extends State<TripDetails> with SingleTickerProviderStat
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text('Destination: ${widget.travel.location}', style: TextStyle(fontSize: 18)),
-                SizedBox(height: 8),
-                Text('Start Date: ${widget.travel.startDate?.toLocal().toString().split(" ")[0]}'),
-                Text('End Date: ${widget.travel.endDate?.toLocal().toString().split(" ")[0]}'),
-                SizedBox(height: 16),
                 Text('Trip Cover Image', style: TextStyle(fontWeight: FontWeight.bold)),
                 GestureDetector(
                   onTap: _pickCoverImage,
@@ -243,6 +238,12 @@ class _TripDetailsState extends State<TripDetails> with SingleTickerProviderStat
                         : null,
                   ),
                 ),
+
+                Text('Destination: ${widget.travel.location}', style: TextStyle(fontSize: 18)),
+                SizedBox(height: 8),
+                Text('Start Date: ${widget.travel.startDate?.toLocal().toString().split(" ")[0]}'),
+                Text('End Date: ${widget.travel.endDate?.toLocal().toString().split(" ")[0]}'),
+                SizedBox(height: 16),
               ],
             ),
           ),

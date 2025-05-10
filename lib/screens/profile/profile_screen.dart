@@ -12,6 +12,8 @@ import 'package:travel_app/utils/pick_profile_image.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'dart:io';
 import 'package:travel_app/utils/pick_profile_image.dart';
+import 'package:qr_flutter/qr_flutter.dart';
+
 
 
 class ProfileScreen extends StatefulWidget {
@@ -405,8 +407,50 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 );
                               }).toList(),
                             ),
-
                             SizedBox(height: 20),
+
+                            ElevatedButton.icon(
+                              onPressed: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    title: Text('Your QR Code'),
+                                    content: Column(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        if (_currentUserData != null)
+                                          QrImageView(
+                                            data: _currentUserData!.uid,
+                                            version: QrVersions.auto,
+                                            size: 200.0,
+                                          ),
+                                        SizedBox(height: 10),
+                                        Text(
+                                          _currentUserData!.uid,
+                                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                                          textAlign: TextAlign.center,
+                                        ),
+                                      ],
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () => Navigator.of(context).pop(),
+                                        child: Text('Close'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+                              },
+                              icon: Icon(Icons.qr_code),
+                              label: Text("Generate QR Code"),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.green,
+                                foregroundColor: Colors.white,
+                                padding: EdgeInsets.symmetric(vertical: 14, horizontal: 24),
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                              ),
+                            ),
+
                             SizedBox(
                               width: double.infinity,
                               child: OutlinedButton(
