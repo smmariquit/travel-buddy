@@ -4,6 +4,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import '../../models/travel_plan_model.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
+
 
 class TripDetails extends StatefulWidget {
   final Travel travel;
@@ -16,13 +18,15 @@ class TripDetails extends StatefulWidget {
 
 class _TripDetailsState extends State<TripDetails> with SingleTickerProviderStateMixin {
   File? _coverImage;
+  String? _coverImageUrl;
   final picker = ImagePicker();
   late TabController _tabController;
+  bool _isLoading = true;
 
   @override
   void initState() {
     super.initState();
-    _generateEmptyActivities();
+    _loadTravelData();
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(() {
       setState(() {});
@@ -33,6 +37,47 @@ class _TripDetailsState extends State<TripDetails> with SingleTickerProviderStat
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  Future<void> _loadTravelData() async {
+    setState(() {
+      _isLoading = true;
+    });
+    
+    try {
+      // Get the latest travel data from Firestore to ensure we have the most up-to-date info
+      if (widget.travel.uid != null) {
+        final docSnapshot = await FirebaseFirestore.instance
+            .collection('travel')
+            .doc(widget.travel.uid)
+            .get();
+            
+        if (docSnapshot.exists) {
+          final data = docSnapshot.data();
+          if (data != null) {
+            // Update the travel object with the latest data
+            final updatedTravel = Travel.fromJson(data, widget.travel.uid);
+            
+            setState(() {
+              // Update activities with the ones from Firestore
+              widget.travel.activities = updatedTravel.activities;
+              widget.travel.imageUrl = updatedTravel.imageUrl;
+              _coverImageUrl = updatedTravel.imageUrl;
+            });
+          }
+        }
+      }
+      
+      // After fetching the latest data, make sure we have activities
+      _generateEmptyActivities();
+      _loadCoverImageUrl();
+    } catch (e) {
+      print('Error loading travel data: $e');
+    } finally {
+      setState(() {
+        _isLoading = false;
+      });
+    }
   }
 
   void _generateEmptyActivities() {
@@ -48,14 +93,60 @@ class _TripDetailsState extends State<TripDetails> with SingleTickerProviderStat
           imageUrl: null,
         );
       });
-      setState(() {}); // Refresh UI
+      _saveActivitiesToFirestore();
+    }
+  }
+
+  Future<void> _loadCoverImageUrl() async {
+    if (widget.travel.imageUrl != null && widget.travel.imageUrl!.isNotEmpty) {
+      setState(() {
+        _coverImageUrl = widget.travel.imageUrl;
+      });
+      return;
+    }
+    
+    final travelId = widget.travel.uid;
+    try {
+      final ref = FirebaseStorage.instance.ref('cover_images/${travelId}.jpg');
+      final url = await ref.getDownloadURL();
+      setState(() {
+        _coverImageUrl = url;
+        widget.travel.imageUrl = url;
+      });
+    } catch (e) {
+      print('Error fetching cover image URL: $e');
     }
   }
 
   Future<void> _pickCoverImage() async {
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-    if (pickedFile != null) {
-      setState(() => _coverImage = File(pickedFile.path));
+    if (pickedFile == null) return;
+
+    final file = File(pickedFile.path);
+    final travelId = widget.travel.uid;
+    final storageRef = FirebaseStorage.instance.ref().child('cover_images/$travelId.jpg');
+
+    try {
+      await storageRef.putFile(file);
+      final imageUrl = await storageRef.getDownloadURL();
+
+      // Update Firestore
+      await FirebaseFirestore.instance
+          .collection('travel')
+          .doc(travelId)
+          .update({'imageUrl': imageUrl});
+
+      // Update local state
+      setState(() {
+        _coverImage = file;
+        _coverImageUrl = imageUrl;
+        widget.travel.imageUrl = imageUrl;
+      });
+    } catch (e) {
+      print('Upload failed: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to upload cover image')),
+      );
     }
   }
 
@@ -70,8 +161,17 @@ class _TripDetailsState extends State<TripDetails> with SingleTickerProviderStat
         actions: [
           TextButton(
             onPressed: () {
+              Navigator.pop(context);
+            },
+            child: Text("Cancel"),
+          ),
+          TextButton(
+            onPressed: () async {
               if (controller.text.trim().isNotEmpty) {
                 setState(() => widget.travel.activities![index].checklist!.add(controller.text.trim()));
+                
+                // Save to Firestore after adding the checklist item
+                await _saveActivitiesToFirestore();
               }
               Navigator.pop(context);
             },
@@ -82,20 +182,87 @@ class _TripDetailsState extends State<TripDetails> with SingleTickerProviderStat
     );
   }
 
+  Future<void> _saveActivitiesToFirestore() async {
+    if (widget.travel.uid == null) return;
+    
+    try {
+      // Convert each Activity object to a Map using the toJson method
+      final List<Map<String, dynamic>> activitiesData = 
+          widget.travel.activities?.map((activity) => activity.toJson()).toList() ?? [];
+      
+      // Print for debugging
+      print('Saving activities to Firestore: ${activitiesData.length} activities');
+      
+      // Debug: check imageUrls before saving
+      for (int i = 0; i < activitiesData.length; i++) {
+        print('Activity $i imageUrl: ${activitiesData[i]['imageUrl']}');
+      }
+      
+      // Update Firestore with the properly formatted activities data
+      await FirebaseFirestore.instance
+          .collection('travel')
+          .doc(widget.travel.uid)
+          .update({
+        'activities': activitiesData
+      });
+      
+      print('Activities saved successfully to Firestore');
+    } catch (e) {
+      print('Error saving activities to Firestore: $e');
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to save activities: ${e.toString()}')),
+      );
+    }
+  }
+
   Future<void> _pickAndUploadImage(int index) async {
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
     if (pickedFile == null) return;
 
     final file = File(pickedFile.path);
-    final filename = '${DateTime.now().millisecondsSinceEpoch}.jpg';
+    final travelId = widget.travel.uid;
+    if (travelId == null) return;
+    
+    // Add unique name with travel ID and activity index
+    final filename = '${travelId}_activity_${index}.jpg';
     final ref = FirebaseStorage.instance.ref().child('itinerary_images/$filename');
+
+    // Show loading indicator
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Uploading activity image...')),
+    );
 
     try {
       await ref.putFile(file);
       final imageUrl = await ref.getDownloadURL();
-      setState(() => widget.travel.activities![index].imageUrl = imageUrl);
+      
+      // Create a new Activity instance with updated imageUrl to ensure proper serialization
+      final Activity updatedActivity = Activity(
+        title: widget.travel.activities![index].title,
+        startDate: widget.travel.activities![index].startDate,
+        endDate: widget.travel.activities![index].endDate,
+        place: widget.travel.activities![index].place,
+        time: widget.travel.activities![index].time,
+        notes: widget.travel.activities![index].notes,
+        imageUrl: imageUrl, 
+        checklist: widget.travel.activities![index].checklist,
+      );
+      
+      // Update the activity in the travel object
+      setState(() {
+        widget.travel.activities![index] = updatedActivity;
+      });
+      
+      // Save the updated activity to Firestore
+      await _saveActivitiesToFirestore();
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Activity image uploaded successfully')),
+      );
     } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Upload failed: $e")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Upload failed: $e")),
+      );
     }
   }
 
@@ -112,15 +279,35 @@ class _TripDetailsState extends State<TripDetails> with SingleTickerProviderStat
           children: [
             Text(activity.title, style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
             const SizedBox(height: 10),
-            if (activity.imageUrl != null)
+            if (activity.imageUrl != null && activity.imageUrl!.isNotEmpty)
               ClipRRect(
                 borderRadius: BorderRadius.circular(12),
-                child: Image.network(activity.imageUrl!, height: 150, width: double.infinity, fit: BoxFit.cover),
+                child: Image.network(
+                  activity.imageUrl!,
+                  height: 150,
+                  width: double.infinity,
+                  fit: BoxFit.cover,
+                  // Add error handling for network images
+                  errorBuilder: (context, error, stackTrace) {
+                    print('Error loading image: $error');
+                    return Container(
+                      height: 150,
+                      width: double.infinity,
+                      color: Colors.grey[300],
+                      child: Center(child: Icon(Icons.error)),
+                    );
+                  },
+                ),
               ),
             TextButton.icon(
               onPressed: () => _pickAndUploadImage(index),
               icon: Icon(Icons.upload, color: Colors.green.shade700),
-              label: Text('Upload Image', style: TextStyle(color: Colors.green.shade700)),
+              label: Text(
+                activity.imageUrl != null && activity.imageUrl!.isNotEmpty 
+                    ? 'Change Image' 
+                    : 'Upload Image',
+                style: TextStyle(color: Colors.green.shade700)
+              ),
             ),
             const SizedBox(height: 10),
             Text("Checklist:", style: TextStyle(fontWeight: FontWeight.bold)),
@@ -181,9 +368,10 @@ class _TripDetailsState extends State<TripDetails> with SingleTickerProviderStat
             child: Text("Cancel"),
           ),
           ElevatedButton(
-            onPressed: () {
+            onPressed: () async {
               if (selectedDate != null && titleController.text.trim().isNotEmpty) {
                 setState(() {
+                  widget.travel.activities ??= [];
                   widget.travel.activities!.add(Activity(
                     title: titleController.text.trim(),
                     startDate: selectedDate!,
@@ -191,6 +379,9 @@ class _TripDetailsState extends State<TripDetails> with SingleTickerProviderStat
                     notes: '',
                   ));
                 });
+                
+                // Save the new itinerary to Firestore
+                await _saveActivitiesToFirestore();
                 Navigator.pop(context);
               }
             },
@@ -211,101 +402,112 @@ class _TripDetailsState extends State<TripDetails> with SingleTickerProviderStat
           controller: _tabController,
           tabs: [Tab(text: 'Overview'), Tab(text: 'Itineraries')],
         ),
-      ),
-      body: TabBarView(
-        controller: _tabController,
-        children: [
-          SingleChildScrollView(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text('Trip Cover Image', style: TextStyle(fontWeight: FontWeight.bold)),
-                GestureDetector(
-                  onTap: _pickCoverImage,
-                  child: Container(
-                    margin: EdgeInsets.only(top: 10),
-                    height: 180,
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: Colors.grey[200],
-                      borderRadius: BorderRadius.circular(12),
-                      image: _coverImage != null
-                          ? DecorationImage(image: FileImage(_coverImage!), fit: BoxFit.cover)
-                          : null,
-                    ),
-                    child: _coverImage == null
-                        ? Center(child: Icon(Icons.camera_alt, color: Colors.grey[600]))
-                        : null,
-                  ),
-                ),
-
-                Text('Destination: ${widget.travel.location}', style: TextStyle(fontSize: 18)),
-                SizedBox(height: 8),
-                Text('Start Date: ${widget.travel.startDate?.toLocal().toString().split(" ")[0]}'),
-                Text('End Date: ${widget.travel.endDate?.toLocal().toString().split(" ")[0]}'),
-                SizedBox(height: 16),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: Text('Your QR Code'),
-                        content: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if ( widget.travel.uid != null)
-                              SizedBox(
-                                height: 200.0,
-                                width: 200.0,
-                                child: QrImageView(
-                                  data:  widget.travel.uid!,
-                                  version: QrVersions.auto,
-                                  size: 200.0,
-                                ),
-                              ),
-                            SizedBox(height: 10),
-                            if ( widget.travel.uid != null)
-                              Text(
-                                "Add friends to your travel",
-                                style: TextStyle(fontSize: 12, color: Colors.grey),
-                                textAlign: TextAlign.center,
-                              ),
-                          ],
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.of(context).pop(),
-                            child: Text('Close'),
-                          ),
-                        ],
-                      ),
-                    );
-                  },
-                  icon: Icon(Icons.qr_code),
-                  label: Text("Generate QR Code"),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.green,
-                    foregroundColor: Colors.white,
-                    padding: EdgeInsets.symmetric(vertical: 14, horizontal: 24),
-                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: widget.travel.activities == null || widget.travel.activities!.isEmpty
-                ? Center(child: Text("No itineraries found."))
-                : ListView.builder(
-                    itemCount: widget.travel.activities!.length,
-                    itemBuilder: (context, index) =>
-                        buildItineraryCard(widget.travel.activities![index], index),
-                  ),
+        actions: [
+          IconButton(
+            icon: Icon(Icons.refresh),
+            onPressed: _loadTravelData,
+            tooltip: 'Refresh data',
           ),
         ],
       ),
+      body: _isLoading
+          ? Center(child: CircularProgressIndicator())
+          : TabBarView(
+              controller: _tabController,
+              children: [
+                SingleChildScrollView(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text('Trip Cover Image', style: TextStyle(fontWeight: FontWeight.bold)),
+                      GestureDetector(
+                        onTap: _pickCoverImage,
+                        child: Container(
+                          margin: EdgeInsets.only(top: 10),
+                          height: 180,
+                          width: double.infinity,
+                          decoration: BoxDecoration(
+                            color: Colors.grey[200],
+                            borderRadius: BorderRadius.circular(12),
+                            image: _coverImage != null
+                              ? DecorationImage(image: FileImage(_coverImage!), fit: BoxFit.cover)
+                              : _coverImageUrl != null
+                                  ? DecorationImage(image: NetworkImage(_coverImageUrl!), fit: BoxFit.cover)
+                                  : null,
+                          ),
+                          child:  (_coverImage == null && _coverImageUrl == null)
+                            ? Center(child: Icon(Icons.camera_alt, color: Colors.grey[600]))
+                            : null,
+                        ),
+                      ),
+
+                      Text('Destination: ${widget.travel.location}', style: TextStyle(fontSize: 18)),
+                      SizedBox(height: 8),
+                      Text('Start Date: ${widget.travel.startDate?.toLocal().toString().split(" ")[0]}'),
+                      Text('End Date: ${widget.travel.endDate?.toLocal().toString().split(" ")[0]}'),
+                      SizedBox(height: 16),
+                      ElevatedButton.icon(
+                        onPressed: () {
+                          showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                              title: Text('Your QR Code'),
+                              content: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  if (widget.travel.uid != null)
+                                    SizedBox(
+                                      height: 200.0,
+                                      width: 200.0,
+                                      child: QrImageView(
+                                        data:  widget.travel.uid!,
+                                        version: QrVersions.auto,
+                                        size: 200.0,
+                                      ),
+                                    ),
+                                  SizedBox(height: 10),
+                                  if (widget.travel.uid != null)
+                                    Text(
+                                      "Add friends to your travel",
+                                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                                      textAlign: TextAlign.center,
+                                    ),
+                                ],
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () => Navigator.of(context).pop(),
+                                  child: Text('Close'),
+                                ),
+                              ],
+                            ),
+                          );
+                        },
+                        icon: Icon(Icons.qr_code),
+                        label: Text("Generate QR Code"),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.green,
+                          foregroundColor: Colors.white,
+                          padding: EdgeInsets.symmetric(vertical: 14, horizontal: 24),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: widget.travel.activities == null || widget.travel.activities!.isEmpty
+                      ? Center(child: Text("No itineraries found."))
+                      : ListView.builder(
+                          itemCount: widget.travel.activities!.length,
+                          itemBuilder: (context, index) =>
+                              buildItineraryCard(widget.travel.activities![index], index),
+                        ),
+                ),
+              ],
+            ),
       floatingActionButton: _tabController.index == 1
           ? FloatingActionButton(
               onPressed: _addManualItinerary,

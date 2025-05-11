@@ -30,7 +30,7 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
   DateTime? _startDate, _endDate;
   String? _flightDetails, _accommodation, _notes;
   List<String> _checklist = [];
-  List<Map<String, dynamic>> _itinerary = [];
+  List<Activity>? _activities = [];
 
   // Controllers
   final _nameController = TextEditingController();
@@ -245,7 +245,7 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
         accommodation: _accommodation,
         notes: _notes,
         checklist: _checklist,
-        itinerary: _itinerary,
+        activities: _activities,
         createdOn: DateTime.now(),
       );
 
