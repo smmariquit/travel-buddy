@@ -11,7 +11,7 @@ class Activity {
   final String? time; // Can be stored as a formatted string like "10:00 AM"
   final String? notes;
   String? imageUrl; // Base64 or Firebase Storage URL
-  final List<String>? checklist;
+  List<String>? checklist;
 
   Activity({
     required this.title,
