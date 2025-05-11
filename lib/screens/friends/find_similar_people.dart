@@ -5,6 +5,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:provider/provider.dart';
 import 'package:travel_app/models/user_model.dart';
 import 'package:travel_app/providers/user_provider.dart';
+import 'package:travel_app/screens/add_travel/scan_qr_page.dart';
+
 
 class FindSimilarPeopleScreen extends StatefulWidget {
   const FindSimilarPeopleScreen({super.key});
@@ -50,6 +52,47 @@ class _FindSimilarPeopleScreenState extends State<FindSimilarPeopleScreen> {
       });
     });
   }
+
+  
+    void _scanQRCodeToAddFriend() async {
+      final result = await Navigator.of(context).push(MaterialPageRoute(
+        builder: (context) => QRScanPage(),
+      ));
+
+      if (result != null && result is String) {
+        try {
+          // Fetch scanned user
+          final doc = await FirebaseFirestore.instance.collection('appUsers').doc(result).get();
+
+          if (!doc.exists) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text("User not found.", style: GoogleFonts.poppins())),
+            );
+            return;
+          }
+
+          final scannedUser = AppUser.fromJson(doc.data()!);
+
+          // Prevent adding self
+          if (scannedUser.uid == _currentUser!.uid) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text("You cannot add yourself.", style: GoogleFonts.poppins())),
+            );
+            return;
+          }
+
+          // Send friend request
+          await _sendFriendRequest(scannedUser);
+
+        } catch (e) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Failed to add friend: $e", style: GoogleFonts.poppins())),
+          );
+        }
+      }
+    }
+
+
 
   // method to get users with similar interests/travel styles
   Future<void> _fetchSimilarUsers() async {
@@ -519,64 +562,89 @@ class _FindSimilarPeopleScreenState extends State<FindSimilarPeopleScreen> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
+ @override
+Widget build(BuildContext context) {
+  return Scaffold(
+    backgroundColor: Colors.grey[100],
+    appBar: AppBar(
       backgroundColor: Colors.grey[100],
-      appBar: AppBar(
-        backgroundColor: Colors.grey[100],
-        title: Text("Similar People", style: GoogleFonts.poppins()),
-        actions: [
-          IconButton(
-            icon: Icon(Icons.refresh),
-            onPressed: _fetchSimilarUsers,
-          ),
-        ],
-      ),
-      body: _isLoading
-          ? Center(child: CircularProgressIndicator())
-          : _errorMessage != null
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Text(
-                          _errorMessage!,
-                          textAlign: TextAlign.center,
-                          style: GoogleFonts.poppins(color: Colors.grey[600]),
-                        ),
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: _fetchSimilarUsers,
-                          child: Text("Reload", style: GoogleFonts.poppins()),
-                        ),
-                      ],
-                    ),
-                  ),
-                )
-              : _similarUsers.isEmpty
+      title: Text("Similar People", style: GoogleFonts.poppins()),
+      actions: [
+        IconButton(
+          icon: Icon(Icons.refresh),
+          onPressed: _fetchSimilarUsers,
+        ),
+      ],
+    ),
+    body: Column(
+      children: [
+        Expanded(
+          child: _isLoading
+              ? Center(child: CircularProgressIndicator())
+              : _errorMessage != null
                   ? Center(
-                      child: Text(
-                        "No similar users found. Try adding more interests or travel styles!",
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.poppins(color: Colors.grey[600]),
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Text(
+                              _errorMessage!,
+                              textAlign: TextAlign.center,
+                              style: GoogleFonts.poppins(color: Colors.grey[600]),
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: _fetchSimilarUsers,
+                              child: Text("Reload", style: GoogleFonts.poppins()),
+                            ),
+                          ],
+                        ),
                       ),
                     )
-                  : ListView.builder(
-                      itemCount: _similarUsers.length,
-                      itemBuilder: (context, index) {
-                        final user = _similarUsers[index];
-                        return SimilarUserCard(
-                          user: user,
-                          currentUser: _currentUser!,
-                          onTap: () => _showUserDetails(user),
-                        );
-                      },
-                    ),
-    );
-  }
+                  : _similarUsers.isEmpty
+                      ? Center(
+                          child: Text(
+                            "No similar users found. Try adding more interests or travel styles!",
+                            textAlign: TextAlign.center,
+                            style: GoogleFonts.poppins(color: Colors.grey[600]),
+                          ),
+                        )
+                      : ListView.builder(
+                          itemCount: _similarUsers.length,
+                          itemBuilder: (context, index) {
+                            final user = _similarUsers[index];
+                            return SimilarUserCard(
+                              user: user,
+                              currentUser: _currentUser!,
+                              onTap: () => _showUserDetails(user),
+                            );
+                          },
+                        ),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              onPressed: _scanQRCodeToAddFriend,
+              icon: Icon(Icons.qr_code_scanner),
+              label: Text("Scan to Add"),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
+    ),
+  );
+}
 }
 
 class SimilarUserCard extends StatelessWidget {
