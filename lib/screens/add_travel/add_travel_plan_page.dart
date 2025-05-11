@@ -218,8 +218,8 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
 
   void _submitForm() async {
     if (_formKey.currentState!.validate()) {
-      // Check if the end date is before the start date
-      if (_endDate!.isBefore(_startDate!)) {
+      // Check if end date is before start date if both are present
+      if (_endDate != null && _startDate != null && _endDate!.isBefore(_startDate!)) {
         ScaffoldMessenger.of(context).showSnackBar(SnackBar(
           content: Text("End date can't be before start date", style: TextStyle(color: backgroundColor)),
           backgroundColor: errorColor,
@@ -235,7 +235,10 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
         return;
       }
 
+      // Create initial travel object with a temporary placeholder ID
+      // The actual ID will be set by the FirebaseTravelAPI.addTravel method
       final travel = Travel(
+        id: 'temp_id',  // This will be replaced by Firebase
         uid: currentUser.uid,
         name: _name,
         startDate: _startDate,
@@ -248,23 +251,18 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
         activities: _activities,
         createdOn: DateTime.now(),
       );
+      String travelId = await _firebaseTravelAPI.addTravel(travel);
 
-      String message = await _firebaseTravelAPI.addTravel(travel);
-
-      if (message.isNotEmpty) {
-        showQR(message);
-
-        // // Pass the new travel plan back to the main page
-        // Navigator.pushReplacementNamed(
-        //   context,
-        //   '/main',
-        //   arguments: travel, // Pass the travel object as an argument
-        // );
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Failed to save travel plan")));
-      }
+    if (travelId.isNotEmpty && !travelId.startsWith("Error")) {
+      // Use the travelId returned from Firestore
+      showQR(travelId);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+        content: Text(travelId.startsWith("Error") ? travelId : "Failed to save travel plan")
+      ));
     }
   }
+}
 
 
   void showQR(String travelId) {
