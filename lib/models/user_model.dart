@@ -5,6 +5,8 @@ class AppUser {
   String lastName;
   String username;
   List<String>? friendUIDs;
+  List<String>? sentFriendRequests; // UIDs of users to whom requests were sent
+  List<String>? receivedFriendRequests; // UIDs of users who sent requests
   String? profileImageUrl;
   String? phoneNumber;
   bool isPrivate;
@@ -20,6 +22,8 @@ class AppUser {
     required this.lastName,
     required this.username,
     this.friendUIDs,
+    this.sentFriendRequests,
+    this.receivedFriendRequests,
     this.profileImageUrl,
     this.phoneNumber,
     required this.isPrivate,
@@ -42,7 +46,9 @@ class AppUser {
     List<String>? interests,
     List<String>? travelStyles,
     bool? isPrivate,
-    List<String>? friendUIDs
+    List<String>? friendUIDs,
+    List<String>? sentFriendRequests,
+    List<String>? receivedFriendRequests,
   }) {
     return AppUser(
       uid: uid ?? this.uid,
@@ -58,6 +64,8 @@ class AppUser {
       travelStyles: travelStyles ?? this.travelStyles,
       isPrivate: isPrivate ?? this.isPrivate,
       friendUIDs: friendUIDs ?? this.friendUIDs,
+      sentFriendRequests: sentFriendRequests ?? this.sentFriendRequests,
+      receivedFriendRequests: receivedFriendRequests ?? this.receivedFriendRequests,
     );
   }
 
@@ -68,7 +76,9 @@ class AppUser {
       middleName: json['middleName'],
       lastName: json['lastName'],
       username: json['username'],
-      friendUIDs: List<String>.from(json['friendUIDs'] ?? []),
+      friendUIDs: json['friendUIDs'] != null ? List<String>.from(json['friendUIDs']) : [],
+      sentFriendRequests: json['sentFriendRequests'] != null ? List<String>.from(json['sentFriendRequests']) : [],
+      receivedFriendRequests: json['receivedFriendRequests'] != null ? List<String>.from(json['receivedFriendRequests']) : [],
       profileImageUrl: json['profileImageUrl'],
       phoneNumber: json['phoneNumber'],
       isPrivate: json['isPrivate'] ?? false,
@@ -87,6 +97,8 @@ class AppUser {
       'lastName': lastName,
       'username': username,
       'friendUIDs': friendUIDs,
+      'sentFriendRequests': sentFriendRequests,
+      'receivedFriendRequests': receivedFriendRequests,
       'profileImageUrl': profileImageUrl,
       'phoneNumber': phoneNumber,
       'isPrivate': isPrivate,
@@ -96,5 +108,4 @@ class AppUser {
       'travelStyles': travelStyles,
     };
   }
-
 }
