@@ -18,6 +18,10 @@ class TravelTrackerProvider with ChangeNotifier {
   List<Travel> get travels => _travels;
   bool get isLoading => _isLoading;
   Stream<QuerySnapshot> get travelStream => _travelsStream;
+  Stream<List<Travel>> getSharedTravelPlans() {
+    return firebaseService!.getSharedTravels(_userId!);
+  }
+
 
   // Set current user and initialize services/streams
   void setUser(String? uid) {

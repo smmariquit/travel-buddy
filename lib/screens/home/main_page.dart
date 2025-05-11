@@ -169,7 +169,55 @@ class _MainPageState extends State<MainPage> {
                               }
                             },
                           ),
+                          const SizedBox(height: 20),
+                          
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              const Text(
+                                'Shared With You',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                ),
+                              ),
+                            ],
+                          ),
 
+                          /// Horizontal scroll for Shared Travel Plans
+                          StreamBuilder<List<Travel>>(
+                            stream: travelProvider.getSharedTravelPlans(),
+                            builder: (context, snapshot) {
+                              if (snapshot.connectionState == ConnectionState.waiting) {
+                                return const Center(child: CircularProgressIndicator());
+                              } else if (snapshot.hasError) {
+                                return Text('Error: ${snapshot.error}');
+                              } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+                                return const Text('No shared travel plans.');
+                              } else {
+                                return SingleChildScrollView(
+                                  scrollDirection: Axis.horizontal,
+                                  child: Row(
+                                    children: snapshot.data!.map((travel) {
+                                      final imageUrl = travel.imageUrl != null && travel.imageUrl!.isNotEmpty
+                                        ? travel.imageUrl!
+                                        : 'assets/sample_image.jpg';
+                                      return TravelPlanCard(
+                                        travelId: travel.id,
+                                        uid: travel.uid,
+                                        name: travel.name,
+                                        startDate: travel.startDate ?? DateTime.now(),
+                                        endDate: travel.endDate ?? DateTime.now(),
+                                        image: imageUrl,
+                                        location: travel.location,
+                                        createdOn: travel.createdOn,
+                                      );
+                                    }).toList(),
+                                  ),
+                                );
+                              }
+                            },
+                          ),
                           const SizedBox(height: 32),
                         ],
                       ),
