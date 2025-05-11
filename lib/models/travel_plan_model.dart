@@ -2,6 +2,8 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_maps_webservice/places.dart';
 import 'package:latlong2/latlong.dart';
 
+
+/// Activity is the itinerary (???) (itinerary is never used due to activity so same na lang sila)
 class Activity {
   final String title;
   final DateTime startDate;
@@ -62,10 +64,11 @@ class Travel {
   final String? accommodation;
   final String? notes;
   final List<String>? checklist;
-  final List<Map<String, dynamic>>? itinerary;
+  // final List<Map<String, dynamic>>? itinerary;
   final List<String>? sharedWith;
   final DateTime createdOn;
   List<Activity>? activities;
+  String? imageUrl;
 
   Travel({
     this.id,
@@ -79,10 +82,11 @@ class Travel {
     this.accommodation,
     this.notes,
     this.checklist,
-    this.itinerary,
+    // this.itinerary,
     this.sharedWith,
     required this.createdOn,
     this.activities,
+    this.imageUrl
   });
 
   factory Travel.fromJson(Map<String, dynamic> json, [String? id]) {
@@ -103,12 +107,13 @@ class Travel {
       accommodation: json['accommodation'],
       notes: json['notes'],
       checklist: List<String>.from(json['checklist'] ?? []),
-      itinerary: (json['itinerary'] as List?)?.cast<Map<String, dynamic>>(),
+      // itinerary: (json['itinerary'] as List?)?.cast<Map<String, dynamic>>(),
       sharedWith: List<String>.from(json['sharedWith'] ?? []),
       createdOn: (json['createdOn'] as Timestamp).toDate(),
       activities: (json['activities'] as List<dynamic>?)
         ?.map((activity) => Activity.fromJson(activity))
         .toList(),
+      imageUrl: json['imageUrl'],
 
     );
   }
@@ -127,10 +132,11 @@ class Travel {
       'accommodation': accommodation,
       'notes': notes,
       'checklist': checklist,
-      'itinerary': itinerary,
+      // 'itinerary': itinerary,
       'sharedWith': sharedWith,
       'createdOn': createdOn,
       'activities': activities?.map((activity) => activity.toJson()).toList(),
+      'imageUrl': imageUrl,
     };
   }
 }

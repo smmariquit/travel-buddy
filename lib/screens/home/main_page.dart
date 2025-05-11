@@ -150,12 +150,15 @@ class _MainPageState extends State<MainPage> {
                                   scrollDirection: Axis.horizontal,
                                   child: Row(
                                     children: snapshot.data!.map((travel) {
+                                      final imageUrl = travel.imageUrl != null && travel.imageUrl!.isNotEmpty
+                                        ? travel.imageUrl!
+                                        : 'assets/sample_image.jpg';
                                       return TravelPlanCard(
                                         uid: travel.uid,
                                         name: travel.name,
                                         startDate: travel.startDate ?? DateTime.now(),
                                         endDate: travel.endDate ?? DateTime.now(),
-                                        image: 'assets/sample_image.jpg',
+                                        image: imageUrl,
                                         location: travel.location,
                                         createdOn: travel.createdOn,
                                       );
