@@ -1,115 +1,174 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/foundation.dart';
 import 'package:travel_app/api/firebase_travel_api.dart';
-import 'package:flutter/material.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:async/async.dart';
 import 'package:travel_app/models/travel_plan_model.dart';
+import 'package:async/async.dart';
 
 class TravelTrackerProvider with ChangeNotifier {
-  late Stream<QuerySnapshot> _travelsStream;
+  final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   FirebaseTravelAPI? firebaseService;
-  String? currentUserId;
 
-  TravelTrackerProvider() {
-    // Constructor is empty for now
-  }
+  String? _userId;
+  List<Travel> _travels = [];
+  bool _isLoading = false;
+  late Stream<QuerySnapshot> _travelsStream;
 
-  void setUser(String? userId) {
-    currentUserId = userId;
-
-    // Initialize firebaseService when user is set
-    if (userId != null) {
-      firebaseService = FirebaseTravelAPI();
-      fetchTravels(); // Fetch travels after initializing user
-    } else {
-      firebaseService = null;
-      _travelsStream = Stream.empty(); // Empty stream when no user
-    }
-    notifyListeners();
-  }
-
-  /// Fetch stream of travel plans (created or shared with the user)
-  void fetchTravels() {
-    if (currentUserId == null || firebaseService == null) {
-      return;
-    }
-
-    var ownTravelsStream = FirebaseFirestore.instance
-        .collection('travel')
-        .where('uid', isEqualTo: currentUserId) // User's own travels
-        .snapshots();
-
-    var sharedTravelsStream = FirebaseFirestore.instance
-        .collection('travel')
-        .where('sharedWith', arrayContains: currentUserId) // Shared travels
-        .snapshots();
-
-    _travelsStream = StreamGroup.merge([ownTravelsStream, sharedTravelsStream]);
-
-    notifyListeners();
-  }
-
+  // Getters
+  String? get userId => _userId;
+  List<Travel> get travels => _travels;
+  bool get isLoading => _isLoading;
   Stream<QuerySnapshot> get travelStream => _travelsStream;
 
-  // Method to fetch travels by category
-  Stream<QuerySnapshot> getTravelsByCategory(String category) {
-    return FirebaseFirestore.instance
+  // Set current user and initialize services/streams
+  void setUser(String? uid) {
+    _userId = uid;
+
+    if (uid != null) {
+      firebaseService = FirebaseTravelAPI();
+      fetchTravelsStream();
+      getTravelPlans(); // Load cached list
+    } else {
+      firebaseService = null;
+      _travelsStream = Stream.empty();
+      _travels = [];
+    }
+
+    notifyListeners();
+  }
+
+  // Clear context
+  void clearUser() {
+    _userId = null;
+    firebaseService = null;
+    _travelsStream = Stream.empty();
+    _travels = [];
+    notifyListeners();
+  }
+
+  // Firestore stream for real-time updates
+  void fetchTravelsStream() {
+    if (_userId == null) return;
+
+    final ownTravels = _firestore
         .collection('travel')
-        .where('uid', isEqualTo: currentUserId)
-        .where('category', isEqualTo: category)
+        .where('uid', isEqualTo: _userId!)
         .snapshots();
+
+    final sharedTravels = _firestore
+        .collection('travel')
+        .where('sharedWith', arrayContains: _userId!)
+        .snapshots();
+
+    _travelsStream = StreamGroup.merge([ownTravels, sharedTravels]);
+    notifyListeners();
   }
 
-  // Method to add a new travel plan
-  Future<String> addTravel(Map<String, dynamic> travelData) async {
-    try {
-      // Adding the travel plan to the 'travel' collection
-      await FirebaseFirestore.instance.collection('travel').add(travelData);
-
-      return 'Travel plan added successfully';
-    } catch (e) {
-      print("Error adding travel: $e");
-      return 'Failed to add travel plan';
-    }
-  }
-
-  // Method to edit an existing travel plan
-  Future<void> updateTravel(String id, Travel updatedTravel) async {
-    if (currentUserId == null || firebaseService == null) {
-      print("ERROR: Cannot update travel, user is not set.");
-      return;
-    }
+  // Fetch travel plans into local list
+  Future<List<Travel>> getTravelPlans() async {
+    if (_userId == null) return [];
+    print('Fetching travel plans for user $_userId');
 
     try {
-      await firebaseService!.editTravel(id, updatedTravel);
+      _isLoading = true;
       notifyListeners();
+
+      final snapshot = await _firestore
+          .collection('travel')
+          .where('uid', isEqualTo: _userId)
+          .orderBy('createdOn', descending: true)
+          .get();
+
+      _travels = snapshot.docs
+          .map((doc) => Travel.fromJson(doc.data(), doc.id))
+          .toList();
+
+      _isLoading = false;
+      notifyListeners();
+      return _travels;
     } catch (e) {
-      print("Error updating travel: $e");
+      print('Error fetching travel plans: $e');
+      _isLoading = false;
+      notifyListeners();
+      return [];
     }
   }
 
-  // Method to delete a travel plan
-  Future<void> deleteTravel(String id) async {
-    if (firebaseService == null) {
-      return;
-    }
+  // Add a travel plan
+  Future<Travel?> addTravelPlan(Travel travel) async {
+    if (_userId == null) return null;
 
     try {
-      await firebaseService!.deleteTravel(id);
+      _isLoading = true;
       notifyListeners();
+
+      final docRef = await _firestore.collection('travel').add(travel.toJson());
+
+      final newTravel = travel.copyWith(id: docRef.id);
+      _travels.insert(0, newTravel);
+
+      _isLoading = false;
+      notifyListeners();
+      return newTravel;
     } catch (e) {
-      print("Error deleting travel: $e");
+      print('Error adding travel plan: $e');
+      _isLoading = false;
+      notifyListeners();
+      return null;
     }
   }
 
-  // Method to share a travel plan with another user
+  // Edit a travel plan
+  Future<bool> updateTravelPlan(Travel travel) async {
+    if (_userId == null || travel.id == null) return false;
+
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      await _firestore.collection('travel').doc(travel.id).update(travel.toJson());
+
+      final index = _travels.indexWhere((t) => t.id == travel.id);
+      if (index >= 0) {
+        _travels[index] = travel;
+      }
+
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      print('Error updating travel plan: $e');
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // Delete travel plan
+  Future<bool> deleteTravelPlan(String travelId) async {
+    if (_userId == null) return false;
+
+    try {
+      _isLoading = true;
+      notifyListeners();
+
+      await _firestore.collection('travel').doc(travelId).delete();
+      _travels.removeWhere((t) => t.id == travelId);
+
+      _isLoading = false;
+      notifyListeners();
+      return true;
+    } catch (e) {
+      print('Error deleting travel plan: $e');
+      _isLoading = false;
+      notifyListeners();
+      return false;
+    }
+  }
+
+  // Share travel plan
   Future<void> shareTravelWithUser(String travelId, String userId) async {
-    if (firebaseService == null || currentUserId == null) {
-      return;
-    }
-
     try {
-      await FirebaseFirestore.instance.collection('travel').doc(travelId).update({
+      await _firestore.collection('travel').doc(travelId).update({
         'sharedWith': FieldValue.arrayUnion([userId]),
       });
       notifyListeners();
@@ -118,14 +177,10 @@ class TravelTrackerProvider with ChangeNotifier {
     }
   }
 
-  // Method to unshare a travel plan with another user
+  // Unshare travel plan
   Future<void> unshareTravelWithUser(String travelId, String userId) async {
-    if (firebaseService == null || currentUserId == null) {
-      return;
-    }
-
     try {
-      await FirebaseFirestore.instance.collection('travel').doc(travelId).update({
+      await _firestore.collection('travel').doc(travelId).update({
         'sharedWith': FieldValue.arrayRemove([userId]),
       });
       notifyListeners();
@@ -134,55 +189,24 @@ class TravelTrackerProvider with ChangeNotifier {
     }
   }
 
-  // Method to fetch all travel plans
-  Future<List<Travel>> getTravelPlans() async {
-    try {
-      final querySnapshot = await FirebaseFirestore.instance
-          .collection('travel')
-          .get();
+  // Update activities list in a travel plan
+  Future<void> updateActivities(String travelId, List<Activity> activities) async {
+    if (firebaseService == null) return;
 
-      return querySnapshot.docs.map((doc) {
-        final data = doc.data();
-        return Travel(
-          uid: doc.id,
-          name: data['name'] ?? '',
-          startDate: (data['startDate'] as Timestamp?)?.toDate(), // Convert Timestamp to DateTime
-          endDate: (data['endDate'] as Timestamp?)?.toDate(), // Convert Timestamp to DateTime
-          location: data['destination'] ?? '',
-          createdOn: (data['createdOn'] as Timestamp).toDate(), // Convert Timestamp to DateTime
-        );
-      }).toList();
+    try {
+      await firebaseService!.updateActivities(travelId, activities);
+      notifyListeners();
     } catch (e) {
-      print("Error fetching travel plans: $e");
-      return [];
+      print("Error updating activities: $e");
     }
   }
 
-/// Updates the activities list of a travel plan.
-///
-/// Parameters:
-/// - [travelId]: The ID of the travel plan.
-/// - [activities]: A list of [Activity] to update.
-Future<void> updateActivities(String travelId, List<Activity> activities) async {
-  if (firebaseService == null) {
-    print("Firebase service is not initialized.");
-    return;
-  }
-
-  try {
-    await firebaseService!.updateActivities(travelId, activities);
-    notifyListeners();
-  } catch (e) {
-    print("Error updating activities: $e");
-  }
-}
-
-
-  // Helper to clear the user context and reset stream
-  void clearUser() {
-    currentUserId = null;
-    firebaseService = null;
-    _travelsStream = Stream.empty();
-    notifyListeners();
+  // Filtered stream by category
+  Stream<QuerySnapshot> getTravelsByCategory(String category) {
+    return _firestore
+        .collection('travel')
+        .where('uid', isEqualTo: _userId)
+        .where('category', isEqualTo: category)
+        .snapshots();
   }
 }

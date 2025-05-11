@@ -1,188 +1,149 @@
-/// Since this travel app uses Cloud Firestore, this file serves as an interface to the document database.
-/// Here, we retrieve, add, edit, delete, and share travel records.
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:travel_app/models/travel_plan_model.dart';
-// TODO: Correct the comments
-/// Encapsulate the functionality of Cloud Firestore
+
+/// Firebase service class for managing travel plans.
 class FirebaseTravelAPI {
-  /// A static instance of the Firestore database
-  static final FirebaseFirestore db = FirebaseFirestore.instance;
+  static final FirebaseFirestore _db = FirebaseFirestore.instance;
+  static final FirebaseAuth _auth = FirebaseAuth.instance;
 
-  /// Retrieves a stream of travel records created by or shared with the user.
-  ///
-  /// Parameters:
-  /// - [uid]: The user ID to filter the travel records.
-  ///
-  /// Returns:
-  /// - A [Stream] of [QuerySnapshot] containing the user's travel records.
-  Stream<QuerySnapshot> getUserTravels(String uid) {
-    return db
-        .collection('travel')
-        .where('sharedWith', arrayContains: uid) // Includes shared travels
-        .orderBy('createdOn', descending: true)
-        .snapshots();
-  }
-
-  /// Adds a new travel record to the Firestore database.
-  ///
-  /// Parameters:
-  /// - [travel]: A map containing the travel details to be added.
-  ///
-  /// Required fields: name, date (can be range), location, uid, createdOn  
-  /// Optional fields: flightDetails, accommodation, notes, checklist (List), itinerary (List or Map), sharedWith (List)
-  ///
-  /// Returns:
-  /// - A [String] message indicating success or the error encountered.
+  /// Adds a new travel plan and returns its document ID.
   Future<String> addTravel(Travel travel) async {
-  try {
-    final docRef = await db.collection('travel').add(travel.toJson());
-    return docRef.id; 
-  } on FirebaseException catch (e) {
-    return "Error on ${e.message}";
-  }
-}
-
-
-  /// Deletes a travel record from the Firestore database.
-  ///
-  /// Parameters:
-  /// - [id]: The document ID of the travel record to be deleted.
-  ///
-  /// Returns:
-  /// - A [String] message indicating success or the error encountered.
-  Future<String> deleteTravel(String id) async {
     try {
-      await db.collection('travel').doc(id).delete();
-      return "Successfully deleted";
-    } on FirebaseException catch (e) {
-      return "Error on ${e.message}";
+      final docRef = _db.collection('travel').doc();
+      final updatedTravel = travel.copyWith(id: docRef.id);
+      await docRef.set(updatedTravel.toJson());
+      return docRef.id;
+    } catch (e) {
+      print("Error adding travel: $e");
+      return "Error adding travel: $e";
     }
   }
 
-  /// Edits an existing travel record in the Firestore database.
-  ///
-  /// Only the owner (creator) should be allowed to perform this action.
-  ///
-  /// Parameters:
-  /// - [id]: The document ID of the travel record to be updated.
-  /// - [newData]: A map containing the updated fields and values.
-  ///
-  /// Returns:
-  /// - A [String] message indicating success or the error encountered.
-  Future<String> editTravel(String id, Travel updatedTravel) async {
+  /// Updates an existing travel plan.
+  Future<String> updateTravel(Travel travel) async {
     try {
-      await db.collection('travel').doc(id).update(updatedTravel.toJson());
+      if (travel.id.isEmpty) {
+        return "Travel ID is empty";
+      }
+      await _db.collection('travel').doc(travel.id).update(travel.toJson());
       return "Travel updated!";
-    } on FirebaseException catch (e) {
+    } catch (e) {
+      print("Error updating travel: $e");
       return "Error updating travel: $e";
     }
   }
 
-  /// Toggles the payment status of a travel record in the Firestore database.
-  ///
-  /// Parameters:
-  /// - [id]: The document ID of the travel record to be updated.
-  /// - [isPaid]: The new payment status to be set.
-  ///
-  /// Returns:
-  /// - A [String] message indicating success or the error encountered.
-  Future<String> toggleStatus(String id, bool isPaid) async {
+  /// Deletes a travel plan by ID.
+  Future<String> deleteTravel(String id) async {
     try {
-      await db.collection('travel').doc(id).update({'isPaid': isPaid});
-      return "Success";
-    } on FirebaseException catch (e) {
-      return "Error on ${e.message}";
+      await _db.collection('travel').doc(id).delete();
+      return "Successfully deleted";
+    } catch (e) {
+      print("Error deleting travel: $e");
+      return "Error deleting travel: $e";
     }
   }
 
-  /// Shares a travel plan with another user by adding their UID to `sharedWith`.
-  ///
-  /// Parameters:
-  /// - [id]: The document ID of the travel record.
-  /// - [friendUid]: The UID of the user to share the plan with.
-  ///
-  /// Returns:
-  /// - A [String] message indicating success or failure.
+  /// Gets travel plans created by the user.
+  Stream<List<Travel>> getTravelsForUser(String userId) {
+    return _db
+        .collection('travel')
+        .where('createdBy', isEqualTo: userId)
+        .orderBy('createdOn', descending: true)
+        .snapshots()
+        .map((snapshot) =>
+            snapshot.docs.map((doc) => Travel.fromJson(doc.data(), doc.id)).toList());
+  }
+
+  /// Gets travel plans shared with the user.
+  Stream<List<Travel>> getSharedTravels(String userId) {
+    return _db
+        .collection('travel')
+        .where('sharedWith', arrayContains: userId)
+        .snapshots()
+        .map((snapshot) =>
+            snapshot.docs.map((doc) => Travel.fromJson(doc.data(), doc.id)).toList());
+  }
+
+  /// Gets a travel plan by ID.
+  Future<Travel?> getTravelById(String travelId) async {
+    try {
+      final doc = await _db.collection('travel').doc(travelId).get();
+      if (doc.exists && doc.data() != null) {
+        return Travel.fromJson(doc.data()!, doc.id);
+      }
+      return null;
+    } catch (e) {
+      print("Error fetching travel by ID: $e");
+      return null;
+    }
+  }
+
+  /// Shares a travel plan with another user.
   Future<String> shareTravelWithUser(String travelId, String friendUid) async {
     try {
-      await db.collection('travel').doc(travelId).update({
-        'sharedWith': FieldValue.arrayUnion([friendUid]),
+      final doc = await _db.collection('travel').doc(travelId).get();
+      if (!doc.exists) return "Travel plan not found";
+
+      final travel = Travel.fromJson(doc.data()!, doc.id);
+      final sharedWith = travel.sharedWith ?? [];
+
+      if (sharedWith.contains(friendUid)) return "Already shared with user";
+
+      sharedWith.add(friendUid);
+
+      await _db.collection('travel').doc(travelId).update({
+        'sharedWith': sharedWith,
       });
-      return "Shared successfully";
-    } on FirebaseException catch (e) {
-      return "Error: ${e.message}";
+
+      return "Travel plan shared successfully";
+    } catch (e) {
+      print("Error sharing travel: $e");
+      return "Failed to share travel plan";
     }
   }
 
-  /// Removes a user from a shared travel plan.
-  ///
-  /// Parameters:
-  /// - [id]: The travel plan document ID.
-  /// - [uidToRemove]: The UID to remove from the sharedWith array.
-  ///
-  /// Returns:
-  /// - A [String] message indicating success or error.
+  /// Removes a user from the sharedWith list.
   Future<String> removeSharedUser(String travelId, String friendUid) async {
     try {
-      await db.collection('travel').doc(travelId).update({
+      await _db.collection('travel').doc(travelId).update({
         'sharedWith': FieldValue.arrayRemove([friendUid]),
       });
       return "User removed";
-    } on FirebaseException catch (e) {
-      return "Error: ${e.message}";
+    } catch (e) {
+      print("Error removing shared user: $e");
+      return "Error: $e";
     }
   }
 
-  /// Adds or updates the itinerary for a travel plan.
-  ///
-  /// Parameters:
-  /// - [id]: The travel plan document ID.
-  /// - [itinerary]: A list or map of itinerary details (e.g., daily plans or time-based schedule).
-  ///
-  /// Returns:
-  /// - A [String] message indicating success or error.
+  /// Updates itinerary field of a travel plan.
   Future<String> updateItinerary(String id, dynamic itinerary) async {
     try {
-      await db.collection('travel').doc(id).update({
+      await _db.collection('travel').doc(id).update({
         'itinerary': itinerary,
       });
       return "Itinerary updated";
-    } on FirebaseException catch (e) {
-      return "Error updating itinerary: ${e.message}";
+    } catch (e) {
+      return "Error updating itinerary: $e";
     }
   }
 
-  /// Generates a shareable QR code string for a travel plan ID.
-  ///
-  /// Parameters:
-  /// - [id]: The travel plan ID to encode.
-  ///
-  /// Returns:
-  /// - A [String] representing the encoded QR value (usually just the ID or link).
-  String generateQRCodeValue(String id) {
-    return id; // Could be just the ID, or a deep link format
+  /// Updates activities field of a travel plan.
+  Future<String> updateActivities(String travelId, List<Activity> activities) async {
+    try {
+      final activityData = activities.map((a) => a.toJson()).toList();
+      await _db.collection('travel').doc(travelId).update({
+        'activities': activityData,
+      });
+      return "Activities updated";
+    } catch (e) {
+      return "Error updating activities: $e";
+    }
   }
 
-  /// Updates the list of activities for a specific travel plan.
-///
-/// Parameters:
-/// - [travelId]: The ID of the travel document.
-/// - [activities]: A list of [Activity] objects to be saved.
-///
-/// Returns:
-/// - A [String] message indicating success or error.
-Future<String> updateActivities(String travelId, List<Activity> activities) async {
-  try {
-    final activityData = activities.map((a) => a.toJson()).toList();
-    await db.collection('travel').doc(travelId).update({
-      'activities': activityData,
-    });
-    return "Activities updated";
-  } on FirebaseException catch (e) {
-    return "Error updating activities: ${e.message}";
+  /// Generates a QR code value (usually just the travel ID).
+  String generateQRCodeValue(String travelId) {
+    return travelId;
   }
 }
-
-}
-
-

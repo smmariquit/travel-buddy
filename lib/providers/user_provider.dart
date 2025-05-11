@@ -32,7 +32,7 @@ class AppUserProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  void fetchUserForCurrentUser() {
+  fetchUserForCurrentUser() {
     User? currentUser = _auth.currentUser;
     if (currentUser != null) {
       _uid = currentUser.uid;

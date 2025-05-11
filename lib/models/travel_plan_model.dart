@@ -2,8 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_maps_webservice/places.dart';
 import 'package:latlong2/latlong.dart';
 
-
-/// Activity is the itinerary (???) (itinerary is never used due to activity so same na lang sila)
+/// Activity is the itinerary item for a travel plan
 class Activity {
   final String title;
   final DateTime startDate;
@@ -34,7 +33,7 @@ class Activity {
       time: json['time'],
       notes: json['notes'],
       imageUrl: json['imageUrl'],
-      checklist: List<String>.from(json['checklist'] ?? []),
+      checklist: json['checklist'] != null ? List<String>.from(json['checklist']) : [],
     );
   }
 
@@ -53,90 +52,122 @@ class Activity {
 }
 
 class Travel {
-  String? id;
-  String uid;
+  final String id;  // Non-nullable, required
+  final String uid;
   final String name;
-  DateTime? startDate;
-  DateTime? endDate;
+  final DateTime? startDate;
+  final DateTime? endDate;
   final String location;
-  // final LatLng? locationLatLng;
   final String? flightDetails;
   final String? accommodation;
   final String? notes;
   final List<String>? checklist;
-  // final List<Map<String, dynamic>>? itinerary;
   final List<String>? sharedWith;
   final DateTime createdOn;
   List<Activity>? activities;
   String? imageUrl;
 
   Travel({
-    this.id,
+    required this.id,  // Required parameter
     required this.uid,
     required this.name,
     this.startDate,
     this.endDate,
     required this.location,
-    // this.locationLatLng,
     this.flightDetails,
     this.accommodation,
     this.notes,
     this.checklist,
-    // this.itinerary,
     this.sharedWith,
     required this.createdOn,
     this.activities,
-    this.imageUrl
+    this.imageUrl,
   });
 
-  factory Travel.fromJson(Map<String, dynamic> json, [String? id]) {
+  /// Creates a Travel object from a JSON map, using the document ID if provided
+  factory Travel.fromJson(Map<String, dynamic> json, [String? docId]) {
+    // Use docId if provided, otherwise use id from json, or generate an error
+    final id = docId ?? json['id'];
+    
+    // Validate ID to ensure it's never null or empty
+    if (id == null || id.isEmpty) {
+      throw ArgumentError('Travel ID cannot be null or empty');
+    }
+    
     return Travel(
-      id: id ?? json['id'],
+      id: id,
       uid: json['uid'],
       name: json['name'],
-      startDate: (json['startDate'] as Timestamp).toDate(),
-      endDate: (json['endDate'] as Timestamp).toDate(),
+      startDate: json['startDate'] != null ? (json['startDate'] as Timestamp).toDate() : null,
+      endDate: json['endDate'] != null ? (json['endDate'] as Timestamp).toDate() : null,
       location: json['location'],
-      // locationLatLng: json['locationLatLng'] != null
-      //     ? LatLng(
-      //         json['locationLatLng']['lat'],
-      //         json['locationLatLng']['lng'],
-      //       )
-      //     : null,
       flightDetails: json['flightDetails'],
       accommodation: json['accommodation'],
       notes: json['notes'],
-      checklist: List<String>.from(json['checklist'] ?? []),
-      // itinerary: (json['itinerary'] as List?)?.cast<Map<String, dynamic>>(),
-      sharedWith: List<String>.from(json['sharedWith'] ?? []),
-      createdOn: (json['createdOn'] as Timestamp).toDate(),
+      checklist: json['checklist'] != null ? List<String>.from(json['checklist']) : [],
+      sharedWith: json['sharedWith'] != null ? List<String>.from(json['sharedWith']) : [],
+      createdOn: json['createdOn'] != null 
+          ? (json['createdOn'] as Timestamp).toDate() 
+          : DateTime.now(),
       activities: (json['activities'] as List<dynamic>?)
-        ?.map((activity) => Activity.fromJson(activity))
-        .toList(),
+          ?.map((activity) => Activity.fromJson(activity))
+          .toList(),
       imageUrl: json['imageUrl'],
-
     );
   }
 
+  /// Converts the Travel object to a JSON map, including the ID
   Map<String, dynamic> toJson() {
     return {
+      'id': id,  // Include ID in the JSON
       'uid': uid,
       'name': name,
       'startDate': startDate,
       'endDate': endDate,
       'location': location,
-      // 'locationLatLng': locationLatLng != null
-      //     ? {'lat': locationLatLng!.latitude, 'lng': locationLatLng!.longitude}
-      //     : null,
       'flightDetails': flightDetails,
       'accommodation': accommodation,
       'notes': notes,
       'checklist': checklist,
-      // 'itinerary': itinerary,
       'sharedWith': sharedWith,
       'createdOn': createdOn,
       'activities': activities?.map((activity) => activity.toJson()).toList(),
       'imageUrl': imageUrl,
     };
+  }
+
+  /// Creates a copy of this Travel object but with the specified fields replaced
+  Travel copyWith({
+    String? id,
+    String? uid,
+    String? name,
+    DateTime? startDate,
+    DateTime? endDate,
+    String? location,
+    String? flightDetails,
+    String? accommodation,
+    String? notes,
+    List<String>? checklist,
+    List<String>? sharedWith,
+    DateTime? createdOn,
+    List<Activity>? activities,
+    String? imageUrl,
+  }) {
+    return Travel(
+      id: id ?? this.id,
+      uid: uid ?? this.uid,
+      name: name ?? this.name,
+      startDate: startDate ?? this.startDate,
+      endDate: endDate ?? this.endDate,
+      location: location ?? this.location,
+      flightDetails: flightDetails ?? this.flightDetails,
+      accommodation: accommodation ?? this.accommodation,
+      notes: notes ?? this.notes,
+      checklist: checklist ?? this.checklist,
+      sharedWith: sharedWith ?? this.sharedWith,
+      createdOn: createdOn ?? this.createdOn,
+      activities: activities ?? this.activities,
+      imageUrl: imageUrl ?? this.imageUrl,
+    );
   }
 }
