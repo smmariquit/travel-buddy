@@ -1,20 +1,27 @@
+// Flutter & Material
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:travel_app/providers/user_provider.dart';
-import 'package:travel_app/models/user_model.dart';
+
+// Firebase & External Services
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'dart:convert';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
+
+// State Management
+import 'package:provider/provider.dart';
+
+// App-specific
+import 'package:travel_app/models/user_model.dart';
+import 'package:travel_app/providers/user_provider.dart';
+import 'package:travel_app/utils/constants.dart';
+import 'package:travel_app/utils/pick_profile_image.dart';
+import 'package:travel_app/widgets/bottom_navigation_bar.dart';
+import 'package:travel_app/providers/user_provider.dart';
+import 'dart:io';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:travel_app/utils/responsive_layout.dart';
-import 'package:travel_app/utils/pick_profile_image.dart';
-import 'package:firebase_storage/firebase_storage.dart';
-import 'dart:io';
-import 'package:travel_app/utils/pick_profile_image.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-
-
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -39,7 +46,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     {"interest": 'Relaxation', "selected": false},
     {"interest": 'Shopping', "selected": false},
     {"interest": 'Sightseeing', "selected": false},
-    {"interest": 'Sports', "selected": false}
+    {"interest": 'Sports', "selected": false},
   ];
 
   List<Map<String, dynamic>> _travelStyles = [
@@ -50,7 +57,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     {"style": 'Cruise', "selected": false},
     {"style": 'Road Trip', "selected": false},
     {"style": 'Eco-Tourism', "selected": false},
-    {"style": 'Adventure Travel', "selected": false}
+    {"style": 'Adventure Travel', "selected": false},
   ];
 
   AppUser? _currentUserData;
@@ -66,20 +73,36 @@ class _ProfileScreenState extends State<ProfileScreen> {
       userStream.listen((firebaseUser) async {
         if (firebaseUser != null) {
           final uid = firebaseUser.uid;
-          final doc = await FirebaseFirestore.instance.collection('appUsers').doc(uid).get();
+          final doc =
+              await FirebaseFirestore.instance
+                  .collection('appUsers')
+                  .doc(uid)
+                  .get();
 
           if (doc.exists) {
             final data = doc.data()!;
             final user = AppUser.fromJson(data);
 
             final masterInterests = [
-              'Adventure', 'Culture', 'Food', 'Nature',
-              'Relaxation', 'Shopping', 'Sightseeing', 'Sports'
+              'Adventure',
+              'Culture',
+              'Food',
+              'Nature',
+              'Relaxation',
+              'Shopping',
+              'Sightseeing',
+              'Sports',
             ];
 
             final masterStyles = [
-              'Backpacking', 'Luxury Travel', 'Solo Travel', "Family Vacation", 
-              "Cruise", 'Road Trip', 'Eco-Tourism', 'Adventure Travel'
+              'Backpacking',
+              'Luxury Travel',
+              'Solo Travel',
+              "Family Vacation",
+              "Cruise",
+              'Road Trip',
+              'Eco-Tourism',
+              'Adventure Travel',
             ];
 
             final selectedInterests = user.interests ?? [];
@@ -94,19 +117,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _locationController.text = user.location ?? '';
               _isPrivate = user.isPrivate;
 
-              _interests = masterInterests.map((interest) {
-                return {
-                  "interest": interest,
-                  "selected": selectedInterests.contains(interest)
-                };
-              }).toList();
+              _interests =
+                  masterInterests.map((interest) {
+                    return {
+                      "interest": interest,
+                      "selected": selectedInterests.contains(interest),
+                    };
+                  }).toList();
 
-              _travelStyles = masterStyles.map((style) {
-                return {
-                  "style": style,
-                  "selected": selectedStyles.contains(style)
-                };
-              }).toList();
+              _travelStyles =
+                  masterStyles.map((style) {
+                    return {
+                      "style": style,
+                      "selected": selectedStyles.contains(style),
+                    };
+                  }).toList();
             });
           }
         }
@@ -141,31 +166,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
         await provider.editLocation(uid, _locationController.text.trim());
       }
 
-      List<String> selectedInterests = _interests
-          .where((interest) => interest['selected'])
-          .map<String>((interest) => interest['interest'] as String)
-          .toList();
+      List<String> selectedInterests =
+          _interests
+              .where((interest) => interest['selected'])
+              .map<String>((interest) => interest['interest'] as String)
+              .toList();
 
-      List<String> selectedTravelStyles = _travelStyles
-          .where((style) => style['selected'])
-          .map<String>((style) => style['style'] as String)
-          .toList();
+      List<String> selectedTravelStyles =
+          _travelStyles
+              .where((style) => style['selected'])
+              .map<String>((style) => style['style'] as String)
+              .toList();
 
       try {
-        await FirebaseFirestore.instance.collection('appUsers').doc(uid).update({
-          'interests': selectedInterests,
-          'travelStyles': selectedTravelStyles,
-        });
+        await FirebaseFirestore.instance.collection('appUsers').doc(uid).update(
+          {
+            'interests': selectedInterests,
+            'travelStyles': selectedTravelStyles,
+          },
+        );
       } catch (e) {
         print("Failed to save interests and travel styles: $e");
       }
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Profile updated')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Profile updated')));
 
       provider.loadUserStream(uid);
-      final doc = await FirebaseFirestore.instance.collection('appUsers').doc(uid).get();
+      final doc =
+          await FirebaseFirestore.instance
+              .collection('appUsers')
+              .doc(uid)
+              .get();
       if (doc.exists) {
         final updatedUser = AppUser.fromJson(doc.data()!);
         setState(() {
@@ -189,11 +222,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
             color: Colors.grey[100],
             child: Column(
               children: [
+                IconButton(
+                  icon: Icon(Icons.exit_to_app, color: Colors.white),
+                  onPressed: () async {
+                    await context.read<AppUserProvider>().signOut();
+                    if (mounted) {
+                      Navigator.of(
+                        context,
+                      ).pushNamedAndRemoveUntil('/signin', (route) => false);
+                    }
+                  },
+                ),
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
                     color: Colors.green,
-                    borderRadius: BorderRadius.vertical(bottom: Radius.circular(30)),
+                    borderRadius: BorderRadius.vertical(
+                      bottom: Radius.circular(30),
+                    ),
                   ),
                   child: Row(
                     children: [
@@ -231,90 +277,139 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           child: CircleAvatar(
                             radius: 40,
                             backgroundColor: Colors.grey[300],
-                            
-                            backgroundImage: _currentUserData!.profileImageUrl != null &&
-                                _currentUserData!.profileImageUrl!.isNotEmpty
-                            ? NetworkImage(_currentUserData!.profileImageUrl!) as ImageProvider
-                            : null,
 
-                            child: _currentUserData!.profileImageUrl == null ||
-                                    _currentUserData!.profileImageUrl!.isEmpty
-                                ? Icon(Icons.person, size: 50, color: Colors.white)
-                                : null,
+                            backgroundImage:
+                                _currentUserData!.profileImageUrl != null &&
+                                        _currentUserData!
+                                            .profileImageUrl!
+                                            .isNotEmpty
+                                    ? NetworkImage(
+                                          _currentUserData!.profileImageUrl!,
+                                        )
+                                        as ImageProvider
+                                    : null,
+
+                            child:
+                                _currentUserData!.profileImageUrl == null ||
+                                        _currentUserData!
+                                            .profileImageUrl!
+                                            .isEmpty
+                                    ? Icon(
+                                      Icons.person,
+                                      size: 50,
+                                      color: Colors.white,
+                                    )
+                                    : null,
                           ),
                         ),
                         Positioned(
                           bottom: 0,
                           right: 4,
                           child: GestureDetector(
-                          onTap: () async {
-                          final source = await showModalBottomSheet<ImageSource>(
-                            context: context,
-                            builder: (context) => SafeArea(
-                              child: Column(
-                                mainAxisSize: MainAxisSize.min,
-                                children: [
-                                  ListTile(
-                                    leading: const Icon(Icons.camera_alt),
-                                    title: const Text('Take a photo'),
-                                    onTap: () => Navigator.pop(context, ImageSource.camera),
+                            onTap: () async {
+                              final source =
+                                  await showModalBottomSheet<ImageSource>(
+                                    context: context,
+                                    builder:
+                                        (context) => SafeArea(
+                                          child: Column(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              ListTile(
+                                                leading: const Icon(
+                                                  Icons.camera_alt,
+                                                ),
+                                                title: const Text(
+                                                  'Take a photo',
+                                                ),
+                                                onTap:
+                                                    () => Navigator.pop(
+                                                      context,
+                                                      ImageSource.camera,
+                                                    ),
+                                              ),
+                                              ListTile(
+                                                leading: const Icon(
+                                                  Icons.photo_library,
+                                                ),
+                                                title: const Text(
+                                                  'Choose from gallery',
+                                                ),
+                                                onTap:
+                                                    () => Navigator.pop(
+                                                      context,
+                                                      ImageSource.gallery,
+                                                    ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                  );
+
+                              if (source == null) return;
+
+                              final permission =
+                                  source == ImageSource.camera
+                                      ? Permission.camera
+                                      : Permission.photos;
+
+                              final status = await permission.request();
+
+                              if (!status.isGranted) {
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text(
+                                      '${permission.toString().split('.').last} permission denied',
+                                    ),
                                   ),
-                                  ListTile(
-                                    leading: const Icon(Icons.photo_library),
-                                    title: const Text('Choose from gallery'),
-                                    onTap: () => Navigator.pop(context, ImageSource.gallery),
+                                );
+                                return;
+                              }
+
+                              final picker = ImagePicker();
+                              final pickedFile = await picker.pickImage(
+                                source: source,
+                              );
+                              if (pickedFile == null) return;
+
+                              final uid = _currentUserData!.uid;
+                              final file = File(pickedFile.path);
+                              final storageRef = FirebaseStorage.instance
+                                  .ref()
+                                  .child('profile_images/$uid.jpg');
+
+                              try {
+                                await storageRef.putFile(file);
+                                final imageUrl =
+                                    await storageRef.getDownloadURL();
+
+                                await FirebaseFirestore.instance
+                                    .collection('appUsers')
+                                    .doc(uid)
+                                    .update({'profileImageUrl': imageUrl});
+
+                                final doc =
+                                    await FirebaseFirestore.instance
+                                        .collection('appUsers')
+                                        .doc(uid)
+                                        .get();
+                                if (doc.exists) {
+                                  final updatedUser = AppUser.fromJson(
+                                    doc.data()!,
+                                  );
+                                  setState(() {
+                                    _currentUserData = updatedUser;
+                                  });
+                                }
+                              } catch (e) {
+                                print('Upload failed: $e');
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                    content: Text('Failed to upload image'),
                                   ),
-                                ],
-                              ),
-                            ),
-                          );
-
-                          if (source == null) return;
-
-                          final permission = source == ImageSource.camera
-                              ? Permission.camera
-                              : Permission.photos;
-
-                          final status = await permission.request();
-
-                          if (!status.isGranted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('${permission.toString().split('.').last} permission denied')),
-                            );
-                            return;
-                          }
-                          
-                          final picker = ImagePicker();
-                          final pickedFile = await picker.pickImage(source: source);
-                          if (pickedFile == null) return;
-
-                          final uid = _currentUserData!.uid;
-                          final file = File(pickedFile.path);
-                          final storageRef = FirebaseStorage.instance.ref().child('profile_images/$uid.jpg');
-
-                          try {
-                            await storageRef.putFile(file);
-                            final imageUrl = await storageRef.getDownloadURL();
-
-                            await FirebaseFirestore.instance.collection('appUsers').doc(uid).update({
-                              'profileImageUrl': imageUrl,
-                            });
-
-                            final doc = await FirebaseFirestore.instance.collection('appUsers').doc(uid).get();
-                            if (doc.exists) {
-                              final updatedUser = AppUser.fromJson(doc.data()!);
-                              setState(() {
-                                _currentUserData = updatedUser;
-                              });
-                            }
-                          } catch (e) {
-                            print('Upload failed: $e');
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Failed to upload image')),
-                            );
-                          }
-                        },
-
+                                );
+                              }
+                            },
 
                             child: CircleAvatar(
                               radius: 14,
@@ -333,162 +428,233 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
 
                 SizedBox(height: 5),
-                
-                  Transform.translate(
-                    offset: Offset(0, -30),
-                    child: Container(
-                      padding: EdgeInsets.symmetric(horizontal: 16),
-                      child: Form(
-                        key: _formKey,
-                        child: Column(
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(child: _buildProfileField(icon: Icons.person_outline, label: "First Name", controller: _firstNameController)),
-                                SizedBox(width: 10),
-                                Expanded(child: _buildProfileField(icon: Icons.badge, label: "Last Name", controller: _lastNameController)),
-                              ],
-                            ),
-                            _buildProfileField(icon: Icons.account_circle_outlined, label: _currentUserData!.username, editable: false),
-                            _buildProfileField(icon: Icons.email_outlined, label: _currentUserData!.email, editable: false),
-                            _buildProfileField(icon: Icons.phone_outlined, label: "Phone number", controller: _phoneController),
-                            _buildProfileField(icon: Icons.location_on_outlined, label: "Location", controller: _locationController),
 
-                            SizedBox(height: 8),
-                            Text('Interests', style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey)),
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: _interests.map((item) {
-                                final isSelected = item['selected'];
-                                return InputChip(
-                                  label: Text(
-                                    item['interest'],
-                                    style: TextStyle(fontSize: 12, color: isSelected ? Colors.white : Colors.black),
-                                  ),
-                                  selected: isSelected,
-                                  onSelected: (selected) {
-                                    setState(() {
-                                      item['selected'] = selected;
-                                    });
-                                  },
-                                  selectedColor: Colors.green,
-                                  checkmarkColor: Colors.white,
-                                  visualDensity: VisualDensity.compact,
-                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                );
-                              }).toList(),
-                            ),
+                Transform.translate(
+                  offset: Offset(0, -30),
+                  child: Container(
+                    padding: EdgeInsets.symmetric(horizontal: 16),
+                    child: Form(
+                      key: _formKey,
+                      child: Column(
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _buildProfileField(
+                                  icon: Icons.person_outline,
+                                  label: "First Name",
+                                  controller: _firstNameController,
+                                ),
+                              ),
+                              SizedBox(width: 10),
+                              Expanded(
+                                child: _buildProfileField(
+                                  icon: Icons.badge,
+                                  label: "Last Name",
+                                  controller: _lastNameController,
+                                ),
+                              ),
+                            ],
+                          ),
+                          _buildProfileField(
+                            icon: Icons.account_circle_outlined,
+                            label: _currentUserData!.username,
+                            editable: false,
+                          ),
+                          _buildProfileField(
+                            icon: Icons.email_outlined,
+                            label: _currentUserData!.email,
+                            editable: false,
+                          ),
+                          _buildProfileField(
+                            icon: Icons.phone_outlined,
+                            label: "Phone number",
+                            controller: _phoneController,
+                          ),
+                          _buildProfileField(
+                            icon: Icons.location_on_outlined,
+                            label: "Location",
+                            controller: _locationController,
+                          ),
 
-                            SizedBox(height: 8),
-                            Text('Travel Styles', style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey)),
-                            Wrap(
-                              spacing: 8,
-                              runSpacing: 8,
-                              children: _travelStyles.map((item) {
-                                final isSelected = item['selected'];
-                                return InputChip(
-                                  label: Text(
-                                    item['style'],
-                                    style: TextStyle(fontSize: 12, color: isSelected ? Colors.white : Colors.black),
-                                  ),
-                                  selected: isSelected,
-                                  onSelected: (selected) {
-                                    setState(() {
-                                      item['selected'] = selected;
-                                    });
-                                  },
-                                  selectedColor: Colors.green,
-                                  checkmarkColor: Colors.white,
-                                  visualDensity: VisualDensity.compact,
-                                  materialTapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                                  padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                );
-                              }).toList(),
+                          SizedBox(height: 8),
+                          Text(
+                            'Interests',
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              color: Colors.grey,
                             ),
-                            SizedBox(height: 20),
+                          ),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children:
+                                _interests.map((item) {
+                                  final isSelected = item['selected'];
+                                  return InputChip(
+                                    label: Text(
+                                      item['interest'],
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color:
+                                            isSelected
+                                                ? Colors.white
+                                                : Colors.black,
+                                      ),
+                                    ),
+                                    selected: isSelected,
+                                    onSelected: (selected) {
+                                      setState(() {
+                                        item['selected'] = selected;
+                                      });
+                                    },
+                                    selectedColor: Colors.green,
+                                    checkmarkColor: Colors.white,
+                                    visualDensity: VisualDensity.compact,
+                                    materialTapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                  );
+                                }).toList(),
+                          ),
 
-                            ElevatedButton.icon(
-                              onPressed: () {
-                                showDialog(
-                                  context: context,
-                                  builder: (context) => AlertDialog(
-                                    title: Text('Your QR Code'),
-                                    content: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        if (_currentUserData != null)
-                                          SizedBox(
-                                            height: 200.0,
-                                            width: 200.0,
-                                            child: QrImageView(
-                                              data: _currentUserData!.uid,
-                                              version: QrVersions.auto,
-                                              size: 200.0,
+                          SizedBox(height: 8),
+                          Text(
+                            'Travel Styles',
+                            style: GoogleFonts.poppins(
+                              fontSize: 14,
+                              color: Colors.grey,
+                            ),
+                          ),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 8,
+                            children:
+                                _travelStyles.map((item) {
+                                  final isSelected = item['selected'];
+                                  return InputChip(
+                                    label: Text(
+                                      item['style'],
+                                      style: TextStyle(
+                                        fontSize: 12,
+                                        color:
+                                            isSelected
+                                                ? Colors.white
+                                                : Colors.black,
+                                      ),
+                                    ),
+                                    selected: isSelected,
+                                    onSelected: (selected) {
+                                      setState(() {
+                                        item['selected'] = selected;
+                                      });
+                                    },
+                                    selectedColor: Colors.green,
+                                    checkmarkColor: Colors.white,
+                                    visualDensity: VisualDensity.compact,
+                                    materialTapTargetSize:
+                                        MaterialTapTargetSize.shrinkWrap,
+                                    padding: EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                      vertical: 4,
+                                    ),
+                                  );
+                                }).toList(),
+                          ),
+                          SizedBox(height: 20),
+
+                          ElevatedButton.icon(
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder:
+                                    (context) => AlertDialog(
+                                      title: Text('Your QR Code'),
+                                      content: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          if (_currentUserData != null)
+                                            SizedBox(
+                                              height: 200.0,
+                                              width: 200.0,
+                                              child: QrImageView(
+                                                data: _currentUserData!.uid,
+                                                version: QrVersions.auto,
+                                                size: 200.0,
+                                              ),
                                             ),
-                                          ),
-                                        SizedBox(height: 10),
-                                        if (_currentUserData != null)
-                                          Text(
-                                            "Make friends scan your QR",
-                                            style: TextStyle(fontSize: 12, color: Colors.grey),
-                                            textAlign: TextAlign.center,
-                                          ),
+                                          SizedBox(height: 10),
+                                          if (_currentUserData != null)
+                                            Text(
+                                              "Make friends scan your QR",
+                                              style: TextStyle(
+                                                fontSize: 12,
+                                                color: Colors.grey,
+                                              ),
+                                              textAlign: TextAlign.center,
+                                            ),
+                                        ],
+                                      ),
+                                      actions: [
+                                        TextButton(
+                                          onPressed:
+                                              () => Navigator.of(context).pop(),
+                                          child: Text('Close'),
+                                        ),
                                       ],
                                     ),
-                                    actions: [
-                                      TextButton(
-                                        onPressed: () => Navigator.of(context).pop(),
-                                        child: Text('Close'),
-                                      ),
-                                    ],
-                                  ),
-                                );
-                              },
-                              icon: Icon(Icons.qr_code),
-                              label: Text("Generate QR Code"),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.green,
-                                foregroundColor: Colors.white,
-                                padding: EdgeInsets.symmetric(vertical: 14, horizontal: 24),
-                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(30)),
+                              );
+                            },
+                            icon: Icon(Icons.qr_code),
+                            label: Text("Generate QR Code"),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              foregroundColor: Colors.white,
+                              padding: EdgeInsets.symmetric(
+                                vertical: 14,
+                                horizontal: 24,
+                              ),
+                              shape: RoundedRectangleBorder(
+                                borderRadius: BorderRadius.circular(30),
                               ),
                             ),
-                            
-                            SizedBox(
-                              width: double.infinity,
-                              child: OutlinedButton(
-                                onPressed: _saveChanges,
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: Colors.green[700],
-                                  side: BorderSide(color: Colors.green[700]!),
-                                  padding: EdgeInsets.symmetric(vertical: 16),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(30),
-                                  ),
+                          ),
+
+                          SizedBox(
+                            width: double.infinity,
+                            child: OutlinedButton(
+                              onPressed: _saveChanges,
+                              style: OutlinedButton.styleFrom(
+                                foregroundColor: Colors.green[700],
+                                side: BorderSide(color: Colors.green[700]!),
+                                padding: EdgeInsets.symmetric(vertical: 16),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(30),
                                 ),
-                                child: Text(
-                                  "Edit profile",
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w500,
-                                    color: Colors.green[700],
-                                  ),
+                              ),
+                              child: Text(
+                                "Edit profile",
+                                style: GoogleFonts.poppins(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.green[700],
                                 ),
                               ),
                             ),
-                          ],
-                        ),
+                          ),
+                        ],
                       ),
                     ),
                   ),
-                
+                ),
               ],
             ),
           ),
         ),
-      ),   
+      ),
     );
   }
 
@@ -516,20 +682,24 @@ class _ProfileScreenState extends State<ProfileScreen> {
         dense: true,
         contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 3),
         leading: Icon(icon, color: Colors.grey),
-        title: editable
-            ? TextField(
-                controller: controller,
-                decoration: InputDecoration(
-                  hintText: label,
-                  border: InputBorder.none,
-                  hintStyle: TextStyle(color: Colors.grey),
+        title:
+            editable
+                ? TextField(
+                  controller: controller,
+                  decoration: InputDecoration(
+                    hintText: label,
+                    border: InputBorder.none,
+                    hintStyle: TextStyle(color: Colors.grey),
+                  ),
+                  style: GoogleFonts.poppins(
+                    fontSize: 14,
+                    color: Colors.black87,
+                  ),
+                )
+                : Text(
+                  label,
+                  style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey),
                 ),
-                style: GoogleFonts.poppins(fontSize: 14, color: Colors.black87),
-              )
-            : Text(
-                label,
-                style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey),
-              ),
       ),
     );
   }

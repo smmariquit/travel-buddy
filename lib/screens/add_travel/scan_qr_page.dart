@@ -1,5 +1,13 @@
+// Flutter & Material
 import 'package:flutter/material.dart';
+
+// Firebase & External Services
 import 'package:mobile_scanner/mobile_scanner.dart';
+
+// State Management
+// (none in this file)
+
+// App-specific
 import 'package:travel_app/utils/constants.dart';
 
 class QRScanPage extends StatefulWidget {
@@ -19,7 +27,10 @@ class _QRScanPageState extends State<QRScanPage> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(title: Text('Scan QR Code'), backgroundColor: primaryColor),
+      appBar: AppBar(
+        title: Text('Scan QR Code'),
+        backgroundColor: primaryColor,
+      ),
       body: MobileScanner(
         controller: controller,
         onDetect: (barcodeCapture) {

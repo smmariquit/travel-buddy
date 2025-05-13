@@ -1,6 +1,16 @@
+// Flutter & Material
+// (none in this file)
+
+// Firebase & External Services
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_maps_webservice/places.dart';
 import 'package:latlong2/latlong.dart';
+
+// State Management
+// (none in this file)
+
+// App-specific
+// (none in this file)
 
 /// Activity is the itinerary item for a travel plan
 class Activity {
@@ -28,12 +38,16 @@ class Activity {
     return Activity(
       title: json['title'],
       startDate: (json['startDate'] as Timestamp).toDate(),
-      endDate: json['endDate'] != null ? (json['endDate'] as Timestamp).toDate() : null,
+      endDate:
+          json['endDate'] != null
+              ? (json['endDate'] as Timestamp).toDate()
+              : null,
       place: json['place'],
       time: json['time'],
       notes: json['notes'],
       imageUrl: json['imageUrl'],
-      checklist: json['checklist'] != null ? List<String>.from(json['checklist']) : [],
+      checklist:
+          json['checklist'] != null ? List<String>.from(json['checklist']) : [],
     );
   }
 
@@ -52,7 +66,7 @@ class Activity {
 }
 
 class Travel {
-  final String id;  // Non-nullable, required
+  final String id; // Non-nullable, required
   final String uid;
   final String name;
   final DateTime? startDate;
@@ -68,7 +82,7 @@ class Travel {
   String? imageUrl;
 
   Travel({
-    required this.id,  // Required parameter
+    required this.id, // Required parameter
     required this.uid,
     required this.name,
     this.startDate,
@@ -88,30 +102,42 @@ class Travel {
   factory Travel.fromJson(Map<String, dynamic> json, [String? docId]) {
     // Use docId if provided, otherwise use id from json, or generate an error
     final id = docId ?? json['id'];
-    
+
     // Validate ID to ensure it's never null or empty
     if (id == null || id.isEmpty) {
       throw ArgumentError('Travel ID cannot be null or empty');
     }
-    
+
     return Travel(
       id: id,
       uid: json['uid'],
       name: json['name'],
-      startDate: json['startDate'] != null ? (json['startDate'] as Timestamp).toDate() : null,
-      endDate: json['endDate'] != null ? (json['endDate'] as Timestamp).toDate() : null,
+      startDate:
+          json['startDate'] != null
+              ? (json['startDate'] as Timestamp).toDate()
+              : null,
+      endDate:
+          json['endDate'] != null
+              ? (json['endDate'] as Timestamp).toDate()
+              : null,
       location: json['location'],
       flightDetails: json['flightDetails'],
       accommodation: json['accommodation'],
       notes: json['notes'],
-      checklist: json['checklist'] != null ? List<String>.from(json['checklist']) : [],
-      sharedWith: json['sharedWith'] != null ? List<String>.from(json['sharedWith']) : [],
-      createdOn: json['createdOn'] != null 
-          ? (json['createdOn'] as Timestamp).toDate() 
-          : DateTime.now(),
-      activities: (json['activities'] as List<dynamic>?)
-          ?.map((activity) => Activity.fromJson(activity))
-          .toList(),
+      checklist:
+          json['checklist'] != null ? List<String>.from(json['checklist']) : [],
+      sharedWith:
+          json['sharedWith'] != null
+              ? List<String>.from(json['sharedWith'])
+              : [],
+      createdOn:
+          json['createdOn'] != null
+              ? (json['createdOn'] as Timestamp).toDate()
+              : DateTime.now(),
+      activities:
+          (json['activities'] as List<dynamic>?)
+              ?.map((activity) => Activity.fromJson(activity))
+              .toList(),
       imageUrl: json['imageUrl'],
     );
   }
@@ -119,7 +145,7 @@ class Travel {
   /// Converts the Travel object to a JSON map, including the ID
   Map<String, dynamic> toJson() {
     return {
-      'id': id,  // Include ID in the JSON
+      'id': id, // Include ID in the JSON
       'uid': uid,
       'name': name,
       'startDate': startDate,

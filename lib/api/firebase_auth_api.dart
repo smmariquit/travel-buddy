@@ -28,40 +28,40 @@ class FirebaseAuthAPI {
   /// - `null` if the sign-in is successful.
   /// - A string message if an error occurs or the user cancels the sign-in.
   signInWithGoogle() async {
-  try {
-    // Attempt to sign in with Google
-    final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
-    
-    // Handle if the user cancels the sign-in process
-    if (googleUser == null) {
-      print("Google sign-in cancelled");
-      return "Sign-in cancelled"; // This will be the result when the user cancels
+    try {
+      // Attempt to sign in with Google
+      final GoogleSignInAccount? googleUser = await GoogleSignIn().signIn();
+
+      // Handle if the user cancels the sign-in process
+      if (googleUser == null) {
+        print("Google sign-in cancelled");
+        return "Sign-in cancelled"; // This will be the result when the user cancels
+      }
+
+      // Get authentication details from Google
+      final GoogleSignInAuthentication googleAuth =
+          await googleUser.authentication;
+
+      // Create Firebase credential from the Google auth tokens
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
+
+      // Sign in with the Firebase credential
+      await auth.signInWithCredential(credential);
+
+      print("Google sign-in successful");
+    } on FirebaseAuthException catch (e) {
+      // Handle Firebase specific errors
+      print("Firebase error: ${e.message}");
+      return "Firebase error: ${e.message}";
+    } catch (e) {
+      // Handle other errors
+      print("Sign-in failed: ${e.toString()}");
+      return "Sign-in failed: ${e.toString()}";
     }
-
-    // Get authentication details from Google
-    final GoogleSignInAuthentication googleAuth = await googleUser.authentication;
-
-    // Create Firebase credential from the Google auth tokens
-    final credential = GoogleAuthProvider.credential(
-      accessToken: googleAuth.accessToken,
-      idToken: googleAuth.idToken,
-    );
-
-    // Sign in with the Firebase credential
-    await auth.signInWithCredential(credential);
-    
-    print("Google sign-in successful");
-  } on FirebaseAuthException catch (e) {
-    // Handle Firebase specific errors
-    print("Firebase error: ${e.message}");
-    return "Firebase error: ${e.message}";
-  } catch (e) {
-    // Handle other errors
-    print("Sign-in failed: ${e.toString()}");
-    return "Sign-in failed: ${e.toString()}";
   }
-}
-
 
   /// Signs in a user using email and password.
   ///
