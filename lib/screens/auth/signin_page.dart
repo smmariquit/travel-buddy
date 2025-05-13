@@ -1,11 +1,19 @@
+// Flutter & Material
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
+// Firebase & External Services
+import 'package:firebase_auth/firebase_auth.dart';
+
+// State Management
 import 'package:provider/provider.dart';
+
+// App-specific
 import 'package:travel_app/providers/user_provider.dart';
-import 'package:travel_app/screens/friends/friends_list.dart';
-import 'signup_page.dart';
 import 'package:travel_app/providers/travel_plans_provider.dart';
+import 'package:travel_app/screens/friends/friends_list.dart';
 import 'package:travel_app/screens/home/main_page.dart';
+import 'signup_page.dart';
 
 class SignInPage extends StatefulWidget {
   const SignInPage({super.key});
@@ -24,71 +32,64 @@ class _SignInPageState extends State<SignInPage> {
   String? username;
   String? password;
 
- @override
-Widget build(BuildContext context) {
-  return Scaffold(
-    body: Stack(
-      children: [
-        // Background Image
-        SizedBox.expand(
-          child: Image.asset(
-            'assets/images/hike_bg.jpg',
-            fit: BoxFit.cover,
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: Stack(
+        children: [
+          // Background Image
+          SizedBox.expand(
+            child: Image.asset('assets/images/hike_bg.jpg', fit: BoxFit.cover),
           ),
-        ),
 
-        // Dark overlay
-        Container(
-          color: Colors.black.withOpacity(0.5),
-        ),
+          // Dark overlay
+          Container(color: Colors.black.withOpacity(0.5)),
 
-        // Content
-        SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 32, vertical: 100),
-            child: Form(
-              key: _formKey,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.center,
-                children: [
-                  const Text(
-                    "Sign In",
-                    style: TextStyle(
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+          // Content
+          SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 32,
+                vertical: 100,
+              ),
+              child: Form(
+                key: _formKey,
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const Text(
+                      "Sign In",
+                      style: TextStyle(
+                        fontSize: 32,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 10),
-                  const Text(
-                    "Welcome back! Log in to plan your next trip.",
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.white70,
+                    const SizedBox(height: 10),
+                    const Text(
+                      "Welcome back! Log in to plan your next trip.",
+                      style: TextStyle(fontSize: 16, color: Colors.white70),
+                      textAlign: TextAlign.center,
                     ),
-                    textAlign: TextAlign.center,
-                  ),
-                  const SizedBox(height: 50),
-                  usernameField,
-                  passwordField,
-                  if (showSignInErrorMessage) signInErrorMessage,
-                  const SizedBox(height: 10),
-                  submitButton,
-                  const SizedBox(height: 20),
-                  orConnect,
-                  googleSignInButton,
-                  signUpButton,
-                ],
+                    const SizedBox(height: 50),
+                    usernameField,
+                    passwordField,
+                    if (showSignInErrorMessage) signInErrorMessage,
+                    const SizedBox(height: 10),
+                    submitButton,
+                    const SizedBox(height: 20),
+                    orConnect,
+                    googleSignInButton,
+                    signUpButton,
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-      ],
-    ),
-  );
-}
-
-
+        ],
+      ),
+    );
+  }
 
   Widget get heading => const Center(
     child: Text(
@@ -101,7 +102,6 @@ Widget build(BuildContext context) {
     ),
   );
 
-
   Widget get subtitle => const Center(
     child: Text(
       "Welcome back! Please log in to continue.",
@@ -110,10 +110,8 @@ Widget build(BuildContext context) {
     ),
   );
 
-
-
   InputDecoration _inputDecoration(String label, String hint) {
-  return InputDecoration(
+    return InputDecoration(
       filled: true,
       fillColor: Colors.white.withOpacity(0.15),
       labelText: label,
@@ -128,8 +126,6 @@ Widget build(BuildContext context) {
     );
   }
 
-
-
   Widget get usernameField => Padding(
     padding: const EdgeInsets.only(bottom: 30),
     child: TextFormField(
@@ -141,8 +137,8 @@ Widget build(BuildContext context) {
           return "Please enter your username";
         }
         if (value.length < 3) {
-        return "Username must be at least 3 characters long";
-      }
+          return "Username must be at least 3 characters long";
+        }
         // final emailRegex = RegExp(r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]+$");
         // if (!emailRegex.hasMatch(value)) {
         //   return 'Please enter a valid email address';
@@ -192,11 +188,9 @@ Widget build(BuildContext context) {
     height: 55,
     child: ElevatedButton(
       style: ElevatedButton.styleFrom(
-        backgroundColor: const Color(0xFF3CC08E), 
+        backgroundColor: const Color(0xFF3CC08E),
         foregroundColor: Colors.white,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
       ),
       onPressed: () async {
         if (_formKey.currentState!.validate()) {
@@ -209,7 +203,10 @@ Widget build(BuildContext context) {
             setState(() {
               showSignInErrorMessage = false;
             });
-            Navigator.pushReplacementNamed(context, '/main'); // Navigate to main page
+            Navigator.pushReplacementNamed(
+              context,
+              '/main',
+            ); // Navigate to main page
           } else {
             setState(() {
               showSignInErrorMessage = true;
@@ -221,55 +218,57 @@ Widget build(BuildContext context) {
     ),
   );
 
-
   Widget get googleSignInButton => Center(
-  child: Container(
-    width: 200,
-    height: 50,
-    margin: const EdgeInsets.symmetric(vertical: 8),
-    child: TextButton.icon(
-      icon: Image.network(
-        'https://img.icons8.com/color/48/000000/google-logo.png',
-        height: 24,
-        width: 24,
-      ),
-      label: const Text("Sign in with Google", style: TextStyle(color: Color.fromARGB(255, 0, 0, 0))),
-      style: ElevatedButton.styleFrom(
-        backgroundColor: const Color.fromARGB(255, 255, 255, 255),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(30),
+    child: Container(
+      width: 200,
+      height: 50,
+      margin: const EdgeInsets.symmetric(vertical: 8),
+      child: TextButton.icon(
+        icon: Image.network(
+          'https://img.icons8.com/color/48/000000/google-logo.png',
+          height: 24,
+          width: 24,
         ),
+        label: const Text(
+          "Sign in with Google",
+          style: TextStyle(color: Color.fromARGB(255, 0, 0, 0)),
+        ),
+        style: ElevatedButton.styleFrom(
+          backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(30),
+          ),
+        ),
+        onPressed: () async {
+          final authProvider = context.read<AppUserProvider>();
+          final travelProvider = context.read<TravelTrackerProvider>();
+
+          // Sign out first to clear any cached credentials
+          await authProvider
+              .signOutGoogle(); // You'll need to implement this method
+
+          // Now attempt to sign in with Google
+          String? result = await authProvider.signInWithGoogle();
+
+          if (result == null) {
+            // Successful sign-in, navigate to the next page
+            travelProvider.setUser(authProvider.uid);
+
+            // Navigate to the next page
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (context) => MainPage()),
+            );
+          } else {
+            // If sign-in fails, show error message
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text(result)));
+          }
+        },
       ),
-      onPressed: () async {
-        final authProvider = context.read<AppUserProvider>();
-        final travelProvider = context.read<TravelTrackerProvider>();
-
-        // Sign out first to clear any cached credentials
-        await authProvider.signOutGoogle(); // You'll need to implement this method
-
-        // Now attempt to sign in with Google
-        String? result = await authProvider.signInWithGoogle();
-
-        if (result == null) {
-          // Successful sign-in, navigate to the next page
-          travelProvider.setUser(authProvider.uid);
-
-          // Navigate to the next page
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (context) => MainPage()),
-          );
-        } else {
-          // If sign-in fails, show error message
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text(result)),
-          );
-        }
-      }
     ),
-  ),
-);
-
+  );
 
   Widget get orConnect => Padding(
     padding: const EdgeInsets.all(10),
@@ -286,17 +285,26 @@ Widget build(BuildContext context) {
     child: Row(
       mainAxisAlignment: MainAxisAlignment.center,
       children: [
-        const Text("Don't have an account?", style: TextStyle(color: Colors.grey)),
+        const Text(
+          "Don't have an account?",
+          style: TextStyle(color: Colors.grey),
+        ),
         TextButton(
           onPressed: () {
             Navigator.push(
               context,
               MaterialPageRoute(builder: (context) => const SignUpPage()),
             ).then((_) {
-              Navigator.pushReplacementNamed(context, '/interests'); // Navigate to interests page after signup
+              Navigator.pushReplacementNamed(
+                context,
+                '/interests',
+              ); // Navigate to interests page after signup
             });
           },
-          child: const Text("Sign Up", style: TextStyle(color: Color(0xFFFF7029))),
+          child: const Text(
+            "Sign Up",
+            style: TextStyle(color: Color(0xFFFF7029)),
+          ),
         ),
       ],
     ),

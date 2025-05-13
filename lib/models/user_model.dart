@@ -65,7 +65,8 @@ class AppUser {
       isPrivate: isPrivate ?? this.isPrivate,
       friendUIDs: friendUIDs ?? this.friendUIDs,
       sentFriendRequests: sentFriendRequests ?? this.sentFriendRequests,
-      receivedFriendRequests: receivedFriendRequests ?? this.receivedFriendRequests,
+      receivedFriendRequests:
+          receivedFriendRequests ?? this.receivedFriendRequests,
     );
   }
 
@@ -76,16 +77,31 @@ class AppUser {
       middleName: json['middleName'],
       lastName: json['lastName'],
       username: json['username'],
-      friendUIDs: json['friendUIDs'] != null ? List<String>.from(json['friendUIDs']) : [],
-      sentFriendRequests: json['sentFriendRequests'] != null ? List<String>.from(json['sentFriendRequests']) : [],
-      receivedFriendRequests: json['receivedFriendRequests'] != null ? List<String>.from(json['receivedFriendRequests']) : [],
+      friendUIDs:
+          json['friendUIDs'] != null
+              ? List<String>.from(json['friendUIDs'])
+              : [],
+      sentFriendRequests:
+          json['sentFriendRequests'] != null
+              ? List<String>.from(json['sentFriendRequests'])
+              : [],
+      receivedFriendRequests:
+          json['receivedFriendRequests'] != null
+              ? List<String>.from(json['receivedFriendRequests'])
+              : [],
       profileImageUrl: json['profileImageUrl'],
       phoneNumber: json['phoneNumber'],
       isPrivate: json['isPrivate'] ?? false,
       email: json['email'],
       location: json['location'],
-      interests: json['interests'] != null ? List<String>.from(json['interests']) : null,
-      travelStyles: json['travelStyles'] != null ? List<String>.from(json['travelStyles']) : null,
+      interests:
+          json['interests'] != null
+              ? List<String>.from(json['interests'])
+              : null,
+      travelStyles:
+          json['travelStyles'] != null
+              ? List<String>.from(json['travelStyles'])
+              : null,
     );
   }
 
