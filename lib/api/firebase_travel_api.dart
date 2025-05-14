@@ -52,8 +52,12 @@ class FirebaseTravelAPI {
         .where('createdBy', isEqualTo: userId)
         .orderBy('createdOn', descending: true)
         .snapshots()
-        .map((snapshot) =>
-            snapshot.docs.map((doc) => Travel.fromJson(doc.data(), doc.id)).toList());
+        .map(
+          (snapshot) =>
+              snapshot.docs
+                  .map((doc) => Travel.fromJson(doc.data(), doc.id))
+                  .toList(),
+        );
   }
 
   /// Gets travel plans shared with the user.
@@ -62,8 +66,12 @@ class FirebaseTravelAPI {
         .collection('travel')
         .where('sharedWith', arrayContains: userId)
         .snapshots()
-        .map((snapshot) =>
-            snapshot.docs.map((doc) => Travel.fromJson(doc.data(), doc.id)).toList());
+        .map(
+          (snapshot) =>
+              snapshot.docs
+                  .map((doc) => Travel.fromJson(doc.data(), doc.id))
+                  .toList(),
+        );
   }
 
   /// Gets a travel plan by ID.
@@ -120,9 +128,7 @@ class FirebaseTravelAPI {
   /// Updates itinerary field of a travel plan.
   Future<String> updateItinerary(String id, dynamic itinerary) async {
     try {
-      await _db.collection('travel').doc(id).update({
-        'itinerary': itinerary,
-      });
+      await _db.collection('travel').doc(id).update({'itinerary': itinerary});
       return "Itinerary updated";
     } catch (e) {
       return "Error updating itinerary: $e";
@@ -130,7 +136,10 @@ class FirebaseTravelAPI {
   }
 
   /// Updates activities field of a travel plan.
-  Future<String> updateActivities(String travelId, List<Activity> activities) async {
+  Future<String> updateActivities(
+    String travelId,
+    List<Activity> activities,
+  ) async {
     try {
       final activityData = activities.map((a) => a.toJson()).toList();
       await _db.collection('travel').doc(travelId).update({
