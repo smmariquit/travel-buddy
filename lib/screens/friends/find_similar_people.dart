@@ -781,27 +781,36 @@ class _FindSimilarPeopleScreenState extends State<FindSimilarPeopleScreen> {
                       },
                     ),
           ),
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: SizedBox(
-              width: double.infinity,
-              child: ElevatedButton.icon(
-                onPressed: _scanQRCodeToAddFriend,
-                icon: Icon(Icons.qr_code_scanner),
-                label: Text("Scan to Add"),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green,
-                  foregroundColor: Colors.white,
-                  padding: EdgeInsets.symmetric(vertical: 16),
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                ),
-              ),
-            ),
-          ),
+          // Padding(
+          //   padding: const EdgeInsets.all(16.0),
+          //   child: SizedBox(
+          //     width: double.infinity,
+          //     child: ElevatedButton.icon(
+          //       onPressed: _scanQRCodeToAddFriend,
+          //       icon: Icon(Icons.qr_code_scanner),
+          //       label: Text("Scan to Add"),
+          //       style: ElevatedButton.styleFrom(
+          //         backgroundColor: Colors.green,
+          //         foregroundColor: Colors.white,
+          //         padding: EdgeInsets.symmetric(vertical: 16),
+          //         shape: RoundedRectangleBorder(
+          //           borderRadius: BorderRadius.circular(12),
+          //         ),
+          //       ),
+          //     ),
+          //   ),
+          // ),
         ],
       ),
+      bottomNavigationBar: BottomNavBar(selectedIndex: 2),
+      floatingActionButtonLocation:
+              FloatingActionButtonLocation.centerDocked,
+          floatingActionButton: FloatingActionButton(
+            backgroundColor: Colors.green.shade700,
+            onPressed: _scanQRCodeToAddFriend,
+            tooltip: "Scan QR to Add Friend",
+            child: Icon(Icons.qr_code_scanner),
+    ),
     );
   }
 }
