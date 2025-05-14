@@ -29,6 +29,7 @@ import 'package:provider/provider.dart';
 import 'package:travel_app/models/travel_plan_model.dart';
 import 'package:travel_app/providers/travel_plans_provider.dart';
 import 'package:travel_app/providers/user_provider.dart';
+import 'package:travel_app/screens/home/notifications.dart';
 import 'package:travel_app/utils/responsive_layout.dart';
 import 'package:travel_app/widgets/bottom_navigation_bar.dart';
 import 'package:travel_app/widgets/travel_plan_card.dart';
@@ -252,7 +253,13 @@ class _GreetingRow extends StatelessWidget {
             ),
           ],
         ),
-        IconButton(icon: const Icon(Icons.notifications), onPressed: () {}),
+        IconButton(icon: const Icon(Icons.notifications),
+        onPressed: () {
+          Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const NotificationPage()),
+    );
+        }),
       ],
     );
   }
