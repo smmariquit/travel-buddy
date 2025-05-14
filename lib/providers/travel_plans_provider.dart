@@ -1,12 +1,29 @@
+// Flutter & Material
+import 'package:flutter/material.dart';
+
+// Firebase & External Services
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_storage/firebase_storage.dart';
+
+// State Management
+import 'package:provider/provider.dart';
+
+// App-specific
 import 'package:travel_app/api/firebase_travel_api.dart';
 import 'package:travel_app/models/travel_plan_model.dart';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 import 'package:async/async.dart';
 
 class TravelTrackerProvider with ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
-  FirebaseTravelAPI? firebaseService;
+  FirebaseTravelAPI? _firebaseService;
+  FirebaseTravelAPI get firebaseService {
+    _firebaseService ??= FirebaseTravelAPI();
+    return _firebaseService!;
+  }
 
   String? _userId;
   List<Travel> _travels = [];
@@ -18,32 +35,39 @@ class TravelTrackerProvider with ChangeNotifier {
   List<Travel> get travels => _travels;
   bool get isLoading => _isLoading;
   Stream<QuerySnapshot> get travelStream => _travelsStream;
-  Stream<List<Travel>> getSharedTravelPlans() {
-    return firebaseService!.getSharedTravels(_userId!);
-  }
 
+  Stream<List<Travel>> getSharedTravelPlans() {
+    if (_userId == null) return Stream.value([]);
+    return firebaseService.getSharedTravels(_userId!);
+  }
 
   // Set current user and initialize services/streams
   void setUser(String? uid) {
+    if (_userId == uid) return; // Skip if user hasn't changed
+
     _userId = uid;
+    bool shouldNotify = false;
 
     if (uid != null) {
-      firebaseService = FirebaseTravelAPI();
+      _firebaseService = FirebaseTravelAPI();
       fetchTravelsStream();
-      getTravelPlans(); // Load cached list
+      shouldNotify = true;
     } else {
-      firebaseService = null;
+      _firebaseService = null;
       _travelsStream = Stream.empty();
       _travels = [];
+      shouldNotify = true;
     }
 
-    notifyListeners();
+    if (shouldNotify) {
+      notifyListeners();
+    }
   }
 
   // Clear context
   void clearUser() {
     _userId = null;
-    firebaseService = null;
+    _firebaseService = null;
     _travelsStream = Stream.empty();
     _travels = [];
     notifyListeners();
@@ -53,15 +77,17 @@ class TravelTrackerProvider with ChangeNotifier {
   void fetchTravelsStream() {
     if (_userId == null) return;
 
-    final ownTravels = _firestore
-        .collection('travel')
-        .where('uid', isEqualTo: _userId!)
-        .snapshots();
+    final ownTravels =
+        _firestore
+            .collection('travel')
+            .where('uid', isEqualTo: _userId!)
+            .snapshots();
 
-    final sharedTravels = _firestore
-        .collection('travel')
-        .where('sharedWith', arrayContains: _userId!)
-        .snapshots();
+    final sharedTravels =
+        _firestore
+            .collection('travel')
+            .where('sharedWith', arrayContains: _userId!)
+            .snapshots();
 
     _travelsStream = StreamGroup.merge([ownTravels, sharedTravels]);
     notifyListeners();
@@ -76,15 +102,17 @@ class TravelTrackerProvider with ChangeNotifier {
       _isLoading = true;
       notifyListeners();
 
-      final snapshot = await _firestore
-          .collection('travel')
-          .where('uid', isEqualTo: _userId)
-          .orderBy('createdOn', descending: true)
-          .get();
+      final snapshot =
+          await _firestore
+              .collection('travel')
+              .where('uid', isEqualTo: _userId)
+              .orderBy('createdOn', descending: true)
+              .get();
 
-      _travels = snapshot.docs
-          .map((doc) => Travel.fromJson(doc.data(), doc.id))
-          .toList();
+      _travels =
+          snapshot.docs
+              .map((doc) => Travel.fromJson(doc.data(), doc.id))
+              .toList();
 
       _isLoading = false;
       notifyListeners();
@@ -129,7 +157,10 @@ class TravelTrackerProvider with ChangeNotifier {
       _isLoading = true;
       notifyListeners();
 
-      await _firestore.collection('travel').doc(travel.id).update(travel.toJson());
+      await _firestore
+          .collection('travel')
+          .doc(travel.id)
+          .update(travel.toJson());
 
       final index = _travels.indexWhere((t) => t.id == travel.id);
       if (index >= 0) {
@@ -194,14 +225,18 @@ class TravelTrackerProvider with ChangeNotifier {
   }
 
   // Update activities list in a travel plan
-  Future<void> updateActivities(String travelId, List<Activity> activities) async {
-    if (firebaseService == null) return;
+  Future<void> updateActivities(
+    String travelId,
+    List<Activity> activities,
+  ) async {
+    if (_userId == null) return;
 
     try {
-      await firebaseService!.updateActivities(travelId, activities);
+      await firebaseService.updateActivities(travelId, activities);
       notifyListeners();
     } catch (e) {
       print("Error updating activities: $e");
+      rethrow; // Rethrow to let the caller handle the error
     }
   }
 

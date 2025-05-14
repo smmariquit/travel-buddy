@@ -7,12 +7,9 @@ class FirebaseAppUserApi {
   Stream<QuerySnapshot> getAllAppUsers() {
     return db.collection('appUsers').snapshots();
   }
-  
-  
+
   Stream<QuerySnapshot> getAppUserByUID(String uid) {
-    return db.collection('appUsers')
-        .where('uid', isEqualTo: uid)
-        .snapshots();
+    return db.collection('appUsers').where('uid', isEqualTo: uid).snapshots();
   }
 
   Future<String> addAppUser(Map<String, dynamic> appUser) async {
@@ -33,7 +30,6 @@ class FirebaseAppUserApi {
     }
   }
 
-
   Future<String> editAppUserFirstName(String uid, String firstName) async {
     try {
       await db.collection('appUsers').doc(uid).update({'firstName': firstName});
@@ -45,13 +41,14 @@ class FirebaseAppUserApi {
 
   Future<String> editAppUserMiddleName(String uid, String middleName) async {
     try {
-      await db.collection('appUsers').doc(uid).update({'middleName': middleName});
+      await db.collection('appUsers').doc(uid).update({
+        'middleName': middleName,
+      });
       return "Successfully edited middle name!";
     } on FirebaseException catch (e) {
       return "Error on ${e.code}: ${e.message}";
     }
   }
-
 
   Future<String> editAppUserLastName(String uid, String lastName) async {
     try {
@@ -62,7 +59,6 @@ class FirebaseAppUserApi {
     }
   }
 
-  
   Future<String> editAppUserEmail(String uid, String email) async {
     try {
       await db.collection('appUsers').doc(uid).update({'email': email});
@@ -83,14 +79,15 @@ class FirebaseAppUserApi {
 
   Future<String> editAppUserPhoneNumber(String uid, String phoneNumber) async {
     try {
-      await db.collection('appUsers').doc(uid).update({'phoneNumber': phoneNumber});
+      await db.collection('appUsers').doc(uid).update({
+        'phoneNumber': phoneNumber,
+      });
       return "Successfully edited phone number!";
     } on FirebaseException catch (e) {
       return "Error on ${e.code}: ${e.message}";
     }
   }
 
-  
   Future<String> editAppUserPrivacyStatus(String uid, bool isPrivate) async {
     try {
       await db.collection('appUsers').doc(uid).update({'isPrivate': isPrivate});
@@ -100,7 +97,6 @@ class FirebaseAppUserApi {
     }
   }
 
-  
   Future<String> editAppUserLocation(String uid, String location) async {
     try {
       await db.collection('appUsers').doc(uid).update({'location': location});
@@ -111,7 +107,11 @@ class FirebaseAppUserApi {
   }
 
   // Generic update field method
-  Future<String> updateAppUserField(String uid, String field, dynamic value) async {
+  Future<String> updateAppUserField(
+    String uid,
+    String field,
+    dynamic value,
+  ) async {
     try {
       await db.collection(_collection).doc(uid).update({field: value});
       return "Successfully updated $field!";

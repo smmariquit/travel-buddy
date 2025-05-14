@@ -1,11 +1,19 @@
+// Flutter & Material
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
-import 'package:travel_app/providers/travel_plans_provider.dart';
+
+// Firebase & External Services
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+
+// State Management
+import 'package:provider/provider.dart';
+
+// App-specific
+import 'package:travel_app/providers/user_provider.dart';
 import 'package:travel_app/widgets/bottom_navigation_bar.dart';
 import '../auth/signin_page.dart';
 import 'package:travel_app/screens/auth/interests_page.dart';
-import 'package:travel_app/providers/user_provider.dart';
+import 'package:travel_app/providers/travel_plans_provider.dart';
 
 class ConnectPage extends StatelessWidget {
   const ConnectPage({super.key});
@@ -28,9 +36,12 @@ class ConnectPage extends StatelessWidget {
         } else if (!snapshot.hasData) {
           return const SignInPage();
         }
-        
+
         final user = snapshot.data!;
-        final provider = Provider.of<TravelTrackerProvider>(context, listen: false);
+        final provider = Provider.of<TravelTrackerProvider>(
+          context,
+          listen: false,
+        );
         provider.setUser(user.uid);
         // final provider = Provider.of<TravelTrackerProvider>(context);
 
@@ -38,43 +49,51 @@ class ConnectPage extends StatelessWidget {
           appBar: AppBar(
             backgroundColor: Colors.transparent,
             elevation: 0,
-            title: const Text("Travel App", style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold)),
+            title: const Text(
+              "Travel App",
+              style: TextStyle(fontSize: 26, fontWeight: FontWeight.bold),
+            ),
             actions: [
               IconButton(
-              icon: const Icon(Icons.exit_to_app),
-              color: Colors.red,
-              onPressed: () async {
-                _showSignOutDialog(context);
-                Provider.of<TravelTrackerProvider>(context, listen: false).clearUser();
-              },
+                icon: const Icon(Icons.exit_to_app),
+                color: Colors.red,
+                onPressed: () async {
+                  _showSignOutDialog(context);
+                  Provider.of<TravelTrackerProvider>(
+                    context,
+                    listen: false,
+                  ).clearUser();
+                },
               ),
             ],
-            ),
-            body: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(builder: (context) => const InterestsPage()),
-                    );
-                  },
-                  child: const Text('Button 1'),
-                ),
-                const SizedBox(height: 20), // Add spacing between buttons
-                ElevatedButton(
-                  onPressed: () {
-                    // Add functionality for Button 2
-                  },
-                  child: const Text('Button 2'),
-                ),
-              ],
-            ),
-            bottomNavigationBar: BottomNavBar()
-          );
-      }
-      );
+          ),
+          body: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const InterestsPage(),
+                    ),
+                  );
+                },
+                child: const Text('Button 1'),
+              ),
+              const SizedBox(height: 20), // Add spacing between buttons
+              ElevatedButton(
+                onPressed: () {
+                  // Add functionality for Button 2
+                },
+                child: const Text('Button 2'),
+              ),
+            ],
+          ),
+          bottomNavigationBar: BottomNavBar(selectedIndex: 2),
+        );
+      },
+    );
   }
 
   void _showSignOutDialog(BuildContext context) {
@@ -86,15 +105,15 @@ class ConnectPage extends StatelessWidget {
           actions: <Widget>[
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop(); 
+                Navigator.of(context).pop();
               },
-              child: const Text('Cancel'),  
+              child: const Text('Cancel'),
             ),
             TextButton(
               onPressed: () async {
                 await FirebaseAuth.instance.signOut();
                 Navigator.of(context).pop();
-                Navigator.pushReplacementNamed(context, '/signin'); 
+                Navigator.pushReplacementNamed(context, '/signin');
               },
               child: const Text('Sign Out'),
             ),
