@@ -622,7 +622,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               ),
                             ),
                           ),
-
+                          SizedBox(height: 20),
                           SizedBox(
                             width: double.infinity,
                             child: OutlinedButton(
