@@ -17,6 +17,7 @@ import 'package:travel_app/providers/user_provider.dart';
 import 'package:travel_app/utils/constants.dart';
 import 'dart:io';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:travel_app/widgets/bottom_navigation_bar.dart';
 
 class TripDetails extends StatefulWidget {
   final Travel travel;
@@ -95,9 +96,10 @@ class _TripDetailsState extends State<TripDetails>
 
   void _generateEmptyActivities() {
     if (widget.travel.activities == null || widget.travel.activities!.isEmpty) {
-      final days =
-          widget.travel.endDate!.difference(widget.travel.startDate!).inDays +
-          1;
+      int days = 1;
+      if (widget.travel.endDate != null && widget.travel.startDate != null) {
+        days = widget.travel.endDate!.difference(widget.travel.startDate!).inDays + 1;
+    }
       widget.travel.activities = List.generate(days, (i) {
         final date = widget.travel.startDate!.add(Duration(days: i));
         return Activity(
@@ -512,8 +514,9 @@ class _TripDetailsState extends State<TripDetails>
                           'Start Date: ${widget.travel.startDate?.toLocal().toString().split(" ")[0]}',
                         ),
                         Text(
-                          'End Date: ${widget.travel.endDate?.toLocal().toString().split(" ")[0]}',
+                          'End Date: ${widget.travel.endDate != null ? widget.travel.endDate!.toLocal().toString().split(' ')[0] : '—'}',
                         ),
+
                         SizedBox(height: 16),
                         ElevatedButton.icon(
                           onPressed: () {
@@ -591,15 +594,16 @@ class _TripDetailsState extends State<TripDetails>
                   ),
                 ],
               ),
+      bottomNavigationBar: BottomNavBar(selectedIndex: 1),
+      floatingActionButtonLocation:
+              FloatingActionButtonLocation.centerDocked,
       floatingActionButton:
-          _tabController.index == 1
-              ? FloatingActionButton(
+          FloatingActionButton(
                 onPressed: _addManualItinerary,
                 backgroundColor: Colors.green.shade700,
                 child: Icon(Icons.add),
                 tooltip: 'Add Itinerary',
               )
-              : null,
     );
   }
 }
