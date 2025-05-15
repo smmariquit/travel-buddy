@@ -625,6 +625,7 @@ void showQR(String travelId) {
   }
 
   void _scanQRCode() async {
+    const successMessage = "Travel plan shared successfully";
     final result = await Navigator.of(
       context,
     ).push(MaterialPageRoute(builder: (context) => QRScanPage()));
@@ -639,6 +640,10 @@ void showQR(String travelId) {
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text(message)));
+
+        if (message != successMessage) {
+        return;
+      }
 
         // Fetch the travel data using the scanned travel ID
         final doc =
