@@ -140,6 +140,7 @@ class _ViewAllPlansState extends State<ViewAllPlans>
 
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: const Text('All Plans'),
         bottom: TabBar(
           controller: _tabController,
@@ -225,7 +226,9 @@ class _PlansList extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       itemCount: plans.length,
       itemBuilder: (context, index) {
+        
         final travel = plans[index];
+        print("${travel.name} ${travel.endDate}");
         return Padding(
           padding: const EdgeInsets.only(bottom: 16.0),
           child: TravelPlanCard(
@@ -233,7 +236,7 @@ class _PlansList extends StatelessWidget {
             uid: travel.uid,
             name: travel.name,
             startDate: travel.startDate ?? DateTime.now(),
-            endDate: travel.endDate ?? DateTime.now(),
+            endDate: travel.endDate,
             image:
                 travel.imageUrl?.isNotEmpty == true
                     ? travel.imageUrl!
