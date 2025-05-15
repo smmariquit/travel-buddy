@@ -90,11 +90,18 @@ class FirebaseTravelAPI {
 
   /// Shares a travel plan with another user.
   Future<String> shareTravelWithUser(String travelId, String friendUid) async {
+    const successMessage = "Travel plan shared successfully";
     try {
       final doc = await _db.collection('travel').doc(travelId).get();
       if (!doc.exists) return "Travel plan not found";
 
       final travel = Travel.fromJson(doc.data()!, doc.id);
+      print(travel.uid);
+      print(friendUid);
+      if (travel.uid == friendUid) {
+      return "Cannot share travel plan with yourself";
+    }
+
       final sharedWith = travel.sharedWith ?? [];
 
       if (sharedWith.contains(friendUid)) return "Already shared with user";
@@ -105,12 +112,12 @@ class FirebaseTravelAPI {
         'sharedWith': sharedWith,
       });
 
-      return "Travel plan shared successfully";
+      return successMessage;
     } catch (e) {
       print("Error sharing travel: $e");
       return "Failed to share travel plan";
     }
-  }
+  } 
 
   /// Removes a user from the sharedWith list.
   Future<String> removeSharedUser(String travelId, String friendUid) async {

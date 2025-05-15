@@ -110,7 +110,7 @@ class Travel {
 
     return Travel(
       id: id,
-      uid: docId,
+      uid: json['uid'],
       name: json['name'],
       startDate:
           json['startDate'] != null
