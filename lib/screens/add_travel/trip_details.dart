@@ -442,6 +442,7 @@ class _TripDetailsState extends State<TripDetails>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         title: Text(widget.travel.name),
         backgroundColor: Color(0xFF2E7D32),
         bottom: TabBar(

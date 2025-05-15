@@ -333,7 +333,7 @@ class _TravelPlansList extends StatelessWidget {
                           uid: travel.uid,
                           name: travel.name,
                           startDate: travel.startDate ?? DateTime.now(),
-                          endDate: travel.endDate ?? DateTime.now(),
+                          endDate: travel.endDate,
                           image: imageUrl,
                           location: travel.location,
                           createdOn: travel.createdOn,

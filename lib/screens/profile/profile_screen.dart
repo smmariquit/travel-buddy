@@ -22,6 +22,8 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:travel_app/utils/responsive_layout.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+import 'package:travel_app/widgets/bottom_navigation_bar.dart';
+import 'package:travel_app/widgets/bottom_navigation_bar.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -208,6 +210,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  void _showSignOutDialog(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text('Are you sure you want to sign out?'),
+          actions: <Widget>[
+            TextButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () async {
+                await FirebaseAuth.instance.signOut();
+                Navigator.of(context).pop();
+                Navigator.pushReplacementNamed(context, '/signin');
+              },
+              child: const Text('Sign Out'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_currentUserData == null) {
@@ -222,17 +251,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
             color: Colors.grey[100],
             child: Column(
               children: [
-                IconButton(
-                  icon: Icon(Icons.exit_to_app, color: Colors.white),
-                  onPressed: () async {
-                    await context.read<AppUserProvider>().signOut();
-                    if (mounted) {
-                      Navigator.of(
-                        context,
-                      ).pushNamedAndRemoveUntil('/signin', (route) => false);
-                    }
-                  },
-                ),
+                // IconButton(
+                //   icon: Icon(Icons.exit_to_app, color: Colors.white),
+                //   onPressed: () async {
+                //     await context.read<AppUserProvider>().signOut();
+                //     if (mounted) {
+                //       Navigator.of(
+                //         context,
+                //       ).pushNamedAndRemoveUntil('/signin', (route) => false);
+                //     }
+                //   },
+                // ),
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
@@ -243,10 +272,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   child: Row(
                     children: [
-                      IconButton(
-                        icon: Icon(Icons.arrow_back, color: Colors.white),
-                        onPressed: () => Navigator.pop(context),
-                      ),
+                      // IconButton(
+                      //   icon: Icon(Icons.arrow_back, color: Colors.white),
+                      //   onPressed: () => Navigator.pop(context),
+                      // ),
                       Expanded(
                         child: Text(
                           _currentUserData!.username,
@@ -566,62 +595,88 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                           SizedBox(height: 20),
 
-                          ElevatedButton.icon(
-                            onPressed: () {
-                              showDialog(
-                                context: context,
-                                builder:
-                                    (context) => AlertDialog(
-                                      title: Text('Your QR Code'),
-                                      content: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          if (_currentUserData != null)
-                                            SizedBox(
-                                              height: 200.0,
-                                              width: 200.0,
-                                              child: QrImageView(
-                                                data: _currentUserData!.uid,
-                                                version: QrVersions.auto,
-                                                size: 200.0,
-                                              ),
-                                            ),
-                                          SizedBox(height: 10),
-                                          if (_currentUserData != null)
-                                            Text(
-                                              "Make friends scan your QR",
-                                              style: TextStyle(
-                                                fontSize: 12,
-                                                color: Colors.grey,
-                                              ),
-                                              textAlign: TextAlign.center,
-                                            ),
-                                        ],
-                                      ),
-                                      actions: [
-                                        TextButton(
-                                          onPressed:
-                                              () => Navigator.of(context).pop(),
-                                          child: Text('Close'),
-                                        ),
-                                      ],
-                                    ),
-                              );
-                            },
-                            icon: Icon(Icons.qr_code),
-                            label: Text("Generate QR Code"),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: Colors.green,
-                              foregroundColor: Colors.white,
-                              padding: EdgeInsets.symmetric(
-                                vertical: 14,
-                                horizontal: 24,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(30),
-                              ),
+                          SizedBox(height: 16),
+                          Divider(thickness: 1),
+                          ListTile(
+                            leading: Icon(Icons.privacy_tip_outlined, color: Colors.black),
+                            title: Text("Private Profile"),
+                            subtitle: Text("Only you can view your profile"),
+                            trailing: Switch(
+                              value: _isPrivate,
+                              onChanged: (value) async {
+                                setState(() {
+                                  _isPrivate = value;
+                                });
+                                await FirebaseFirestore.instance
+                                    .collection('appUsers')
+                                    .doc(_currentUserData!.uid)
+                                    .update({'isPrivate': _isPrivate});
+                              },
                             ),
                           ),
+                          ListTile(
+                            leading: Icon(Icons.logout, color: Colors.red),
+                            title: Text("Log Out"),
+                            onTap: () => _showSignOutDialog(context),
+                          ),
+                          Divider(thickness: 1),
+
+                          // ElevatedButton.icon(
+                          //   onPressed: () {
+                          //     showDialog(
+                          //       context: context,
+                          //       builder:
+                          //           (context) => AlertDialog(
+                          //             title: Text('Your QR Code'),
+                          //             content: Column(
+                          //               mainAxisSize: MainAxisSize.min,
+                          //               children: [
+                          //                 if (_currentUserData != null)
+                          //                   SizedBox(
+                          //                     height: 200.0,
+                          //                     width: 200.0,
+                          //                     child: QrImageView(
+                          //                       data: _currentUserData!.uid,
+                          //                       version: QrVersions.auto,
+                          //                       size: 200.0,
+                          //                     ),
+                          //                   ),
+                          //                 SizedBox(height: 10),
+                          //                 if (_currentUserData != null)
+                          //                   Text(
+                          //                     "Make friends scan your QR",
+                          //                     style: TextStyle(
+                          //                       fontSize: 12,
+                          //                       color: Colors.grey,
+                          //                     ),
+                          //                     textAlign: TextAlign.center,
+                          //                   ),
+                          //               ],
+                          //             ),
+                          //             actions: [
+                          //               TextButton(
+                          //                 onPressed:
+                          //                     () => Navigator.of(context).pop(),
+                          //                 child: Text('Close'),
+                          //               ),
+                          //             ],
+                          //           ),
+                          //     );
+                          //   },
+                          //   icon: Icon(Icons.qr_code),
+                          //   label: Text("Generate QR Code"),
+                          //   style: ElevatedButton.styleFrom(
+                          //     backgroundColor: Colors.green,
+                          //     foregroundColor: Colors.white,
+                          //     padding: EdgeInsets.symmetric(
+                          //       vertical: 14,
+                          //       horizontal: 24,
+                          //     ),
+                          //     shape: RoundedRectangleBorder(
+                          //       borderRadius: BorderRadius.circular(30),
+                          //     ),
+                          //   ),
+                          // ),
                           SizedBox(height: 20),
                           SizedBox(
                             width: double.infinity,
@@ -655,6 +710,53 @@ class _ProfileScreenState extends State<ProfileScreen> {
           ),
         ),
       ),
+      bottomNavigationBar: BottomNavBar(selectedIndex: 3),
+      floatingActionButtonLocation:
+        FloatingActionButtonLocation.centerDocked,
+      floatingActionButton: FloatingActionButton(
+      onPressed: () {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: Text('Your QR Code'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (_currentUserData != null)
+                  SizedBox(
+                    height: 200.0,
+                    width: 200.0,
+                    child: QrImageView(
+                      data: _currentUserData!.uid,
+                      version: QrVersions.auto,
+                      size: 200.0,
+                    ),
+                  ),
+                SizedBox(height: 10),
+                if (_currentUserData != null)
+                  Text(
+                    "Make friends scan your QR",
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.grey,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text('Close'),
+              ),
+            ],
+          ),
+        );
+      },
+      backgroundColor: Colors.green.shade700,
+      child: Icon(Icons.qr_code),
+      tooltip: 'Generate QR Code',
+    ),
     );
   }
 

@@ -47,7 +47,7 @@ class TravelPlanCard extends StatelessWidget {
   final String uid;
   final String name;
   final DateTime startDate;
-  final DateTime endDate;
+  final DateTime? endDate;
   final DateTime createdOn;
   final String location;
   final String image;
@@ -61,7 +61,7 @@ class TravelPlanCard extends StatelessWidget {
     required this.uid,
     required this.name,
     required this.startDate,
-    required this.endDate,
+    this.endDate,
     required this.location,
     required this.createdOn,
     required this.image,
@@ -184,14 +184,14 @@ class TravelPlanCard extends StatelessWidget {
                         const SizedBox(width: 4),
                         Expanded(
                           child: Text(
-                            '${_formatDate(startDate)} - ${_formatDate(endDate)}',
+                            endDate != null
+                                ? '${_formatDate(startDate)} - ${_formatDate(endDate!)}'
+                                : '${_formatDate(startDate)} -',
                             style: const TextStyle(
                               fontSize: 12,
                               color: Colors.grey,
                             ),
-                            overflow:
-                                TextOverflow
-                                    .ellipsis, // How will it handle text that is too long?https://api.flutter.dev/flutter/painting/TextOverflow.html
+                            overflow: TextOverflow.ellipsis,
                           ),
                         ),
                       ],

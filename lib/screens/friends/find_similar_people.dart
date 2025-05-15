@@ -723,6 +723,7 @@ class _FindSimilarPeopleScreenState extends State<FindSimilarPeopleScreen> {
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
+        automaticallyImplyLeading: false,
         backgroundColor: Colors.grey[100],
         title: Text("Similar People", style: GoogleFonts.poppins()),
         actions: [
