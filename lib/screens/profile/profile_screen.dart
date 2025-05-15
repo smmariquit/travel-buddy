@@ -24,6 +24,12 @@ import 'package:travel_app/utils/responsive_layout.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:travel_app/widgets/bottom_navigation_bar.dart';
 import 'package:travel_app/widgets/bottom_navigation_bar.dart';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+import 'package:flutter/rendering.dart';
+import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
+import 'dart:io';
+import 'package:permission_handler/permission_handler.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -39,6 +45,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _lastNameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _locationController = TextEditingController();
+  final GlobalKey qrKey = GlobalKey();
 
   List<Map<String, dynamic>> _interests = [
     {"interest": 'Adventure', "selected": false},
@@ -236,6 +243,109 @@ class _ProfileScreenState extends State<ProfileScreen> {
       },
     );
   }
+
+  Future<void> saveQRToGalleryPlus() async {
+  try {
+    await Permission.storage.request();
+    await WidgetsBinding.instance.endOfFrame;
+
+    RenderRepaintBoundary boundary =
+        qrKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
+
+    // Capture the QR widget as image
+    ui.Image qrImage = await boundary.toImage(pixelRatio: 3.0);
+
+    // Create a new picture recorder and canvas
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+
+    // Paint white background
+    final paint = Paint()..color = ui.Color(0xFFFFFFFF); // White color
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, qrImage.width.toDouble(), qrImage.height.toDouble()),
+      paint,
+    );
+
+    // Draw the QR image on top of white background
+    canvas.drawImage(qrImage, Offset.zero, Paint());
+
+    // End recording and create final image
+    final picture = recorder.endRecording();
+    final imgWithWhiteBg = await picture.toImage(qrImage.width, qrImage.height);
+
+    // Convert to bytes
+    final byteData = await imgWithWhiteBg.toByteData(format: ui.ImageByteFormat.png);
+    if (byteData != null) {
+      final pngBytes = byteData.buffer.asUint8List();
+
+      final result = await ImageGallerySaverPlus.saveImage(
+        pngBytes,
+        quality: 100,
+        name: "qr_code_white_bg_${DateTime.now().millisecondsSinceEpoch}",
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('QR Code to gallery!')),
+      );
+    }
+  } catch (e) {
+    print('Error saving QR code: $e');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Failed to save QR code.')),
+    );
+  }
+}
+
+void showQRDialog() {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text('Your QR Code'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (_currentUserData!.uid.isNotEmpty) // Use id property instead of uid
+            RepaintBoundary(
+              key: qrKey,
+              child: Container(
+                color: Colors.white, // Ensure white background for QR code
+                child: SizedBox(
+                  height: 200.0,
+                  width: 200.0,
+                  child: QrImageView(
+                    data: _currentUserData!.uid, // Use id instead of uid
+                    version: QrVersions.auto,
+                    size: 200.0,
+                  ),
+                ),
+              ),
+            ),
+          SizedBox(height: 10),
+          if (_currentUserData!.uid.isNotEmpty)
+            Text(
+              "Add friends to your travel",
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey,
+              ),
+              textAlign: TextAlign.center,
+            ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () async {
+            await saveQRToGalleryPlus();
+          },
+          child: Text("Save QR", style: TextStyle(color: primaryColor)),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text('Close'),
+        ),
+      ],
+    ),
+  );
+}
 
   @override
   Widget build(BuildContext context) {
@@ -714,45 +824,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       floatingActionButtonLocation:
         FloatingActionButtonLocation.centerDocked,
       floatingActionButton: FloatingActionButton(
-      onPressed: () {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: Text('Your QR Code'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (_currentUserData != null)
-                  SizedBox(
-                    height: 200.0,
-                    width: 200.0,
-                    child: QrImageView(
-                      data: _currentUserData!.uid,
-                      version: QrVersions.auto,
-                      size: 200.0,
-                    ),
-                  ),
-                SizedBox(height: 10),
-                if (_currentUserData != null)
-                  Text(
-                    "Make friends scan your QR",
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.grey,
-                    ),
-                    textAlign: TextAlign.center,
-                  ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: Text('Close'),
-              ),
-            ],
-          ),
-        );
-      },
+      onPressed: showQRDialog,
       backgroundColor: Colors.green.shade700,
       child: Icon(Icons.qr_code),
       tooltip: 'Generate QR Code',

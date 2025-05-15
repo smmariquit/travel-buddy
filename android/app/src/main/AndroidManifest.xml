@@ -5,14 +5,17 @@
     <uses-permission android:name="android.permission.READ_MEDIA_IMAGES"/>
     <uses-permission android:name="android.permission.CAMERA"/>
     <uses-permission android:name="android.permission.INTERNET" />
+    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
+
 
 
     <application
         android:label="Travel Buddy"
         android:name="${applicationName}"
         android:enableOnBackInvokedCallback="true"
-        android:icon="@mipmap/ic_launcher">
-        
+        android:icon="@mipmap/ic_launcher"
+        android:requestLegacyExternalStorage="true">
+
         <!-- enableOnBackInvokedCallback is to enable the new predictive back gesture navigation system introduced in Android 13 (API 33).
              This provides a preview of the previous screen when the user starts the back gesture,
              allowing them to either complete the gesture to go back or cancel it to stay on the current screen. -->
