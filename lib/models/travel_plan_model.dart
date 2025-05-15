@@ -99,7 +99,7 @@ class Travel {
   });
 
   /// Creates a Travel object from a JSON map, using the document ID if provided
-  factory Travel.fromJson(Map<String, dynamic> json, [String? docId]) {
+  factory Travel.fromJson(Map<String, dynamic> json, String docId) {
     // Use docId if provided, otherwise use id from json, or generate an error
     final id = docId ?? json['id'];
 
@@ -110,7 +110,7 @@ class Travel {
 
     return Travel(
       id: id,
-      uid: json['uid'],
+      uid: docId,
       name: json['name'],
       startDate:
           json['startDate'] != null

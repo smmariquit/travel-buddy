@@ -18,6 +18,12 @@ import 'package:travel_app/utils/constants.dart';
 import 'dart:io';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:travel_app/widgets/bottom_navigation_bar.dart';
+import 'dart:typed_data';
+import 'dart:ui' as ui;
+import 'package:flutter/rendering.dart';
+import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
+import 'dart:io';
+import 'package:permission_handler/permission_handler.dart';
 
 class TripDetails extends StatefulWidget {
   final Travel travel;
@@ -35,16 +41,19 @@ class _TripDetailsState extends State<TripDetails>
   final picker = ImagePicker();
   late TabController _tabController;
   bool _isLoading = true;
+  final GlobalKey qrKey = GlobalKey();
+
 
   @override
-  void initState() {
-    super.initState();
-    _loadTravelData();
-    _tabController = TabController(length: 2, vsync: this);
-    _tabController.addListener(() {
-      setState(() {});
-    });
-  }
+void initState() {
+  super.initState();
+  print('Travel debug - id: ${widget.travel.id}, id: ${widget.travel.id}');
+  _loadTravelData();
+  _tabController = TabController(length: 2, vsync: this);
+  _tabController.addListener(() {
+    setState(() {});
+  });
+}
 
   @override
   void dispose() {
@@ -59,27 +68,26 @@ class _TripDetailsState extends State<TripDetails>
 
     try {
       // Get the latest travel data from Firestore to ensure we have the most up-to-date info
-      if (widget.travel.uid != null) {
-        final docSnapshot =
-            await FirebaseFirestore.instance
-                .collection('travel')
-                .doc(widget.travel.uid)
-                .get();
+      final docSnapshot =
+          await FirebaseFirestore.instance
+              .collection('travel')
+              .doc(widget.travel.id)
+              .get();
 
-        if (docSnapshot.exists) {
-          final data = docSnapshot.data();
-          if (data != null) {
-            // Update the travel object with the latest data
-            final updatedTravel = Travel.fromJson(data, widget.travel.uid);
+      if (docSnapshot.exists) {
+        final data = docSnapshot.data();
+        if (data != null) {
+          // Update the travel object with the latest data
+          final updatedTravel = Travel.fromJson(data, widget.travel.id);
 
-            setState(() {
-              // Update activities with the ones from Firestore
-              widget.travel.activities = updatedTravel.activities;
-              widget.travel.imageUrl = updatedTravel.imageUrl;
-              _coverImageUrl = updatedTravel.imageUrl;
-            });
-          }
+          setState(() {
+            // Update activities with the ones from Firestore
+            widget.travel.activities = updatedTravel.activities;
+            widget.travel.imageUrl = updatedTravel.imageUrl;
+            _coverImageUrl = updatedTravel.imageUrl;
+          });
         }
+        
       }
 
       // After fetching the latest data, make sure we have activities
@@ -122,7 +130,7 @@ class _TripDetailsState extends State<TripDetails>
       return;
     }
 
-    final travelId = widget.travel.uid;
+    final travelId = widget.travel.id;
     try {
       final ref = FirebaseStorage.instance.ref('cover_images/${travelId}.jpg');
       final url = await ref.getDownloadURL();
@@ -140,7 +148,7 @@ class _TripDetailsState extends State<TripDetails>
     if (pickedFile == null) return;
 
     final file = File(pickedFile.path);
-    final travelId = widget.travel.uid;
+    final travelId = widget.travel.id;
     final storageRef = FirebaseStorage.instance.ref().child(
       'cover_images/$travelId.jpg',
     );
@@ -210,7 +218,7 @@ class _TripDetailsState extends State<TripDetails>
   }
 
   Future<void> _saveActivitiesToFirestore() async {
-    if (widget.travel.uid == null) return;
+    if (widget.travel.id == null) return;
 
     try {
       // Convert each Activity object to a Map using the toJson method
@@ -233,15 +241,15 @@ class _TripDetailsState extends State<TripDetails>
       // Update Firestore with the properly formatted activities data
       await FirebaseFirestore.instance
           .collection('travel')
-          .doc(widget.travel.uid)
+          .doc(widget.travel.id)
           .update({'activities': activitiesData});
 
       print('Activities saved successfully to Firestore');
     } catch (e) {
-      print('Error saving activities to Firestore: $e');
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to save activities: ${e.toString()}')),
-      );
+      // print('Error saving activities to Firestore: $e');
+      // ScaffoldMessenger.of(context).showSnackBar(
+      //   SnackBar(content: Text('Failed to save activities: ${e.toString()}')),
+      // );
     }
   }
 
@@ -250,7 +258,7 @@ class _TripDetailsState extends State<TripDetails>
     if (pickedFile == null) return;
 
     final file = File(pickedFile.path);
-    final travelId = widget.travel.uid;
+    final travelId = widget.travel.id;
     if (travelId == null) return;
 
     // Add unique name with travel ID and activity index
@@ -438,6 +446,108 @@ class _TripDetailsState extends State<TripDetails>
     );
   }
 
+  Future<void> saveQRToGalleryPlus() async {
+  try {
+    await Permission.storage.request();
+    await WidgetsBinding.instance.endOfFrame;
+
+    RenderRepaintBoundary boundary =
+        qrKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
+
+    // Capture the QR widget as image
+    ui.Image qrImage = await boundary.toImage(pixelRatio: 3.0);
+
+    // Create a new picture recorder and canvas
+    final recorder = ui.PictureRecorder();
+    final canvas = Canvas(recorder);
+
+    // Paint white background
+    final paint = Paint()..color = ui.Color(0xFFFFFFFF); // White color
+    canvas.drawRect(
+      Rect.fromLTWH(0, 0, qrImage.width.toDouble(), qrImage.height.toDouble()),
+      paint,
+    );
+
+    // Draw the QR image on top of white background
+    canvas.drawImage(qrImage, Offset.zero, Paint());
+
+    // End recording and create final image
+    final picture = recorder.endRecording();
+    final imgWithWhiteBg = await picture.toImage(qrImage.width, qrImage.height);
+
+    // Convert to bytes
+    final byteData = await imgWithWhiteBg.toByteData(format: ui.ImageByteFormat.png);
+    if (byteData != null) {
+      final pngBytes = byteData.buffer.asUint8List();
+
+      final result = await ImageGallerySaverPlus.saveImage(
+        pngBytes,
+        quality: 100,
+        name: "qr_code_white_bg_${DateTime.now().millisecondsSinceEpoch}",
+      );
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('QR Code to gallery!')),
+      );
+    }
+  } catch (e) {
+    print('Error saving QR code: $e');
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Failed to save QR code.')),
+    );
+  }
+}
+
+void showQRDialog() {
+  showDialog(
+    context: context,
+    builder: (context) => AlertDialog(
+      title: Text('Your QR Code'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          if (widget.travel.id.isNotEmpty) // Use id property instead of uid
+            RepaintBoundary(
+              key: qrKey,
+              child: Container(
+                color: Colors.white, // Ensure white background for QR code
+                child: SizedBox(
+                  height: 200.0,
+                  width: 200.0,
+                  child: QrImageView(
+                    data: widget.travel.id, // Use id instead of uid
+                    version: QrVersions.auto,
+                    size: 200.0,
+                  ),
+                ),
+              ),
+            ),
+          SizedBox(height: 10),
+          if (widget.travel.id.isNotEmpty)
+            Text(
+              "Add friends to your travel",
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.grey,
+              ),
+              textAlign: TextAlign.center,
+            ),
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: () async {
+            await saveQRToGalleryPlus();
+          },
+          child: Text("Save QR", style: TextStyle(color: primaryColor)),
+        ),
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: Text('Close'),
+        ),
+      ],
+    ),
+  );
+}
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -520,47 +630,7 @@ class _TripDetailsState extends State<TripDetails>
 
                         SizedBox(height: 16),
                         ElevatedButton.icon(
-                          onPressed: () {
-                            showDialog(
-                              context: context,
-                              builder:
-                                  (context) => AlertDialog(
-                                    title: Text('Your QR Code'),
-                                    content: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        if (widget.travel.uid != null)
-                                          SizedBox(
-                                            height: 200.0,
-                                            width: 200.0,
-                                            child: QrImageView(
-                                              data: widget.travel.uid!,
-                                              version: QrVersions.auto,
-                                              size: 200.0,
-                                            ),
-                                          ),
-                                        SizedBox(height: 10),
-                                        if (widget.travel.uid != null)
-                                          Text(
-                                            "Add friends to your travel",
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.grey,
-                                            ),
-                                            textAlign: TextAlign.center,
-                                          ),
-                                      ],
-                                    ),
-                                    actions: [
-                                      TextButton(
-                                        onPressed:
-                                            () => Navigator.of(context).pop(),
-                                        child: Text('Close'),
-                                      ),
-                                    ],
-                                  ),
-                            );
-                          },
+                          onPressed: showQRDialog,
                           icon: Icon(Icons.qr_code),
                           label: Text("Generate QR Code"),
                           style: ElevatedButton.styleFrom(
