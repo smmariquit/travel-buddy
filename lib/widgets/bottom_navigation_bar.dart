@@ -68,21 +68,25 @@ class _BottomNavBarState extends State<BottomNavBar> {
       icon: Icons.home,
       label: 'Home',
       route: (context) => const MainPage(),
+      routeName: '/main',
     ),
     NavigationItem(
       icon: Icons.map,
       label: 'Plans',
       route: (context) => const ViewAllPlans(),
+      routeName: '/plans',
     ),
     NavigationItem(
       icon: Icons.handshake,
       label: 'Find People',
       route: (context) => const FindSimilarPeopleScreen(),
+      routeName: '/find_people',
     ),
     NavigationItem(
       icon: Icons.person,
       label: 'Profile',
       route: (context) => const ProfileScreen(),
+      routeName: '/profile',
     ),
   ];
 
@@ -91,7 +95,10 @@ class _BottomNavBarState extends State<BottomNavBar> {
     if (index != _selectedIndex) {
       Navigator.push(
         context,
-        MaterialPageRoute(builder: _navigationItems[index].route),
+        MaterialPageRoute(
+          builder: _navigationItems[index].route,
+          settings: RouteSettings(name: _navigationItems[index].routeName),
+        ),
       );
     }
 
@@ -109,7 +116,6 @@ class _BottomNavBarState extends State<BottomNavBar> {
         mainAxisAlignment: MainAxisAlignment.spaceAround,
         children: [
           ...List.generate(_navigationItems.length + 1, (index) {
-            // Spread operator, parang * in Python. List.generate is a Dart function. Reference: https://api.flutter.dev/flutter/dart-core/List/List.generate.html
             // Skip the middle space for FAB
             if (index == 2) {
               return const SizedBox(width: BottomNavConstants.fabSpace);
@@ -142,10 +148,12 @@ class NavigationItem {
   final IconData icon;
   final String label;
   final Widget Function(BuildContext) route;
+  final String routeName;
 
   const NavigationItem({
     required this.icon,
     required this.label,
     required this.route,
+    required this.routeName,
   });
 }

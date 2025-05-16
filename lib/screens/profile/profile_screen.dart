@@ -245,107 +245,118 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> saveQRToGalleryPlus() async {
-  try {
-    await Permission.storage.request();
-    await WidgetsBinding.instance.endOfFrame;
+    try {
+      await Permission.storage.request();
+      await WidgetsBinding.instance.endOfFrame;
 
-    RenderRepaintBoundary boundary =
-        qrKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
+      RenderRepaintBoundary boundary =
+          qrKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
 
-    // Capture the QR widget as image
-    ui.Image qrImage = await boundary.toImage(pixelRatio: 3.0);
+      // Capture the QR widget as image
+      ui.Image qrImage = await boundary.toImage(pixelRatio: 3.0);
 
-    // Create a new picture recorder and canvas
-    final recorder = ui.PictureRecorder();
-    final canvas = Canvas(recorder);
+      // Create a new picture recorder and canvas
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(recorder);
 
-    // Paint white background
-    final paint = Paint()..color = ui.Color(0xFFFFFFFF); // White color
-    canvas.drawRect(
-      Rect.fromLTWH(0, 0, qrImage.width.toDouble(), qrImage.height.toDouble()),
-      paint,
-    );
-
-    // Draw the QR image on top of white background
-    canvas.drawImage(qrImage, Offset.zero, Paint());
-
-    // End recording and create final image
-    final picture = recorder.endRecording();
-    final imgWithWhiteBg = await picture.toImage(qrImage.width, qrImage.height);
-
-    // Convert to bytes
-    final byteData = await imgWithWhiteBg.toByteData(format: ui.ImageByteFormat.png);
-    if (byteData != null) {
-      final pngBytes = byteData.buffer.asUint8List();
-
-      final result = await ImageGallerySaverPlus.saveImage(
-        pngBytes,
-        quality: 100,
-        name: "qr_code_white_bg_${DateTime.now().millisecondsSinceEpoch}",
+      // Paint white background
+      final paint = Paint()..color = ui.Color(0xFFFFFFFF); // White color
+      canvas.drawRect(
+        Rect.fromLTWH(
+          0,
+          0,
+          qrImage.width.toDouble(),
+          qrImage.height.toDouble(),
+        ),
+        paint,
       );
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('QR Code to gallery!')),
+
+      // Draw the QR image on top of white background
+      canvas.drawImage(qrImage, Offset.zero, Paint());
+
+      // End recording and create final image
+      final picture = recorder.endRecording();
+      final imgWithWhiteBg = await picture.toImage(
+        qrImage.width,
+        qrImage.height,
       );
+
+      // Convert to bytes
+      final byteData = await imgWithWhiteBg.toByteData(
+        format: ui.ImageByteFormat.png,
+      );
+      if (byteData != null) {
+        final pngBytes = byteData.buffer.asUint8List();
+
+        final result = await ImageGallerySaverPlus.saveImage(
+          pngBytes,
+          quality: 100,
+          name: "qr_code_white_bg_${DateTime.now().millisecondsSinceEpoch}",
+        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('QR Code to gallery!')));
+      }
+    } catch (e) {
+      print('Error saving QR code: $e');
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to save QR code.')));
     }
-  } catch (e) {
-    print('Error saving QR code: $e');
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Failed to save QR code.')),
+  }
+
+  void showQRDialog() {
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: Text('Your QR Code'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (_currentUserData!
+                    .uid
+                    .isNotEmpty) // Use id property instead of uid
+                  RepaintBoundary(
+                    key: qrKey,
+                    child: Container(
+                      color:
+                          Colors.white, // Ensure white background for QR code
+                      child: SizedBox(
+                        height: 200.0,
+                        width: 200.0,
+                        child: QrImageView(
+                          data: _currentUserData!.uid, // Use id instead of uid
+                          version: QrVersions.auto,
+                          size: 200.0,
+                        ),
+                      ),
+                    ),
+                  ),
+                SizedBox(height: 10),
+                if (_currentUserData!.uid.isNotEmpty)
+                  Text(
+                    "Add friends to your travel",
+                    style: TextStyle(fontSize: 12, color: Colors.grey),
+                    textAlign: TextAlign.center,
+                  ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () async {
+                  await saveQRToGalleryPlus();
+                },
+                child: Text("Save QR", style: TextStyle(color: primaryColor)),
+              ),
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text('Close'),
+              ),
+            ],
+          ),
     );
   }
-}
-
-void showQRDialog() {
-  showDialog(
-    context: context,
-    builder: (context) => AlertDialog(
-      title: Text('Your QR Code'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          if (_currentUserData!.uid.isNotEmpty) // Use id property instead of uid
-            RepaintBoundary(
-              key: qrKey,
-              child: Container(
-                color: Colors.white, // Ensure white background for QR code
-                child: SizedBox(
-                  height: 200.0,
-                  width: 200.0,
-                  child: QrImageView(
-                    data: _currentUserData!.uid, // Use id instead of uid
-                    version: QrVersions.auto,
-                    size: 200.0,
-                  ),
-                ),
-              ),
-            ),
-          SizedBox(height: 10),
-          if (_currentUserData!.uid.isNotEmpty)
-            Text(
-              "Add friends to your travel",
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.grey,
-              ),
-              textAlign: TextAlign.center,
-            ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () async {
-            await saveQRToGalleryPlus();
-          },
-          child: Text("Save QR", style: TextStyle(color: primaryColor)),
-        ),
-        TextButton(
-          onPressed: () => Navigator.of(context).pop(),
-          child: Text('Close'),
-        ),
-      ],
-    ),
-  );
-}
 
   @override
   Widget build(BuildContext context) {
@@ -708,7 +719,10 @@ void showQRDialog() {
                           SizedBox(height: 16),
                           Divider(thickness: 1),
                           ListTile(
-                            leading: Icon(Icons.privacy_tip_outlined, color: Colors.black),
+                            leading: Icon(
+                              Icons.privacy_tip_outlined,
+                              color: Colors.black,
+                            ),
                             title: Text("Private Profile"),
                             subtitle: Text("Only you can view your profile"),
                             trailing: Switch(
@@ -821,14 +835,13 @@ void showQRDialog() {
         ),
       ),
       bottomNavigationBar: BottomNavBar(selectedIndex: 3),
-      floatingActionButtonLocation:
-        FloatingActionButtonLocation.centerDocked,
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
       floatingActionButton: FloatingActionButton(
-      onPressed: showQRDialog,
-      backgroundColor: Colors.green.shade700,
-      child: Icon(Icons.qr_code),
-      tooltip: 'Generate QR Code',
-    ),
+        onPressed: showQRDialog,
+        backgroundColor: Colors.green.shade700,
+        child: Icon(Icons.qr_code),
+        tooltip: 'Generate QR Code',
+      ),
     );
   }
 
