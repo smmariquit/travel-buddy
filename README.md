@@ -63,5 +63,4 @@ Created with https://ascii-tree-generator.com/
 * [Material Design](https://m3.material.io/)
 * CMSC 23 Resources
 ## Acknowledgements 🙏
-* Many thanks to the CMSC 23 instructors for their guidance
-* Some parts of this app were developed with the assistance of ChatGPT and other LLMs
+* Many thanks to the CMSC 23 instructors for their guidance* Some parts of this app were developed with the assistance of ChatGPT and other LLMs
