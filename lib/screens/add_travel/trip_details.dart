@@ -14,10 +14,14 @@ import 'package:provider/provider.dart';
 import 'package:travel_app/models/travel_plan_model.dart';
 import 'package:travel_app/providers/travel_plans_provider.dart';
 import 'package:travel_app/providers/user_provider.dart';
+import 'package:travel_app/screens/view_all_plans.dart';
 import 'package:travel_app/utils/constants.dart';
 import 'dart:io';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:travel_app/widgets/bottom_navigation_bar.dart';
+import 'package:path_provider/path_provider.dart';
+import 'package:permission_handler/permission_handler.dart';
+import 'dart:ui' as ui;
 
 class TripDetails extends StatefulWidget {
   final Travel travel;
@@ -34,12 +38,17 @@ class _TripDetailsState extends State<TripDetails>
   String? _coverImageUrl;
   final picker = ImagePicker();
   late TabController _tabController;
+  TravelTrackerProvider? _travelPlansProvider;
   bool _isLoading = true;
+  late Travel _travel;
+  final _usernameController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
+    _travel = widget.travel;
     _loadTravelData();
+    _travelPlansProvider = TravelTrackerProvider();
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(() {
       setState(() {});
@@ -59,26 +68,34 @@ class _TripDetailsState extends State<TripDetails>
 
     try {
       // Get the latest travel data from Firestore to ensure we have the most up-to-date info
-      if (widget.travel.uid != null) {
-        final docSnapshot =
-            await FirebaseFirestore.instance
-                .collection('travel')
-                .doc(widget.travel.uid)
-                .get();
+      final docSnapshot =
+          await FirebaseFirestore.instance
+              .collection('travel')
+              .doc(_travel.id)
+              .get();
 
-        if (docSnapshot.exists) {
-          final data = docSnapshot.data();
-          if (data != null) {
-            // Update the travel object with the latest data
-            final updatedTravel = Travel.fromJson(data, widget.travel.uid);
+      if (docSnapshot.exists) {
+        final data = docSnapshot.data();
+        if (data != null) {
+          // Update the travel object with the latest data
+          final updatedTravel = Travel.fromJson(data, _travel.id);
 
-            setState(() {
-              // Update activities with the ones from Firestore
-              widget.travel.activities = updatedTravel.activities;
-              widget.travel.imageUrl = updatedTravel.imageUrl;
-              _coverImageUrl = updatedTravel.imageUrl;
-            });
-          }
+          setState(() {
+            // Update all travel data using copyWith
+            _travel = _travel.copyWith(
+              name: updatedTravel.name,
+              location: updatedTravel.location,
+              startDate: updatedTravel.startDate,
+              endDate: updatedTravel.endDate,
+              flightDetails: updatedTravel.flightDetails,
+              accommodation: updatedTravel.accommodation,
+              notes: updatedTravel.notes,
+              activities: updatedTravel.activities,
+              imageUrl: updatedTravel.imageUrl,
+              sharedWith: updatedTravel.sharedWith,
+            );
+            _coverImageUrl = updatedTravel.imageUrl;
+          });
         }
       }
 
@@ -95,40 +112,42 @@ class _TripDetailsState extends State<TripDetails>
   }
 
   void _generateEmptyActivities() {
-    if (widget.travel.activities == null || widget.travel.activities!.isEmpty) {
+    if (_travel.activities == null || _travel.activities!.isEmpty) {
       int days = 1;
-      if (widget.travel.endDate != null && widget.travel.startDate != null) {
-        days = widget.travel.endDate!.difference(widget.travel.startDate!).inDays + 1;
-    }
-      widget.travel.activities = List.generate(days, (i) {
-        final date = widget.travel.startDate!.add(Duration(days: i));
-        return Activity(
-          title: "Day ${i + 1} - ${date.toLocal().toString().split(' ')[0]}",
-          startDate: date,
-          checklist: [],
-          notes: '',
-          imageUrl: null,
-        );
-      });
+      if (_travel.endDate != null && _travel.startDate != null) {
+        days = _travel.endDate!.difference(_travel.startDate!).inDays + 1;
+      }
+      _travel = _travel.copyWith(
+        activities: List.generate(days, (i) {
+          final date = _travel.startDate!.add(Duration(days: i));
+          return Activity(
+            title: "Day ${i + 1} - ${date.toLocal().toString().split(' ')[0]}",
+            startDate: date,
+            checklist: [],
+            notes: '',
+            imageUrl: null,
+          );
+        }),
+      );
       _saveActivitiesToFirestore();
     }
   }
 
   Future<void> _loadCoverImageUrl() async {
-    if (widget.travel.imageUrl != null && widget.travel.imageUrl!.isNotEmpty) {
+    if (_travel.imageUrl != null && _travel.imageUrl!.isNotEmpty) {
       setState(() {
-        _coverImageUrl = widget.travel.imageUrl;
+        _coverImageUrl = _travel.imageUrl;
       });
       return;
     }
 
-    final travelId = widget.travel.uid;
+    final travelId = _travel.id;
     try {
       final ref = FirebaseStorage.instance.ref('cover_images/${travelId}.jpg');
       final url = await ref.getDownloadURL();
       setState(() {
         _coverImageUrl = url;
-        widget.travel.imageUrl = url;
+        _travel = _travel.copyWith(imageUrl: url);
       });
     } catch (e) {
       print('Error fetching cover image URL: $e');
@@ -140,7 +159,7 @@ class _TripDetailsState extends State<TripDetails>
     if (pickedFile == null) return;
 
     final file = File(pickedFile.path);
-    final travelId = widget.travel.uid;
+    final travelId = _travel.id;
     final storageRef = FirebaseStorage.instance.ref().child(
       'cover_images/$travelId.jpg',
     );
@@ -159,7 +178,7 @@ class _TripDetailsState extends State<TripDetails>
       setState(() {
         _coverImage = file;
         _coverImageUrl = imageUrl;
-        widget.travel.imageUrl = imageUrl;
+        _travel = _travel.copyWith(imageUrl: imageUrl);
       });
     } catch (e) {
       print('Upload failed: $e');
@@ -192,7 +211,7 @@ class _TripDetailsState extends State<TripDetails>
                 onPressed: () async {
                   if (controller.text.trim().isNotEmpty) {
                     setState(
-                      () => widget.travel.activities![index].checklist!.add(
+                      () => _travel.activities![index].checklist!.add(
                         controller.text.trim(),
                       ),
                     );
@@ -210,14 +229,12 @@ class _TripDetailsState extends State<TripDetails>
   }
 
   Future<void> _saveActivitiesToFirestore() async {
-    if (widget.travel.uid == null) return;
+    if (_travel.id == null) return;
 
     try {
       // Convert each Activity object to a Map using the toJson method
       final List<Map<String, dynamic>> activitiesData =
-          widget.travel.activities
-              ?.map((activity) => activity.toJson())
-              .toList() ??
+          _travel.activities?.map((activity) => activity.toJson()).toList() ??
           [];
 
       // Print for debugging
@@ -233,7 +250,7 @@ class _TripDetailsState extends State<TripDetails>
       // Update Firestore with the properly formatted activities data
       await FirebaseFirestore.instance
           .collection('travel')
-          .doc(widget.travel.uid)
+          .doc(_travel.id)
           .update({'activities': activitiesData});
 
       print('Activities saved successfully to Firestore');
@@ -250,7 +267,7 @@ class _TripDetailsState extends State<TripDetails>
     if (pickedFile == null) return;
 
     final file = File(pickedFile.path);
-    final travelId = widget.travel.uid;
+    final travelId = _travel.id;
     if (travelId == null) return;
 
     // Add unique name with travel ID and activity index
@@ -270,19 +287,19 @@ class _TripDetailsState extends State<TripDetails>
 
       // Create a new Activity instance with updated imageUrl to ensure proper serialization
       final Activity updatedActivity = Activity(
-        title: widget.travel.activities![index].title,
-        startDate: widget.travel.activities![index].startDate,
-        endDate: widget.travel.activities![index].endDate,
-        place: widget.travel.activities![index].place,
-        time: widget.travel.activities![index].time,
-        notes: widget.travel.activities![index].notes,
+        title: _travel.activities![index].title,
+        startDate: _travel.activities![index].startDate,
+        endDate: _travel.activities![index].endDate,
+        place: _travel.activities![index].place,
+        time: _travel.activities![index].time,
+        notes: _travel.activities![index].notes,
         imageUrl: imageUrl,
-        checklist: widget.travel.activities![index].checklist,
+        checklist: _travel.activities![index].checklist,
       );
 
       // Update the activity in the travel object
       setState(() {
-        widget.travel.activities![index] = updatedActivity;
+        _travel.activities![index] = updatedActivity;
       });
 
       // Save the updated activity to Firestore
@@ -393,7 +410,7 @@ class _TripDetailsState extends State<TripDetails>
                   onPressed: () async {
                     final picked = await showDatePicker(
                       context: context,
-                      initialDate: widget.travel.startDate ?? DateTime.now(),
+                      initialDate: _travel.startDate ?? DateTime.now(),
                       firstDate: DateTime(2000),
                       lastDate: DateTime(2100),
                     );
@@ -415,8 +432,8 @@ class _TripDetailsState extends State<TripDetails>
                   if (selectedDate != null &&
                       titleController.text.trim().isNotEmpty) {
                     setState(() {
-                      widget.travel.activities ??= [];
-                      widget.travel.activities!.add(
+                      _travel.activities ??= [];
+                      _travel.activities!.add(
                         Activity(
                           title: titleController.text.trim(),
                           startDate: selectedDate!,
@@ -442,13 +459,19 @@ class _TripDetailsState extends State<TripDetails>
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.travel.name),
+        title: Text(_travel.name),
         backgroundColor: Color(0xFF2E7D32),
         bottom: TabBar(
           controller: _tabController,
           tabs: [Tab(text: 'Overview'), Tab(text: 'Itineraries')],
         ),
         actions: [
+          if (_travel.uid == FirebaseAuth.instance.currentUser?.uid)
+            IconButton(
+              icon: Icon(Icons.edit),
+              onPressed: _editTravelPlan,
+              tooltip: 'Edit travel plan',
+            ),
           IconButton(
             icon: Icon(Icons.refresh),
             onPressed: _loadTravelData,
@@ -462,132 +485,485 @@ class _TripDetailsState extends State<TripDetails>
               : TabBarView(
                 controller: _tabController,
                 children: [
+                  // Overview Tab
                   SingleChildScrollView(
                     padding: const EdgeInsets.all(16.0),
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Trip Cover Image',
-                          style: TextStyle(fontWeight: FontWeight.bold),
-                        ),
-                        GestureDetector(
-                          onTap: _pickCoverImage,
-                          child: Container(
-                            margin: EdgeInsets.only(top: 10),
-                            height: 180,
-                            width: double.infinity,
-                            decoration: BoxDecoration(
-                              color: Colors.grey[200],
-                              borderRadius: BorderRadius.circular(12),
-                              image:
-                                  _coverImage != null
-                                      ? DecorationImage(
-                                        image: FileImage(_coverImage!),
-                                        fit: BoxFit.cover,
-                                      )
-                                      : _coverImageUrl != null
-                                      ? DecorationImage(
-                                        image: NetworkImage(_coverImageUrl!),
-                                        fit: BoxFit.cover,
-                                      )
-                                      : null,
-                            ),
-                            child:
-                                (_coverImage == null && _coverImageUrl == null)
-                                    ? Center(
-                                      child: Icon(
-                                        Icons.camera_alt,
-                                        color: Colors.grey[600],
-                                      ),
-                                    )
-                                    : null,
+                        // Cover Image Section
+                        Card(
+                          elevation: 4,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
                           ),
-                        ),
-
-                        Text(
-                          'Destination: ${widget.travel.location}',
-                          style: TextStyle(fontSize: 18),
-                        ),
-                        SizedBox(height: 8),
-                        Text(
-                          'Start Date: ${widget.travel.startDate?.toLocal().toString().split(" ")[0]}',
-                        ),
-                        Text(
-                          'End Date: ${widget.travel.endDate != null ? widget.travel.endDate!.toLocal().toString().split(' ')[0] : '—'}',
-                        ),
-
-                        SizedBox(height: 16),
-                        ElevatedButton.icon(
-                          onPressed: () {
-                            showDialog(
-                              context: context,
-                              builder:
-                                  (context) => AlertDialog(
-                                    title: Text('Your QR Code'),
-                                    content: Column(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        if (widget.travel.uid != null)
-                                          SizedBox(
-                                            height: 200.0,
-                                            width: 200.0,
-                                            child: QrImageView(
-                                              data: widget.travel.uid!,
-                                              version: QrVersions.auto,
-                                              size: 200.0,
-                                            ),
-                                          ),
-                                        SizedBox(height: 10),
-                                        if (widget.travel.uid != null)
-                                          Text(
-                                            "Add friends to your travel",
-                                            style: TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.grey,
-                                            ),
-                                            textAlign: TextAlign.center,
-                                          ),
-                                      ],
-                                    ),
-                                    actions: [
-                                      TextButton(
-                                        onPressed:
-                                            () => Navigator.of(context).pop(),
-                                        child: Text('Close'),
-                                      ),
-                                    ],
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Padding(
+                                padding: const EdgeInsets.all(16.0),
+                                child: Text(
+                                  'Trip Cover Image',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
                                   ),
-                            );
-                          },
-                          icon: Icon(Icons.qr_code),
-                          label: Text("Generate QR Code"),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.green,
-                            foregroundColor: Colors.white,
-                            padding: EdgeInsets.symmetric(
-                              vertical: 14,
-                              horizontal: 24,
-                            ),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(30),
+                                ),
+                              ),
+                              GestureDetector(
+                                onTap: _pickCoverImage,
+                                child: Container(
+                                  height: 200,
+                                  width: double.infinity,
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[200],
+                                    borderRadius: BorderRadius.only(
+                                      bottomLeft: Radius.circular(16),
+                                      bottomRight: Radius.circular(16),
+                                    ),
+                                    image:
+                                        _coverImage != null
+                                            ? DecorationImage(
+                                              image: FileImage(_coverImage!),
+                                              fit: BoxFit.cover,
+                                            )
+                                            : _coverImageUrl != null
+                                            ? DecorationImage(
+                                              image: NetworkImage(
+                                                _coverImageUrl!,
+                                              ),
+                                              fit: BoxFit.cover,
+                                            )
+                                            : null,
+                                  ),
+                                  child:
+                                      (_coverImage == null &&
+                                              _coverImageUrl == null)
+                                          ? Center(
+                                            child: Column(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.center,
+                                              children: [
+                                                Icon(
+                                                  Icons.camera_alt,
+                                                  color: Colors.grey[600],
+                                                  size: 48,
+                                                ),
+                                                SizedBox(height: 8),
+                                                Text(
+                                                  'Tap to add cover image',
+                                                  style: TextStyle(
+                                                    color: Colors.grey[600],
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          )
+                                          : null,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                        SizedBox(height: 24),
+
+                        // Trip Details Section
+                        Card(
+                          elevation: 4,
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  'Trip Details',
+                                  style: TextStyle(
+                                    fontSize: 18,
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                                SizedBox(height: 16),
+                                _buildDetailRow(
+                                  Icons.location_on,
+                                  'Destination',
+                                  _travel.location,
+                                ),
+                                SizedBox(height: 8),
+                                _buildDetailRow(
+                                  Icons.calendar_today,
+                                  'Start Date',
+                                  _travel.startDate?.toLocal().toString().split(
+                                        " ",
+                                      )[0] ??
+                                      'Not set',
+                                ),
+                                SizedBox(height: 8),
+                                _buildDetailRow(
+                                  Icons.calendar_today,
+                                  'End Date',
+                                  _travel.endDate != null
+                                      ? _travel.endDate!
+                                          .toLocal()
+                                          .toString()
+                                          .split(' ')[0]
+                                      : 'Not set',
+                                ),
+                                if (_travel.flightDetails?.isNotEmpty ??
+                                    false) ...[
+                                  SizedBox(height: 8),
+                                  _buildDetailRow(
+                                    Icons.flight,
+                                    'Flight Details',
+                                    _travel.flightDetails!,
+                                  ),
+                                ],
+                                if (_travel.accommodation?.isNotEmpty ??
+                                    false) ...[
+                                  SizedBox(height: 8),
+                                  _buildDetailRow(
+                                    Icons.hotel,
+                                    'Accommodation',
+                                    _travel.accommodation!,
+                                  ),
+                                ],
+                                if (_travel.notes?.isNotEmpty ?? false) ...[
+                                  SizedBox(height: 8),
+                                  _buildDetailRow(
+                                    Icons.note,
+                                    'Notes',
+                                    _travel.notes!,
+                                  ),
+                                ],
+                              ],
                             ),
                           ),
                         ),
+                        SizedBox(height: 24),
+
+                        // Share buttons (only for trip owner)
+                        if (_travel.uid ==
+                            FirebaseAuth.instance.currentUser?.uid)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 20),
+                            child: Column(
+                              children: [
+                                ElevatedButton.icon(
+                                  onPressed: () {
+                                    showDialog(
+                                      context: context,
+                                      builder:
+                                          (context) => AlertDialog(
+                                            title: const Text(
+                                              'Share by Username',
+                                            ),
+                                            content: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                TextField(
+                                                  controller:
+                                                      _usernameController,
+                                                  decoration:
+                                                      const InputDecoration(
+                                                        labelText: 'Username',
+                                                        border:
+                                                            OutlineInputBorder(),
+                                                      ),
+                                                ),
+                                                const SizedBox(height: 16),
+                                                ElevatedButton(
+                                                  onPressed: () async {
+                                                    final username =
+                                                        _usernameController.text
+                                                            .trim();
+                                                    if (username.isEmpty) {
+                                                      ScaffoldMessenger.of(
+                                                        context,
+                                                      ).showSnackBar(
+                                                        const SnackBar(
+                                                          content: Text(
+                                                            'Please enter a username',
+                                                          ),
+                                                        ),
+                                                      );
+                                                      return;
+                                                    }
+
+                                                    try {
+                                                      final userQuery =
+                                                          await FirebaseFirestore
+                                                              .instance
+                                                              .collection(
+                                                                'appUsers',
+                                                              )
+                                                              .where(
+                                                                'username',
+                                                                isEqualTo:
+                                                                    username,
+                                                              )
+                                                              .get();
+
+                                                      if (userQuery
+                                                          .docs
+                                                          .isEmpty) {
+                                                        ScaffoldMessenger.of(
+                                                          context,
+                                                        ).showSnackBar(
+                                                          const SnackBar(
+                                                            content: Text(
+                                                              'User not found',
+                                                            ),
+                                                          ),
+                                                        );
+                                                        return;
+                                                      }
+
+                                                      final targetUserId =
+                                                          userQuery
+                                                              .docs
+                                                              .first
+                                                              .id;
+                                                      await FirebaseFirestore
+                                                          .instance
+                                                          .collection('travel')
+                                                          .doc(_travel.id)
+                                                          .update({
+                                                            'sharedWith':
+                                                                FieldValue.arrayUnion([
+                                                                  targetUserId,
+                                                                ]),
+                                                          });
+
+                                                      ScaffoldMessenger.of(
+                                                        context,
+                                                      ).showSnackBar(
+                                                        const SnackBar(
+                                                          content: Text(
+                                                            'Travel plan shared successfully',
+                                                          ),
+                                                        ),
+                                                      );
+                                                      Navigator.pop(context);
+                                                    } catch (e) {
+                                                      print(
+                                                        'Error sharing travel plan: $e',
+                                                      );
+                                                      ScaffoldMessenger.of(
+                                                        context,
+                                                      ).showSnackBar(
+                                                        const SnackBar(
+                                                          content: Text(
+                                                            'Failed to share travel plan',
+                                                          ),
+                                                        ),
+                                                      );
+                                                    }
+                                                  },
+                                                  child: const Text('Share'),
+                                                  style:
+                                                      ElevatedButton.styleFrom(
+                                                        backgroundColor:
+                                                            Colors.green,
+                                                        foregroundColor:
+                                                            Colors.white,
+                                                      ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.person_add),
+                                  label: const Text('Share by Username'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.green,
+                                    foregroundColor: Colors.white,
+                                    minimumSize: const Size(
+                                      double.infinity,
+                                      48,
+                                    ),
+                                  ),
+                                ),
+                                const SizedBox(height: 16),
+                                ElevatedButton.icon(
+                                  onPressed: () {
+                                    showDialog(
+                                      context: context,
+                                      builder:
+                                          (context) => AlertDialog(
+                                            title: const Text('Share QR Code'),
+                                            content: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                QrImageView(
+                                                  data: _travel.id!,
+                                                  version: QrVersions.auto,
+                                                  size: 200.0,
+                                                ),
+                                                const SizedBox(height: 16),
+                                                const Text(
+                                                  'Scan this QR code to view the travel plan',
+                                                  textAlign: TextAlign.center,
+                                                ),
+                                              ],
+                                            ),
+                                            actions: [
+                                              TextButton(
+                                                onPressed:
+                                                    () =>
+                                                        Navigator.pop(context),
+                                                child: const Text('Close'),
+                                              ),
+                                            ],
+                                          ),
+                                    );
+                                  },
+                                  icon: const Icon(Icons.qr_code),
+                                  label: const Text('Generate QR Code'),
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: Colors.green,
+                                    foregroundColor: Colors.white,
+                                    minimumSize: const Size(
+                                      double.infinity,
+                                      48,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        SizedBox(height: 24),
+
+                        // Delete Button (only for trip owner)
+                        if (_travel.uid ==
+                            FirebaseAuth.instance.currentUser?.uid)
+                          Center(
+                            child: ElevatedButton.icon(
+                              onPressed: () {
+                                showDialog(
+                                  context: context,
+                                  builder:
+                                      (context) => AlertDialog(
+                                        title: Text('Delete this plan'),
+                                        content: Text(
+                                          'Are you sure you want to delete this plan? This action cannot be undone.',
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed:
+                                                () =>
+                                                    Navigator.of(context).pop(),
+                                            child: Text('Cancel'),
+                                          ),
+                                          TextButton(
+                                            onPressed: () async {
+                                              final scaffoldMessenger =
+                                                  ScaffoldMessenger.of(context);
+                                              final navigator = Navigator.of(
+                                                context,
+                                              );
+                                              navigator.pop();
+
+                                              final success = await context
+                                                  .read<TravelTrackerProvider>()
+                                                  .deleteTravelPlan(_travel.id);
+
+                                              if (success) {
+                                                scaffoldMessenger.showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text(
+                                                      'Travel plan deleted successfully',
+                                                    ),
+                                                    backgroundColor:
+                                                        Colors.green,
+                                                    duration: Duration(
+                                                      seconds: 2,
+                                                    ),
+                                                  ),
+                                                );
+                                                navigator.pop();
+                                              } else {
+                                                scaffoldMessenger.showSnackBar(
+                                                  const SnackBar(
+                                                    content: Text(
+                                                      'Failed to delete travel plan',
+                                                    ),
+                                                    backgroundColor: Colors.red,
+                                                    duration: Duration(
+                                                      seconds: 2,
+                                                    ),
+                                                  ),
+                                                );
+                                              }
+                                            },
+                                            child: Text(
+                                              'Delete',
+                                              style: TextStyle(
+                                                color: Colors.red,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                );
+                              },
+                              icon: Icon(Icons.delete, color: Colors.white),
+                              label: Text('Delete Plan'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red,
+                                foregroundColor: Colors.white,
+                                padding: EdgeInsets.symmetric(
+                                  horizontal: 32,
+                                  vertical: 12,
+                                ),
+                              ),
+                            ),
+                          ),
+                        SizedBox(height: 24),
                       ],
                     ),
                   ),
+                  // Itineraries Tab
                   Padding(
                     padding: const EdgeInsets.all(16.0),
                     child:
-                        widget.travel.activities == null ||
-                                widget.travel.activities!.isEmpty
-                            ? Center(child: Text("No itineraries found."))
+                        _travel.activities == null ||
+                                _travel.activities!.isEmpty
+                            ? Center(
+                              child: Column(
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Icon(
+                                    Icons.event_note,
+                                    size: 64,
+                                    color: Colors.grey[400],
+                                  ),
+                                  SizedBox(height: 16),
+                                  Text(
+                                    "No itineraries found.",
+                                    style: TextStyle(
+                                      fontSize: 16,
+                                      color: Colors.grey[600],
+                                    ),
+                                  ),
+                                  SizedBox(height: 8),
+                                  Text(
+                                    "Tap the + button to add an itinerary",
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: Colors.grey[500],
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            )
                             : ListView.builder(
-                              itemCount: widget.travel.activities!.length,
+                              itemCount: _travel.activities!.length,
                               itemBuilder:
                                   (context, index) => buildItineraryCard(
-                                    widget.travel.activities![index],
+                                    _travel.activities![index],
                                     index,
                                   ),
                             ),
@@ -595,15 +971,413 @@ class _TripDetailsState extends State<TripDetails>
                 ],
               ),
       bottomNavigationBar: BottomNavBar(selectedIndex: 1),
-      floatingActionButtonLocation:
-              FloatingActionButtonLocation.centerDocked,
-      floatingActionButton:
-          FloatingActionButton(
-                onPressed: _addManualItinerary,
-                backgroundColor: Colors.green.shade700,
-                child: Icon(Icons.add),
-                tooltip: 'Add Itinerary',
-              )
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      floatingActionButton: FloatingActionButton(
+        onPressed: _addManualItinerary,
+        backgroundColor: Colors.green.shade700,
+        child: Icon(Icons.add),
+        tooltip: 'Add Itinerary',
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(IconData icon, String label, String value) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Icon(icon, size: 20, color: Colors.green.shade700),
+        SizedBox(width: 8),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                label,
+                style: TextStyle(fontSize: 14, color: Colors.grey[600]),
+              ),
+              SizedBox(height: 2),
+              Text(
+                value,
+                style: TextStyle(fontSize: 16, fontWeight: FontWeight.w500),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Future<List<Map<String, dynamic>>> _getSharedUsersInfo() async {
+    if (_travel.sharedWith == null || _travel.sharedWith!.isEmpty) {
+      return [];
+    }
+
+    List<Map<String, dynamic>> usersInfo = [];
+    for (String uid in _travel.sharedWith!) {
+      try {
+        final userDoc =
+            await FirebaseFirestore.instance
+                .collection('appUsers')
+                .doc(uid)
+                .get();
+
+        if (userDoc.exists) {
+          usersInfo.add({
+            'uid': uid,
+            'username': userDoc.data()?['username'] ?? 'Unknown User',
+          });
+        }
+      } catch (e) {
+        print('Error fetching user info: $e');
+      }
+    }
+    return usersInfo;
+  }
+
+  Future<void> _removeSharedUser(String userId) async {
+    try {
+      await FirebaseFirestore.instance
+          .collection('travel')
+          .doc(_travel.id)
+          .update({
+            'sharedWith': FieldValue.arrayRemove([userId]),
+          });
+
+      // Refresh the travel data to update the UI
+      await _loadTravelData();
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('User removed from shared list'),
+            backgroundColor: Colors.green,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error removing user: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _saveQRCodeToStorage() async {
+    try {
+      // Request storage permission for Android
+      var status = await Permission.storage.request();
+      if (!status.isGranted) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Storage permission is required to save QR code'),
+              backgroundColor: Colors.red,
+            ),
+          );
+        }
+        return;
+      }
+
+      // Show loading indicator
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Saving QR code...'),
+            duration: Duration(seconds: 1),
+          ),
+        );
+      }
+
+      // Create a QR code painter
+      final qrPainter = QrPainter(
+        data: _travel.id!,
+        version: QrVersions.auto,
+        gapless: true,
+      );
+
+      final directory = await getExternalStorageDirectory();
+      if (directory == null) {
+        throw Exception('Could not access storage directory');
+      }
+
+      final file = File('${directory.path}/travel_qr_${_travel.id}.png');
+
+      // Create a picture recorder
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(recorder);
+      final size = Size(200, 200);
+
+      // Paint the QR code
+      qrPainter.paint(canvas, size);
+      final picture = recorder.endRecording();
+      final img = await picture.toImage(
+        size.width.toInt(),
+        size.height.toInt(),
+      );
+      final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
+      final buffer = byteData!.buffer.asUint8List();
+
+      // Save the file
+      await file.writeAsBytes(buffer);
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('QR code saved successfully'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error saving QR code: $e'),
+            backgroundColor: Colors.red,
+            duration: Duration(seconds: 2),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> _showShareByUsernameDialog() async {
+    final usernameController = TextEditingController();
+
+    return showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: Text('Share with Friend'),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                TextField(
+                  controller: usernameController,
+                  decoration: InputDecoration(
+                    labelText: 'Enter friend\'s username',
+                    hintText: 'e.g., john_doe',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  final username = usernameController.text.trim();
+                  if (username.isEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Please enter a username')),
+                    );
+                    return;
+                  }
+
+                  // Find user by username
+                  final userQuery =
+                      await FirebaseFirestore.instance
+                          .collection('appUsers')
+                          .where('username', isEqualTo: username)
+                          .get();
+
+                  if (userQuery.docs.isEmpty) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(
+                        context,
+                      ).showSnackBar(SnackBar(content: Text('User not found')));
+                    }
+                    return;
+                  }
+
+                  final friendUid = userQuery.docs.first.id;
+
+                  // Don't allow sharing with yourself
+                  if (friendUid == FirebaseAuth.instance.currentUser?.uid) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text('Cannot share with yourself')),
+                      );
+                    }
+                    return;
+                  }
+
+                  // Check if already shared
+                  if (_travel.sharedWith?.contains(friendUid) ?? false) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Already shared with this user'),
+                        ),
+                      );
+                    }
+                    return;
+                  }
+
+                  try {
+                    // Add to sharedWith array
+                    await FirebaseFirestore.instance
+                        .collection('travel')
+                        .doc(_travel.id)
+                        .update({
+                          'sharedWith': FieldValue.arrayUnion([friendUid]),
+                        });
+
+                    // Refresh the travel data
+                    await _loadTravelData();
+
+                    if (context.mounted) {
+                      Navigator.pop(context); // Close the dialog
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Successfully shared with $username'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Error sharing: $e'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
+                },
+                child: Text('Share'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green.shade700,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ],
+          ),
+    );
+  }
+
+  Future<void> _editTravelPlan() async {
+    final nameController = TextEditingController(text: _travel.name);
+    final locationController = TextEditingController(text: _travel.location);
+    final notesController = TextEditingController(text: _travel.notes);
+    final flightController = TextEditingController(text: _travel.flightDetails);
+    final accommodationController = TextEditingController(
+      text: _travel.accommodation,
+    );
+
+    return showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: Text('Edit Travel Plan'),
+            content: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nameController,
+                    decoration: InputDecoration(
+                      labelText: 'Trip Name',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  TextField(
+                    controller: locationController,
+                    decoration: InputDecoration(
+                      labelText: 'Location',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  TextField(
+                    controller: notesController,
+                    decoration: InputDecoration(
+                      labelText: 'Notes',
+                      border: OutlineInputBorder(),
+                    ),
+                    maxLines: 3,
+                  ),
+                  SizedBox(height: 8),
+                  TextField(
+                    controller: flightController,
+                    decoration: InputDecoration(
+                      labelText: 'Flight Details',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                  SizedBox(height: 8),
+                  TextField(
+                    controller: accommodationController,
+                    decoration: InputDecoration(
+                      labelText: 'Accommodation',
+                      border: OutlineInputBorder(),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text('Cancel'),
+              ),
+              ElevatedButton(
+                onPressed: () async {
+                  try {
+                    final updatedTravel = _travel.copyWith(
+                      name: nameController.text.trim(),
+                      location: locationController.text.trim(),
+                      notes: notesController.text.trim(),
+                      flightDetails: flightController.text.trim(),
+                      accommodation: accommodationController.text.trim(),
+                    );
+
+                    await FirebaseFirestore.instance
+                        .collection('travel')
+                        .doc(_travel.id)
+                        .update(updatedTravel.toJson());
+
+                    // Refresh the travel data
+                    await _loadTravelData();
+
+                    if (context.mounted) {
+                      Navigator.pop(context); // Close the dialog
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Travel plan updated successfully'),
+                          backgroundColor: Colors.green,
+                        ),
+                      );
+                    }
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Error updating travel plan: $e'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  }
+                },
+                child: Text('Save'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green.shade700,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ],
+          ),
     );
   }
 }

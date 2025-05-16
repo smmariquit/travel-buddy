@@ -21,7 +21,9 @@ class TravelTrackerProvider with ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   FirebaseTravelAPI? _firebaseService;
   FirebaseTravelAPI get firebaseService {
-    _firebaseService ??= FirebaseTravelAPI();
+    if (_firebaseService == null) {
+      _firebaseService = FirebaseTravelAPI();
+    }
     return _firebaseService!;
   }
 
