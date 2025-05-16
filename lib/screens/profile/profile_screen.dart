@@ -22,14 +22,6 @@ import 'package:google_fonts/google_fonts.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:travel_app/utils/responsive_layout.dart';
 import 'package:qr_flutter/qr_flutter.dart';
-import 'package:travel_app/widgets/bottom_navigation_bar.dart';
-import 'package:travel_app/widgets/bottom_navigation_bar.dart';
-import 'dart:typed_data';
-import 'dart:ui' as ui;
-import 'package:flutter/rendering.dart';
-import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
-import 'dart:io';
-import 'package:permission_handler/permission_handler.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -45,7 +37,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _lastNameController = TextEditingController();
   final _phoneController = TextEditingController();
   final _locationController = TextEditingController();
-  final GlobalKey qrKey = GlobalKey();
 
   List<Map<String, dynamic>> _interests = [
     {"interest": 'Adventure', "selected": false},
@@ -217,147 +208,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  void _showSignOutDialog(BuildContext context) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          title: const Text('Are you sure you want to sign out?'),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-              },
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () async {
-                await FirebaseAuth.instance.signOut();
-                Navigator.of(context).pop();
-                Navigator.pushReplacementNamed(context, '/signin');
-              },
-              child: const Text('Sign Out'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  Future<void> saveQRToGalleryPlus() async {
-    try {
-      await Permission.storage.request();
-      await WidgetsBinding.instance.endOfFrame;
-
-      RenderRepaintBoundary boundary =
-          qrKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
-
-      // Capture the QR widget as image
-      ui.Image qrImage = await boundary.toImage(pixelRatio: 3.0);
-
-      // Create a new picture recorder and canvas
-      final recorder = ui.PictureRecorder();
-      final canvas = Canvas(recorder);
-
-      // Paint white background
-      final paint = Paint()..color = ui.Color(0xFFFFFFFF); // White color
-      canvas.drawRect(
-        Rect.fromLTWH(
-          0,
-          0,
-          qrImage.width.toDouble(),
-          qrImage.height.toDouble(),
-        ),
-        paint,
-      );
-
-      // Draw the QR image on top of white background
-      canvas.drawImage(qrImage, Offset.zero, Paint());
-
-      // End recording and create final image
-      final picture = recorder.endRecording();
-      final imgWithWhiteBg = await picture.toImage(
-        qrImage.width,
-        qrImage.height,
-      );
-
-      // Convert to bytes
-      final byteData = await imgWithWhiteBg.toByteData(
-        format: ui.ImageByteFormat.png,
-      );
-      if (byteData != null) {
-        final pngBytes = byteData.buffer.asUint8List();
-
-        final result = await ImageGallerySaverPlus.saveImage(
-          pngBytes,
-          quality: 100,
-          name: "qr_code_white_bg_${DateTime.now().millisecondsSinceEpoch}",
-        );
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('QR Code to gallery!')));
-      }
-    } catch (e) {
-      print('Error saving QR code: $e');
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed to save QR code.')));
-    }
-  }
-
-  void showQRDialog() {
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: Text('Your QR Code'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                if (_currentUserData!
-                    .uid
-                    .isNotEmpty) // Use id property instead of uid
-                  RepaintBoundary(
-                    key: qrKey,
-                    child: Container(
-                      color:
-                          Colors.white, // Ensure white background for QR code
-                      child: SizedBox(
-                        height: 200.0,
-                        width: 200.0,
-                        child: QrImageView(
-                          data: _currentUserData!.uid, // Use id instead of uid
-                          version: QrVersions.auto,
-                          size: 200.0,
-                        ),
-                      ),
-                    ),
-                  ),
-                SizedBox(height: 10),
-                if (_currentUserData!.uid.isNotEmpty)
-                  Text(
-                    "Add friends to your travel",
-                    style: TextStyle(fontSize: 12, color: Colors.grey),
-                    textAlign: TextAlign.center,
-                  ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () async {
-                  await saveQRToGalleryPlus();
-                },
-                child: Text("Save QR", style: TextStyle(color: primaryColor)),
-              ),
-              TextButton(
-                onPressed: () => Navigator.of(context).pop(),
-                child: Text('Close'),
-              ),
-            ],
-          ),
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
     if (_currentUserData == null) {
@@ -372,17 +222,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
             color: Colors.grey[100],
             child: Column(
               children: [
-                // IconButton(
-                //   icon: Icon(Icons.exit_to_app, color: Colors.white),
-                //   onPressed: () async {
-                //     await context.read<AppUserProvider>().signOut();
-                //     if (mounted) {
-                //       Navigator.of(
-                //         context,
-                //       ).pushNamedAndRemoveUntil('/signin', (route) => false);
-                //     }
-                //   },
-                // ),
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(
@@ -393,435 +232,319 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   child: Row(
                     children: [
-                      // IconButton(
-                      //   icon: Icon(Icons.arrow_back, color: Colors.white),
-                      //   onPressed: () => Navigator.pop(context),
-                      // ),
+                      IconButton(
+                        icon: Icon(Icons.arrow_back, color: Colors.white),
+                        onPressed: () => Navigator.pop(context),
+                      ),
                       Expanded(
                         child: Text(
-                          _currentUserData!.username,
-                          style: GoogleFonts.poppins(
-                            fontSize: 20,
-                            fontWeight: FontWeight.w500,
+                          'Profile',
+                          style: TextStyle(
                             color: Colors.white,
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
                           ),
                           textAlign: TextAlign.center,
                         ),
                       ),
-                      SizedBox(width: 40),
+                      SizedBox(width: 48), // To balance the back button
                     ],
                   ),
                 ),
-
-                Transform.translate(
-                  offset: Offset(0, -30),
-                  child: Center(
-                    child: Stack(
-                      children: [
-                        Container(
-                          padding: EdgeInsets.all(3),
-                          decoration: BoxDecoration(
-                            color: Colors.white,
-                            shape: BoxShape.circle,
-                          ),
-                          child: CircleAvatar(
-                            radius: 40,
-                            backgroundColor: Colors.grey[300],
-
-                            backgroundImage:
-                                _currentUserData!.profileImageUrl != null &&
-                                        _currentUserData!
-                                            .profileImageUrl!
-                                            .isNotEmpty
-                                    ? NetworkImage(
-                                          _currentUserData!.profileImageUrl!,
-                                        )
-                                        as ImageProvider
-                                    : null,
-
-                            child:
-                                _currentUserData!.profileImageUrl == null ||
-                                        _currentUserData!
-                                            .profileImageUrl!
-                                            .isEmpty
-                                    ? Icon(
-                                      Icons.person,
-                                      size: 50,
-                                      color: Colors.white,
-                                    )
-                                    : null,
-                          ),
-                        ),
-                        Positioned(
-                          bottom: 0,
-                          right: 4,
-                          child: GestureDetector(
-                            onTap: () async {
-                              final source =
-                                  await showModalBottomSheet<ImageSource>(
-                                    context: context,
-                                    builder:
-                                        (context) => SafeArea(
-                                          child: Column(
-                                            mainAxisSize: MainAxisSize.min,
-                                            children: [
-                                              ListTile(
-                                                leading: const Icon(
-                                                  Icons.camera_alt,
+                SizedBox(height: 20),
+                // Profile Image and Name
+                Center(
+                  child: Column(
+                    children: [
+                      GestureDetector(
+                        onTap: () async {
+                          final source =
+                              await showModalBottomSheet<ImageSource>(
+                                context: context,
+                                builder:
+                                    (context) => SafeArea(
+                                      child: Column(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          ListTile(
+                                            leading: const Icon(
+                                              Icons.camera_alt,
+                                            ),
+                                            title: const Text('Take a photo'),
+                                            onTap:
+                                                () => Navigator.pop(
+                                                  context,
+                                                  ImageSource.camera,
                                                 ),
-                                                title: const Text(
-                                                  'Take a photo',
-                                                ),
-                                                onTap:
-                                                    () => Navigator.pop(
-                                                      context,
-                                                      ImageSource.camera,
-                                                    ),
-                                              ),
-                                              ListTile(
-                                                leading: const Icon(
-                                                  Icons.photo_library,
-                                                ),
-                                                title: const Text(
-                                                  'Choose from gallery',
-                                                ),
-                                                onTap:
-                                                    () => Navigator.pop(
-                                                      context,
-                                                      ImageSource.gallery,
-                                                    ),
-                                              ),
-                                            ],
                                           ),
-                                        ),
-                                  );
-
-                              if (source == null) return;
-
-                              final permission =
-                                  source == ImageSource.camera
-                                      ? Permission.camera
-                                      : Permission.photos;
-
-                              final status = await permission.request();
-
-                              if (!status.isGranted) {
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text(
-                                      '${permission.toString().split('.').last} permission denied',
+                                          ListTile(
+                                            leading: const Icon(
+                                              Icons.photo_library,
+                                            ),
+                                            title: const Text(
+                                              'Choose from gallery',
+                                            ),
+                                            onTap:
+                                                () => Navigator.pop(
+                                                  context,
+                                                  ImageSource.gallery,
+                                                ),
+                                          ),
+                                        ],
+                                      ),
                                     ),
-                                  ),
-                                );
-                                return;
-                              }
-
-                              final picker = ImagePicker();
-                              final pickedFile = await picker.pickImage(
-                                source: source,
                               );
-                              if (pickedFile == null) return;
 
-                              final uid = _currentUserData!.uid;
-                              final file = File(pickedFile.path);
-                              final storageRef = FirebaseStorage.instance
-                                  .ref()
-                                  .child('profile_images/$uid.jpg');
+                          if (source == null) return;
 
-                              try {
-                                await storageRef.putFile(file);
-                                final imageUrl =
-                                    await storageRef.getDownloadURL();
+                          final permission =
+                              source == ImageSource.camera
+                                  ? Permission.camera
+                                  : Permission.photos;
 
-                                await FirebaseFirestore.instance
-                                    .collection('appUsers')
-                                    .doc(uid)
-                                    .update({'profileImageUrl': imageUrl});
+                          final status = await permission.request();
 
-                                final doc =
-                                    await FirebaseFirestore.instance
-                                        .collection('appUsers')
-                                        .doc(uid)
-                                        .get();
-                                if (doc.exists) {
-                                  final updatedUser = AppUser.fromJson(
-                                    doc.data()!,
-                                  );
-                                  setState(() {
-                                    _currentUserData = updatedUser;
-                                  });
-                                }
-                              } catch (e) {
-                                print('Upload failed: $e');
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                    content: Text('Failed to upload image'),
-                                  ),
-                                );
-                              }
-                            },
-
-                            child: CircleAvatar(
-                              radius: 14,
-                              backgroundColor: Colors.black54,
-                              child: Icon(
-                                Icons.camera_alt,
-                                color: Colors.white,
-                                size: 12,
+                          if (!status.isGranted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  '${permission.toString().split('.').last} permission denied',
+                                ),
                               ),
-                            ),
+                            );
+                            return;
+                          }
+
+                          final picker = ImagePicker();
+                          final pickedFile = await picker.pickImage(
+                            source: source,
+                          );
+                          if (pickedFile == null) return;
+
+                          final uid = _currentUserData!.uid;
+                          final file = File(pickedFile.path);
+                          final storageRef = FirebaseStorage.instance
+                              .ref()
+                              .child('profile_images/$uid.jpg');
+
+                          try {
+                            await storageRef.putFile(file);
+                            final imageUrl = await storageRef.getDownloadURL();
+                            await FirebaseFirestore.instance
+                                .collection('appUsers')
+                                .doc(uid)
+                                .update({'profileImageUrl': imageUrl});
+
+                            setState(() {
+                              _currentUserData = _currentUserData!.copyWith(
+                                profileImageUrl: imageUrl,
+                              );
+                            });
+                          } catch (e) {
+                            print('Upload failed: $e');
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(content: Text('Failed to upload image')),
+                            );
+                          }
+                        },
+                        child: CircleAvatar(
+                          radius: 50,
+                          backgroundColor: Colors.grey[300],
+                          backgroundImage:
+                              _currentUserData!.profileImageUrl != null
+                                  ? NetworkImage(
+                                    _currentUserData!.profileImageUrl!,
+                                  )
+                                  : null,
+                          child:
+                              _currentUserData!.profileImageUrl == null
+                                  ? Icon(
+                                    Icons.person,
+                                    size: 50,
+                                    color: Colors.grey[600],
+                                  )
+                                  : null,
+                        ),
+                      ),
+                      SizedBox(height: 16),
+                      Text(
+                        '${_currentUserData!.firstName} ${_currentUserData!.lastName}',
+                        style: TextStyle(
+                          fontSize: 24,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                      if (_currentUserData!.username != null) ...[
+                        SizedBox(height: 4),
+                        Text(
+                          '@${_currentUserData!.username}',
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.grey[600],
                           ),
                         ),
                       ],
-                    ),
+                    ],
                   ),
                 ),
-
-                SizedBox(height: 5),
-
-                Transform.translate(
-                  offset: Offset(0, -30),
-                  child: Container(
-                    padding: EdgeInsets.symmetric(horizontal: 16),
+                SizedBox(height: 32),
+                // Private Profile Toggle
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Private Profile',
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      Switch(
+                        value: _isPrivate,
+                        onChanged: (value) async {
+                          setState(() {
+                            _isPrivate = value;
+                          });
+                          await FirebaseFirestore.instance
+                              .collection('appUsers')
+                              .doc(_currentUserData!.uid)
+                              .update({'isPrivate': value});
+                        },
+                        activeColor: Colors.green,
+                      ),
+                    ],
+                  ),
+                ),
+                SizedBox(height: 24),
+                // Profile Information Section
+                Card(
+                  margin: EdgeInsets.symmetric(horizontal: 20),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
                     child: Form(
                       key: _formKey,
                       child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Row(
-                            children: [
-                              Expanded(
-                                child: _buildProfileField(
-                                  icon: Icons.person_outline,
-                                  label: "First Name",
-                                  controller: _firstNameController,
-                                ),
-                              ),
-                              SizedBox(width: 10),
-                              Expanded(
-                                child: _buildProfileField(
-                                  icon: Icons.badge,
-                                  label: "Last Name",
-                                  controller: _lastNameController,
-                                ),
-                              ),
-                            ],
+                          Text(
+                            'Profile Information',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
-                          _buildProfileField(
-                            icon: Icons.account_circle_outlined,
-                            label: _currentUserData!.username,
-                            editable: false,
+                          SizedBox(height: 16),
+                          TextFormField(
+                            controller: _firstNameController,
+                            decoration: InputDecoration(
+                              labelText: 'First Name',
+                              border: OutlineInputBorder(),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter your first name';
+                              }
+                              return null;
+                            },
                           ),
-                          _buildProfileField(
-                            icon: Icons.email_outlined,
-                            label: _currentUserData!.email,
-                            editable: false,
+                          SizedBox(height: 16),
+                          TextFormField(
+                            controller: _lastNameController,
+                            decoration: InputDecoration(
+                              labelText: 'Last Name',
+                              border: OutlineInputBorder(),
+                            ),
+                            validator: (value) {
+                              if (value == null || value.isEmpty) {
+                                return 'Please enter your last name';
+                              }
+                              return null;
+                            },
                           ),
-                          _buildProfileField(
-                            icon: Icons.phone_outlined,
-                            label: "Phone number",
+                          SizedBox(height: 16),
+                          TextFormField(
                             controller: _phoneController,
+                            decoration: InputDecoration(
+                              labelText: 'Phone Number',
+                              border: OutlineInputBorder(),
+                            ),
                           ),
-                          _buildProfileField(
-                            icon: Icons.location_on_outlined,
-                            label: "Location",
+                          SizedBox(height: 16),
+                          TextFormField(
                             controller: _locationController,
+                            decoration: InputDecoration(
+                              labelText: 'Location',
+                              border: OutlineInputBorder(),
+                            ),
                           ),
-
-                          SizedBox(height: 8),
+                          SizedBox(height: 24),
                           Text(
                             'Interests',
-                            style: GoogleFonts.poppins(
-                              fontSize: 14,
-                              color: Colors.grey,
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
+                          SizedBox(height: 8),
                           Wrap(
                             spacing: 8,
                             runSpacing: 8,
                             children:
-                                _interests.map((item) {
-                                  final isSelected = item['selected'];
-                                  return InputChip(
-                                    label: Text(
-                                      item['interest'],
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color:
-                                            isSelected
-                                                ? Colors.white
-                                                : Colors.black,
-                                      ),
-                                    ),
-                                    selected: isSelected,
+                                _interests.map((interest) {
+                                  return FilterChip(
+                                    label: Text(interest['interest']),
+                                    selected: interest['selected'],
                                     onSelected: (selected) {
                                       setState(() {
-                                        item['selected'] = selected;
+                                        interest['selected'] = selected;
                                       });
                                     },
-                                    selectedColor: Colors.green,
-                                    checkmarkColor: Colors.white,
-                                    visualDensity: VisualDensity.compact,
-                                    materialTapTargetSize:
-                                        MaterialTapTargetSize.shrinkWrap,
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 4,
-                                    ),
+                                    selectedColor: Colors.green.shade100,
+                                    checkmarkColor: Colors.green,
                                   );
                                 }).toList(),
                           ),
-
-                          SizedBox(height: 8),
+                          SizedBox(height: 24),
                           Text(
                             'Travel Styles',
-                            style: GoogleFonts.poppins(
-                              fontSize: 14,
-                              color: Colors.grey,
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
                             ),
                           ),
+                          SizedBox(height: 8),
                           Wrap(
                             spacing: 8,
                             runSpacing: 8,
                             children:
-                                _travelStyles.map((item) {
-                                  final isSelected = item['selected'];
-                                  return InputChip(
-                                    label: Text(
-                                      item['style'],
-                                      style: TextStyle(
-                                        fontSize: 12,
-                                        color:
-                                            isSelected
-                                                ? Colors.white
-                                                : Colors.black,
-                                      ),
-                                    ),
-                                    selected: isSelected,
+                                _travelStyles.map((style) {
+                                  return FilterChip(
+                                    label: Text(style['style']),
+                                    selected: style['selected'],
                                     onSelected: (selected) {
                                       setState(() {
-                                        item['selected'] = selected;
+                                        style['selected'] = selected;
                                       });
                                     },
-                                    selectedColor: Colors.green,
-                                    checkmarkColor: Colors.white,
-                                    visualDensity: VisualDensity.compact,
-                                    materialTapTargetSize:
-                                        MaterialTapTargetSize.shrinkWrap,
-                                    padding: EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 4,
-                                    ),
+                                    selectedColor: Colors.green.shade100,
+                                    checkmarkColor: Colors.green,
                                   );
                                 }).toList(),
                           ),
-                          SizedBox(height: 20),
-
-                          SizedBox(height: 16),
-                          Divider(thickness: 1),
-                          ListTile(
-                            leading: Icon(
-                              Icons.privacy_tip_outlined,
-                              color: Colors.black,
-                            ),
-                            title: Text("Private Profile"),
-                            subtitle: Text("Only you can view your profile"),
-                            trailing: Switch(
-                              value: _isPrivate,
-                              onChanged: (value) async {
-                                setState(() {
-                                  _isPrivate = value;
-                                });
-                                await FirebaseFirestore.instance
-                                    .collection('appUsers')
-                                    .doc(_currentUserData!.uid)
-                                    .update({'isPrivate': _isPrivate});
-                              },
-                            ),
-                          ),
-                          ListTile(
-                            leading: Icon(Icons.logout, color: Colors.red),
-                            title: Text("Log Out"),
-                            onTap: () => _showSignOutDialog(context),
-                          ),
-                          Divider(thickness: 1),
-
-                          // ElevatedButton.icon(
-                          //   onPressed: () {
-                          //     showDialog(
-                          //       context: context,
-                          //       builder:
-                          //           (context) => AlertDialog(
-                          //             title: Text('Your QR Code'),
-                          //             content: Column(
-                          //               mainAxisSize: MainAxisSize.min,
-                          //               children: [
-                          //                 if (_currentUserData != null)
-                          //                   SizedBox(
-                          //                     height: 200.0,
-                          //                     width: 200.0,
-                          //                     child: QrImageView(
-                          //                       data: _currentUserData!.uid,
-                          //                       version: QrVersions.auto,
-                          //                       size: 200.0,
-                          //                     ),
-                          //                   ),
-                          //                 SizedBox(height: 10),
-                          //                 if (_currentUserData != null)
-                          //                   Text(
-                          //                     "Make friends scan your QR",
-                          //                     style: TextStyle(
-                          //                       fontSize: 12,
-                          //                       color: Colors.grey,
-                          //                     ),
-                          //                     textAlign: TextAlign.center,
-                          //                   ),
-                          //               ],
-                          //             ),
-                          //             actions: [
-                          //               TextButton(
-                          //                 onPressed:
-                          //                     () => Navigator.of(context).pop(),
-                          //                 child: Text('Close'),
-                          //               ),
-                          //             ],
-                          //           ),
-                          //     );
-                          //   },
-                          //   icon: Icon(Icons.qr_code),
-                          //   label: Text("Generate QR Code"),
-                          //   style: ElevatedButton.styleFrom(
-                          //     backgroundColor: Colors.green,
-                          //     foregroundColor: Colors.white,
-                          //     padding: EdgeInsets.symmetric(
-                          //       vertical: 14,
-                          //       horizontal: 24,
-                          //     ),
-                          //     shape: RoundedRectangleBorder(
-                          //       borderRadius: BorderRadius.circular(30),
-                          //     ),
-                          //   ),
-                          // ),
-                          SizedBox(height: 20),
-                          SizedBox(
-                            width: double.infinity,
-                            child: OutlinedButton(
-                              onPressed: _saveChanges,
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: Colors.green[700],
-                                side: BorderSide(color: Colors.green[700]!),
-                                padding: EdgeInsets.symmetric(vertical: 16),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(30),
-                                ),
-                              ),
-                              child: Text(
-                                "Edit profile",
-                                style: GoogleFonts.poppins(
-                                  fontSize: 16,
-                                  fontWeight: FontWeight.w500,
-                                  color: Colors.green[700],
-                                ),
-                              ),
+                          SizedBox(height: 24),
+                          ElevatedButton.icon(
+                            onPressed: _saveChanges,
+                            icon: Icon(Icons.save),
+                            label: Text('Save Changes'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: Colors.green,
+                              foregroundColor: Colors.white,
+                              minimumSize: Size(double.infinity, 48),
                             ),
                           ),
                         ],
@@ -829,64 +552,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                 ),
+                SizedBox(height: 16),
+                // Sign Out Button
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      await context.read<AppUserProvider>().signOut();
+                      if (mounted) {
+                        Navigator.of(
+                          context,
+                        ).pushNamedAndRemoveUntil('/signin', (route) => false);
+                      }
+                    },
+                    icon: Icon(Icons.exit_to_app),
+                    label: Text('Sign Out'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.red,
+                      foregroundColor: Colors.white,
+                      minimumSize: Size(double.infinity, 48),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 24),
               ],
             ),
           ),
         ),
-      ),
-      bottomNavigationBar: BottomNavBar(selectedIndex: 3),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      floatingActionButton: FloatingActionButton(
-        onPressed: showQRDialog,
-        backgroundColor: Colors.green.shade700,
-        child: Icon(Icons.qr_code),
-        tooltip: 'Generate QR Code',
-      ),
-    );
-  }
-
-  Widget _buildProfileField({
-    required IconData icon,
-    required String label,
-    TextEditingController? controller,
-    bool editable = true,
-  }) {
-    return Container(
-      margin: EdgeInsets.only(bottom: 6),
-      decoration: BoxDecoration(
-        color: Colors.white,
-        borderRadius: BorderRadius.circular(10),
-        boxShadow: [
-          BoxShadow(
-            color: Colors.grey.withAlpha(26),
-            spreadRadius: 1,
-            blurRadius: 2,
-            offset: Offset(0, 1),
-          ),
-        ],
-      ),
-      child: ListTile(
-        dense: true,
-        contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 3),
-        leading: Icon(icon, color: Colors.grey),
-        title:
-            editable
-                ? TextField(
-                  controller: controller,
-                  decoration: InputDecoration(
-                    hintText: label,
-                    border: InputBorder.none,
-                    hintStyle: TextStyle(color: Colors.grey),
-                  ),
-                  style: GoogleFonts.poppins(
-                    fontSize: 14,
-                    color: Colors.black87,
-                  ),
-                )
-                : Text(
-                  label,
-                  style: GoogleFonts.poppins(fontSize: 14, color: Colors.grey),
-                ),
       ),
     );
   }
