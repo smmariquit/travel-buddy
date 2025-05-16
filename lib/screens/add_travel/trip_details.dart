@@ -223,9 +223,17 @@ class _TripDetailsState extends State<TripDetails>
     } catch (e) {
       print('Upload failed: $e');
       if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('Failed to upload cover image')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Failed to upload cover image'),
+            behavior: SnackBarBehavior.floating,
+            margin: EdgeInsets.only(
+              bottom: MediaQuery.of(context).size.height * 0.15,
+              left: 16,
+              right: 16,
+            ),
+          ),
+        );
       }
     }
   }
@@ -293,9 +301,17 @@ class _TripDetailsState extends State<TripDetails>
     );
 
     if (context.mounted) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Uploading activity image...')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Uploading activity image...'),
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.only(
+            bottom: MediaQuery.of(context).size.height * 0.15,
+            left: 16,
+            right: 16,
+          ),
+        ),
+      );
     }
 
     try {
@@ -321,14 +337,31 @@ class _TripDetailsState extends State<TripDetails>
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Activity image uploaded successfully')),
+          SnackBar(
+            content: Text('Activity image uploaded successfully'),
+            behavior: SnackBarBehavior.floating,
+            margin: EdgeInsets.only(
+              bottom: MediaQuery.of(context).size.height * 0.15,
+              left: 16,
+              right: 16,
+            ),
+          ),
         );
       }
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(SnackBar(content: Text("Upload failed: $e")));
+        ).showSnackBar(SnackBar(
+          content: Text("Upload failed: $e"),
+            behavior: SnackBarBehavior.floating,
+            margin: EdgeInsets.only(
+              bottom: MediaQuery.of(context).size.height * 0.15,
+              left: 16,
+              right: 16,
+            ),
+          ),
+        );
       }
     }} else {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -534,9 +567,17 @@ class _TripDetailsState extends State<TripDetails>
       }
     } catch (e) {
       print('Error saving QR code: $e');
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed to save QR code.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to save QR code.'),
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.only(
+            bottom: MediaQuery.of(context).size.height * 0.15,
+            left: 16,
+            right: 16,
+          ),
+        ),
+      );
     }
   }
 
@@ -792,6 +833,83 @@ class _TripDetailsState extends State<TripDetails>
                             padding: const EdgeInsets.symmetric(horizontal: 20),
                             child: Column(
                               children: [
+                                // Shared Users Section
+                                if (_travel.sharedWith != null &&
+                                    _travel.sharedWith!.isNotEmpty)
+                                  Card(
+                                    elevation: 4,
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(16.0),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            'Shared With',
+                                            style: TextStyle(
+                                              fontSize: 18,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                          SizedBox(height: 8),
+                                          FutureBuilder<
+                                            List<Map<String, dynamic>>
+                                          >(
+                                            future: _getSharedUsersInfo(),
+                                            builder: (context, snapshot) {
+                                              if (snapshot.connectionState ==
+                                                  ConnectionState.waiting) {
+                                                return Center(
+                                                  child:
+                                                      CircularProgressIndicator(),
+                                                );
+                                              }
+                                              if (!snapshot.hasData ||
+                                                  snapshot.data!.isEmpty) {
+                                                return Text(
+                                                  'No users shared with',
+                                                );
+                                              }
+                                              return Column(
+                                                children:
+                                                    snapshot.data!
+                                                        .map(
+                                                          (user) => ListTile(
+                                                            leading: CircleAvatar(
+                                                              child: Text(
+                                                                user['username'][0]
+                                                                    .toUpperCase(),
+                                                              ),
+                                                            ),
+                                                            title: Text(
+                                                              user['username'],
+                                                            ),
+                                                            trailing: IconButton(
+                                                              icon: Icon(
+                                                                Icons
+                                                                    .remove_circle_outline,
+                                                                color:
+                                                                    Colors.red,
+                                                              ),
+                                                              onPressed:
+                                                                  () => _removeSharedUser(
+                                                                    user['uid'],
+                                                                  ),
+                                                            ),
+                                                          ),
+                                                        )
+                                                        .toList(),
+                                              );
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                SizedBox(height: 16),
                                 ElevatedButton.icon(
                                   onPressed: () {
                                     showDialog(
@@ -844,31 +962,55 @@ class _TripDetailsState extends State<TripDetails>
                                                     'sharedWith': FieldValue.arrayUnion([targetUserId]),
                                                   });
 
-                                                  ScaffoldMessenger.of(context).showSnackBar(
-                                                    const SnackBar(
-                                                      content:
-                                                          Text('Travel plan shared successfully'),
-                                                    ),
-                                                  );
-                                                  Navigator.pop(context);
-                                                } catch (e) {
-                                                  print('Error sharing travel plan: $e');
-                                                  ScaffoldMessenger.of(context).showSnackBar(
-                                                    const SnackBar(
-                                                      content: Text('Failed to share travel plan'),
-                                                    ),
-                                                  );
-                                                }
-                                              },
-                                              child: const Text('Share'),
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor: Colors.green,
-                                                foregroundColor: Colors.white,
-                                              ),
+                                                      ScaffoldMessenger.of(
+                                                        context,
+                                                      ).showSnackBar(
+                                                        SnackBar(
+                                                          content: Text(
+                                                            'Travel plan shared successfully',
+                                                          ),
+                                                          behavior:
+                                                              SnackBarBehavior
+                                                                  .floating,
+                                                          margin: EdgeInsets.only(
+                                                            bottom:
+                                                                MediaQuery.of(
+                                                                  context,
+                                                                ).size.height *
+                                                                0.15,
+                                                            left: 16,
+                                                            right: 16,
+                                                          ),
+                                                        ),
+                                                      );
+                                                      Navigator.pop(context);
+                                                    } catch (e) {
+                                                      print(
+                                                        'Error sharing travel plan: $e',
+                                                      );
+                                                      ScaffoldMessenger.of(
+                                                        context,
+                                                      ).showSnackBar(
+                                                        const SnackBar(
+                                                          content: Text(
+                                                            'Failed to share travel plan',
+                                                          ),
+                                                        ),
+                                                      );
+                                                    }
+                                                  },
+                                                  child: const Text('Share'),
+                                                  style:
+                                                      ElevatedButton.styleFrom(
+                                                        backgroundColor:
+                                                            Colors.green,
+                                                        foregroundColor:
+                                                            Colors.white,
+                                                      ),
+                                                ),
+                                              ],
                                             ),
-                                          ],
-                                        ),
-                                      ),
+                                          ),
                                     );
                                   },
                                   icon: const Icon(Icons.person_add),
@@ -1129,9 +1271,17 @@ class _TripDetailsState extends State<TripDetails>
 
                   if (userQuery.docs.isEmpty) {
                     if (context.mounted) {
-                      ScaffoldMessenger.of(
-                        context,
-                      ).showSnackBar(SnackBar(content: Text('User not found')));
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('User not found'),
+                          behavior: SnackBarBehavior.floating,
+                          margin: EdgeInsets.only(
+                            bottom: MediaQuery.of(context).size.height * 0.15,
+                            left: 16,
+                            right: 16,
+                          ),
+                        ),
+                      );
                     }
                     return;
                   }
@@ -1293,6 +1443,7 @@ class _TripDetailsState extends State<TripDetails>
                         SnackBar(
                           content: Text('Travel plan updated successfully'),
                           backgroundColor: Colors.green,
+                          behavior: SnackBarBehavior.floating,
                         ),
                       );
                     }
