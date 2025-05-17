@@ -8,7 +8,6 @@ import 'package:travel_app/models/travel_notification_model.dart';
 import 'package:travel_app/screens/add_travel/trip_details.dart';
 import 'package:travel_app/models/travel_plan_model.dart';
 
-
 class NotificationPage extends StatefulWidget {
   const NotificationPage({super.key});
 
@@ -19,23 +18,21 @@ class NotificationPage extends StatefulWidget {
 class _NotificationPageState extends State<NotificationPage> with SingleTickerProviderStateMixin {
   AppUser? _currentUser;
   List<AppUser> _requestUsers = [];
-  List<TravelNotification> _travelNotifications = []; // New list to store travel notifications
+  List<TravelNotification> _travelNotifications = [];
   bool _isLoading = true;
   String? _errorMessage;
   TabController? _tabController;
-  final NotificationService _notificationService = NotificationService(); // Instance of our service
+  final NotificationService _notificationService = NotificationService();
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 2, vsync: this);
     // Initialize notification service
-    _notificationService.initialize().then((_) {
-      // Schedule daily check for upcoming travel
-      _notificationService.scheduleUpcomingTripChecks();
+    _notificationService.init().then((_) {
+      _fetchCurrentUserAndRequests();
+      _fetchTravelNotifications();
     });
-    _fetchCurrentUserAndRequests();
-    _fetchTravelNotifications(); // New method to fetch travel notifications
   }
 
   @override
@@ -69,6 +66,11 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
       setState(() {
         _currentUser = currentUser;
       });
+
+      // Save FCM token to Firestore if user exists
+      if (_currentUser != null && _notificationService.fcmToken != null) {
+        await _notificationService.saveTokenToFirestore(_currentUser!.uid);
+      }
 
       // Get friend requests
       final receivedRequests = currentUser.receivedFriendRequests ?? [];
@@ -106,71 +108,70 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
 
   // Fetch travel notifications 
   Future<void> _fetchTravelNotifications() async {
-  try {
-    final userId = FirebaseAuth.instance.currentUser?.uid;
-    if (userId == null) return;
+    try {
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId == null) return;
 
-    final now = DateTime.now();
-    final notifications = <TravelNotification>[];
+      final now = DateTime.now();
+      final notifications = <TravelNotification>[];
 
-    // Query travels where user is owner
-    final ownerSnapshot = await FirebaseFirestore.instance
-        .collection('travel')
-        .where('uid', isEqualTo: userId)
-        .get();
+      // Query travels where user is owner
+      final ownerSnapshot = await FirebaseFirestore.instance
+          .collection('travel')
+          .where('uid', isEqualTo: userId)
+          .get();
 
-    // Query travels where user is in sharedWith
-    final sharedSnapshot = await FirebaseFirestore.instance
-        .collection('travel')
-        .where('sharedWith', arrayContains: userId)
-        .get();
+      // Query travels where user is in sharedWith
+      final sharedSnapshot = await FirebaseFirestore.instance
+          .collection('travel')
+          .where('sharedWith', arrayContains: userId)
+          .get();
 
-    // Combine both query results
-    final allDocs = [...ownerSnapshot.docs, ...sharedSnapshot.docs];
+      // Combine both query results
+      final allDocs = [...ownerSnapshot.docs, ...sharedSnapshot.docs];
 
-    for (var doc in allDocs) {
-      final data = doc.data();
-      final startDateTimestamp = data['startDate'] as Timestamp?;
-      if (startDateTimestamp == null) continue;
+      for (var doc in allDocs) {
+        final data = doc.data();
+        final startDateTimestamp = data['startDate'] as Timestamp?;
+        if (startDateTimestamp == null) continue;
 
-      final startDate = startDateTimestamp.toDate();
-      final daysUntilTrip = startDate.difference(now).inDays;
+        final startDate = startDateTimestamp.toDate();
+        final daysUntilTrip = startDate.difference(now).inDays;
 
-      // If trip starts within next 5 days, add notification and send push notification
-      if (daysUntilTrip <= 5 && daysUntilTrip >= 0) {
-        notifications.add(
-          TravelNotification(
-            tripId: doc.id,
-            tripName: data['name'] ?? 'Unnamed Trip',
-            destination: data['destination'] ?? 'Unknown',
-            startDate: startDate,
-            daysUntil: daysUntilTrip,
-          ),
-        );
+        // If trip starts within next 5 days, add notification
+        if (daysUntilTrip <= 5 && daysUntilTrip >= 0) {
+          notifications.add(
+            TravelNotification(
+              tripId: doc.id,
+              tripName: data['name'] ?? 'Unnamed Trip',
+              destination: data['destination'] ?? 'Unknown',
+              startDate: startDate,
+              daysUntil: daysUntilTrip,
+            ),
+          );
+          // await sendPushNotification(
+          //   fcmToken: _currentUser?.fcmToken ?? '',
+          //   title: 'Upcoming Trip Reminder',
+          //   body: 'Your trip "${data['name'] ?? 'Unnamed Trip'}" starts in $daysUntilTrip day(s)!',
+          // );
 
-        // Send push notification to current user for the trip starting soon
-        // Get current user's FCM token
-        final currentUserDoc = await FirebaseFirestore.instance.collection('appUsers').doc(userId).get();
-        final currentUser = AppUser.fromJson(currentUserDoc.data()!);
-        if (currentUser.fcmToken != null && currentUser.fcmToken!.isNotEmpty) {
-          await sendPushNotification(
-            fcmToken: currentUser.fcmToken!,
+                    
+          // Send a local notification for upcoming trip
+          await _notificationService.showTripReminderNotification(
             title: 'Upcoming Trip Reminder',
             body: 'Your trip "${data['name'] ?? 'Unnamed Trip'}" starts in $daysUntilTrip day(s)!',
+            payload: doc.id,
           );
         }
       }
+
+      setState(() {
+        _travelNotifications = notifications;
+      });
+    } catch (e) {
+      debugPrint('Error fetching travel notifications: $e');
     }
-
-    setState(() {
-      _travelNotifications = notifications;
-    });
-  } catch (e) {
-    print('Error fetching travel notifications: $e');
   }
-}
-
-
 
   Future<void> _acceptFriendRequest(AppUser user) async {
     try {
@@ -218,14 +219,22 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
         'sentFriendRequests': otherUserSentRequests,
       });
 
-      // Send push notification to the other user
-      if (otherUser.fcmToken != null && otherUser.fcmToken!.isNotEmpty) {
-        await sendPushNotification(
-          fcmToken: otherUser.fcmToken!,
+      // Send notification to the other user
+      final otherUserFcmToken = otherUser.fcmToken;
+      if (otherUserFcmToken != null && otherUserFcmToken.isNotEmpty) {
+        await _notificationService.showTripReminderNotification(
           title: 'Friend Request Accepted',
           body: '${_currentUser!.firstName} accepted your friend request!',
         );
-      }
+        // if (otherUserFcmToken != null && otherUserFcmToken.isNotEmpty) {
+        //   await sendPushNotification(
+        //     fcmToken: otherUserFcmToken,
+        //     title: 'Friend Request Accepted',
+        //     body: '${_currentUser!.firstName} accepted your friend request!',
+        //   );
+        }
+
+      // }
 
       // Update local state
       setState(() {
@@ -288,14 +297,22 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
             .doc(user.uid)
             .update({'sentFriendRequests': otherUserSentRequests});
       }
-
-      // Send push notification to the other user
-      if (otherUser.fcmToken != null && otherUser.fcmToken!.isNotEmpty) {
-        await sendPushNotification(
-          fcmToken: otherUser.fcmToken!,
-          title: 'Friend Request Rejected',
-          body: '${_currentUser!.firstName} rejected your friend request.',
+      
+      // Send rejection notification (optional - this is often skipped in real apps)
+      final otherUserFcmToken = otherUser.fcmToken;
+      if (otherUserFcmToken != null && otherUserFcmToken.isNotEmpty) {
+        await _notificationService.showTripReminderNotification(
+          title: 'Friend Request Update',
+          body: '${_currentUser!.firstName} has responded to your friend request',
         );
+      //   if (otherUserFcmToken != null && otherUserFcmToken.isNotEmpty) {
+      //     await sendPushNotification(
+      //       fcmToken: otherUserFcmToken,
+      //       title: 'Friend Request Update',
+      //       body: '${_currentUser!.firstName} has responded to your friend request',
+      //     );
+      // }
+
       }
 
       // Update local state
@@ -578,7 +595,6 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
                 }
               },
             ),
-
           ),
         );
       },
@@ -676,20 +692,3 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
     );
   }
 }
-
-// // Model class for travel notifications
-// class TravelNotification {
-//   final String tripId;
-//   final String tripName;
-//   final String destination;
-//   final DateTime startDate;
-//   final int daysUntil;
-
-//   TravelNotification({
-//     required this.tripId,
-//     required this.tripName,
-//     required this.destination,
-//     required this.startDate,
-//     required this.daysUntil,
-//   });
-// }

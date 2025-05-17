@@ -16,6 +16,7 @@ import 'dart:ui' as ui;
 import 'package:flutter/rendering.dart';
 import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
 import 'dart:io';
+import 'package:travel_app/utils/notification_service.dart'; 
 import 'package:permission_handler/permission_handler.dart';
 
 
@@ -32,6 +33,7 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
   final _formKey = GlobalKey<FormState>();
   final GlobalKey qrKey = GlobalKey();
   final FirebaseTravelAPI _firebaseTravelAPI = FirebaseTravelAPI();
+  final NotificationService _notificationService = NotificationService();
   late String _name, _location;
   DateTime? _startDate, _endDate;
   String? _flightDetails, _accommodation, _notes;
@@ -284,68 +286,99 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
     }
   }
 
-  void _submitForm() async {
-    if (_formKey.currentState!.validate()) {
-      // Check if end date is before start date if both are present
-      if (_endDate != null &&
-          _startDate != null &&
-          _endDate!.isBefore(_startDate!)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              "End date can't be before start date",
-              style: TextStyle(color: backgroundColor),
-            ),
-            backgroundColor: errorColor,
+ void _submitForm() async {
+  if (_formKey.currentState!.validate()) {
+    // Check if end date is before start date if both are present
+    if (_endDate != null &&
+        _startDate != null &&
+        _endDate!.isBefore(_startDate!)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            "End date can't be before start date",
+            style: TextStyle(color: backgroundColor),
           ),
-        );
-        return;
-      }
-
-      _formKey.currentState!.save();
-      final currentUser = FirebaseAuth.instance.currentUser;
-
-      if (currentUser == null) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("User not logged in")));
-        return;
-      }
-
-      // Create initial travel object with a temporary placeholder ID
-      // The actual ID will be set by the FirebaseTravelAPI.addTravel method
-      final travel = Travel(
-        id: 'temp_id', // This will be replaced by Firebase
-        uid: currentUser.uid,
-        name: _name,
-        startDate: _startDate,
-        endDate: _endDate,
-        location: _location,
-        flightDetails: _flightDetails,
-        accommodation: _accommodation,
-        notes: _notes,
-        checklist: _checklist,
-        activities: _activities,
-        createdOn: DateTime.now(),
+          backgroundColor: errorColor,
+        ),
       );
-      String travelId = await _firebaseTravelAPI.addTravel(travel);
+      return;
+    }
 
-      if (travelId.isNotEmpty && !travelId.startsWith("Error")) {
-        // Use the travelId returned from Firestore
-        showQR(travelId);
-      } else {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text(
-              travelId.startsWith("Error")
-                  ? travelId
-                  : "Failed to save travel plan",
-            ),
+    _formKey.currentState!.save();
+    final currentUser = FirebaseAuth.instance.currentUser;
+
+    if (currentUser == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("User not logged in")),
+      );
+      return;
+    }
+
+    // Create travel object
+    final travel = Travel(
+      id: 'temp_id', // This will be replaced by Firebase
+      uid: currentUser.uid,
+      name: _name,
+      startDate: _startDate,
+      endDate: _endDate,
+      location: _location,
+      flightDetails: _flightDetails,
+      accommodation: _accommodation,
+      notes: _notes,
+      checklist: _checklist,
+      activities: _activities,
+      createdOn: DateTime.now(),
+    );
+
+    String travelId = await _firebaseTravelAPI.addTravel(travel);
+
+    if (travelId.isNotEmpty && !travelId.startsWith("Error")) {
+    showQR(travelId); // Show QR first
+
+    // Always send notification with days until trip (if _startDate is available)
+    if (_startDate != null) {
+      final daysUntilTrip = _startDate!.difference(DateTime.now()).inDays;
+      final tripName = travel.name.isNotEmpty ? travel.name : 'Unnamed Trip';
+
+      // await _notificationService.showTripReminderNotification(
+      //   title: 'Upcoming Trip Reminder',
+      //   body: 'Your trip "$tripName" starts in $daysUntilTrip day(s)!',
+      //   payload: travelId,
+      // );
+    
+
+    // Fetch current user's FCM token from Firestore
+  final currentUserDoc = await FirebaseFirestore.instance
+      .collection('appUsers')
+      .doc(currentUser.uid)
+      .get();
+
+  final currentUserData = currentUserDoc.data();
+  final fcmToken = currentUserData?['fcmToken'] as String?;
+
+  if (fcmToken != null && fcmToken.isNotEmpty) {
+    await sendPushNotification(
+      fcmToken: fcmToken,
+      title: 'Upcoming Trip Reminder',
+      body: 'Your trip "$tripName" starts in $daysUntilTrip day(s)!',
+    );
+  }
+    }
+
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            travelId.startsWith("Error")
+                ? travelId
+                : "Failed to save travel plan",
           ),
-        );
-      }
+        ),
+      );
     }
   }
+}
+
 
 void showQR(String travelId) {
   showDialog(

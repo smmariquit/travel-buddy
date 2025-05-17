@@ -1,287 +1,261 @@
+// Direct FCM approach without Cloud Functions
 import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:travel_app/models/user_model.dart';
-import 'package:travel_app/models/travel_plan_model.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import 'package:cloud_functions/cloud_functions.dart';
-import 'package:firebase_core/firebase_core.dart';
-
-@pragma('vm:entry-point')
-Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
-  // Initialize Firebase if needed
-  await Firebase.initializeApp();
-  print("Handling a background message: ${message.messageId}");
-}
-
-final FirebaseFunctions _functions = FirebaseFunctions.instance;
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
   NotificationService._internal();
 
-  final FirebaseMessaging _fcm = FirebaseMessaging.instance;
+  final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
   final FlutterLocalNotificationsPlugin _flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
 
-  Future<void> initialize() async {
-    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  bool _isInitialized = false;
+  String? _fcmToken;
 
-    // Request notification permissions
-    NotificationSettings settings = await _fcm.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-    );
+  // Getter for FCM token
+  String? get fcmToken => _fcmToken;
 
-    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-      print('User granted permission');
-    } else if (settings.authorizationStatus == AuthorizationStatus.provisional) {
-      print('User granted provisional permission');
-    } else {
-      print('User declined or has not accepted permission');
-    }
+  Future<void> init() async {
+    if (_isInitialized) return;
 
+    // Initialize Flutter Local Notifications for foreground notifications
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
 
     const DarwinInitializationSettings initializationSettingsIOS =
         DarwinInitializationSettings(
-      requestAlertPermission: true,
-      requestBadgePermission: true,
-      requestSoundPermission: true,
-    );
+          requestAlertPermission: true,
+          requestBadgePermission: true,
+          requestSoundPermission: true,
+        );
 
-    const InitializationSettings initializationSettings = InitializationSettings(
-      android: initializationSettingsAndroid,
-      iOS: initializationSettingsIOS,
-    );
+    const InitializationSettings initializationSettings =
+        InitializationSettings(
+          android: initializationSettingsAndroid,
+          iOS: initializationSettingsIOS,
+        );
 
-    // Initialize local notifications with tap handling
     await _flutterLocalNotificationsPlugin.initialize(
       initializationSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) {
-        final payload = response.payload;
-        if (payload != null) {
-          print('Notification tapped with payload: $payload');
-          // TODO: Navigate to specific screen based on payload if needed
-        }
+        debugPrint('Notification tapped: ${response.payload}');
       },
     );
 
-    // Listen for foreground messages
-    FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
+    // Create notification channel for Android
+    await _createNotificationChannel();
 
-    // Listen for token refresh and save new token
-    _fcm.onTokenRefresh.listen(_saveTokenToDatabase);
+    // Request permission for iOS and get token
+    await _requestPermissions();
 
-    // Get current FCM token and save it
-    String? token = await _fcm.getToken();
-    if (token != null) {
-      await _saveTokenToDatabase(token);
-    }
+    // Get the FCM token
+    await _getToken();
 
-    // Check for upcoming trips and notify
-    _checkUpcomingTrips();
+    // Configure Firebase Messaging handlers
+    _configureFirebaseMessaging();
+
+    _isInitialized = true;
   }
 
-  void _handleForegroundMessage(RemoteMessage message) async {
-    if (message.notification != null) {
-      await _showLocalNotification(
-        title: message.notification!.title ?? 'New Notification',
-        body: message.notification!.body ?? '',
-        payload: message.data.toString(),
+  Future<void> _createNotificationChannel() async {
+    const AndroidNotificationChannel channel = AndroidNotificationChannel(
+      'trip_reminders_channel',
+      'Trip Reminders',
+      description: 'Notifications for upcoming trips',
+      importance: Importance.high,
+      playSound: true,
+      enableVibration: true,
+    );
+
+    await _flutterLocalNotificationsPlugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >()
+        ?.createNotificationChannel(channel);
+  }
+
+  Future<void> _requestPermissions() async {
+    try {
+      // Request notifications permission
+      NotificationSettings settings = await _firebaseMessaging
+          .requestPermission(
+            alert: true,
+            announcement: false,
+            badge: true,
+            carPlay: false,
+            criticalAlert: false,
+            provisional: false,
+            sound: true,
+          );
+
+      debugPrint(
+        'User granted notifications permission: ${settings.authorizationStatus}',
       );
+
+      // For Android 13+
+      final androidPlugin =
+          _flutterLocalNotificationsPlugin
+              .resolvePlatformSpecificImplementation<
+                AndroidFlutterLocalNotificationsPlugin
+              >();
+      if (androidPlugin != null) {
+        final granted = await androidPlugin.requestNotificationsPermission();
+        debugPrint('Android notification permission granted: $granted');
+      }
+    } catch (e) {
+      debugPrint('Error requesting notification permissions: $e');
     }
   }
 
-  Future<void> _saveTokenToDatabase(String token) async {
-    final userId = FirebaseAuth.instance.currentUser?.uid;
-    if (userId != null) {
-      await FirebaseFirestore.instance.collection('appUsers').doc(userId).update({
-        'fcmToken': token,
+  Future<void> _getToken() async {
+    try {
+      _fcmToken = await _firebaseMessaging.getToken();
+      debugPrint('FCM Token: $_fcmToken');
+
+      // Listen for token refresh
+      FirebaseMessaging.instance.onTokenRefresh.listen((newToken) {
+        _fcmToken = newToken;
+        debugPrint('FCM Token refreshed: $_fcmToken');
       });
+    } catch (e) {
+      debugPrint('Error getting FCM token: $e');
     }
   }
 
-  Future<void> _showLocalNotification({
+  void _configureFirebaseMessaging() {
+    // Handle incoming messages when the app is in the foreground
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+      debugPrint('Got a message whilst in the foreground!');
+      debugPrint('Message data: ${message.data}');
+
+      if (message.notification != null) {
+        debugPrint(
+          'Message notification: ${message.notification!.title}, ${message.notification!.body}',
+        );
+
+        // Show a local notification when a message is received in foreground
+        _showLocalNotification(message);
+      }
+    });
+
+    // Handle notification tap when app is in background or terminated
+    FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
+      debugPrint('Message clicked: ${message.data}');
+    });
+  }
+
+  Future<void> _showLocalNotification(RemoteMessage message) async {
+    try {
+      RemoteNotification? notification = message.notification;
+      AndroidNotification? android = message.notification?.android;
+
+      if (notification != null) {
+        await _flutterLocalNotificationsPlugin.show(
+          notification.hashCode,
+          notification.title,
+          notification.body,
+          NotificationDetails(
+            android: AndroidNotificationDetails(
+              'trip_reminders_channel',
+              'Trip Reminders',
+              channelDescription: 'Notifications for upcoming trips',
+              icon: android?.smallIcon ?? '@mipmap/ic_launcher',
+              importance: Importance.high,
+              priority: Priority.high,
+            ),
+            iOS: const DarwinNotificationDetails(
+              presentAlert: true,
+              presentBadge: true,
+              presentSound: true,
+            ),
+          ),
+          payload: message.data['trip_id'],
+        );
+      }
+    } catch (e) {
+      debugPrint('Error showing local notification: $e');
+    }
+  }
+
+  // Method to update user token in Firestore
+  Future<void> saveTokenToFirestore(String userId) async {
+    if (_fcmToken == null || _fcmToken!.isEmpty) {
+      debugPrint('FCM token is null or empty, cannot save to Firestore');
+      return;
+    }
+
+    try {
+      await FirebaseFirestore.instance
+          .collection('appUsers')
+          .doc(userId)
+          .update({'fcmToken': _fcmToken});
+      
+      debugPrint('FCM token saved to Firestore for user: $userId');
+    } catch (e) {
+      debugPrint('Error saving FCM token to Firestore: $e');
+    }
+  }
+
+  // Show a local notification for trip reminders (without using Cloud Functions)
+  Future<void> showTripReminderNotification({
     required String title,
     required String body,
     String? payload,
   }) async {
-    const AndroidNotificationDetails androidDetails = AndroidNotificationDetails(
-      'travel_app_channel',
-      'Travel App Notifications',
-      channelDescription: 'Notifications from Travel App',
-      importance: Importance.max,
-      priority: Priority.high,
-      showWhen: true,
-    );
-
-    const DarwinNotificationDetails iosDetails = DarwinNotificationDetails(
-      presentAlert: true,
-      presentBadge: true,
-      presentSound: true,
-    );
-
-    const NotificationDetails platformDetails = NotificationDetails(
-      android: androidDetails,
-      iOS: iosDetails,
-    );
-
-    await _flutterLocalNotificationsPlugin.show(
-      DateTime.now().millisecond,
-      title,
-      body,
-      platformDetails,
-      payload: payload,
-    );
-  }
-
-  Future<void> _checkUpcomingTrips() async {
-    final userId = FirebaseAuth.instance.currentUser?.uid;
-    if (userId == null) return;
-
-    final tripsSnapshot = await FirebaseFirestore.instance
-        .collection('trips')
-        .where('sharedWith', arrayContains: userId)
-        .get();
-
-    final now = DateTime.now();
-
-    for (var doc in tripsSnapshot.docs) {
-      final travel = Travel.fromJson(doc.data(), doc.id);
-
-      if (travel.startDate != null) {
-        final daysUntilTrip = travel.startDate!.difference(now).inDays;
-
-        if (daysUntilTrip == 5) {
-          await _showLocalNotification(
-            title: 'Upcoming Trip: ${travel.name}',
-            body: 'Your trip to ${travel.location} starts in 5 days! Time to prepare!',
-            payload: 'trip_${travel.id}',
-          );
-        }
-      }
+    if (!_isInitialized) {
+      await init();
     }
-  }
 
-  Future<void> sendPushNotification({
-    required String fcmToken,
-    required String title,
-    required String body,
-  }) async {
     try {
-      // Format exactly as the cloud function expects
-      final data = {
-        'to': fcmToken, // Use 'to' for the FCM token
-        'notification': {
-          'title': title,
-          'body': body,
-        },
-        'data': {
-          'fcmToken': fcmToken, // Optional: include the token in data if needed
-        },
-      };
-      
-      // Debug print to verify data being sent
-      print('Sending notification with data: $data');
-      
-      final result = await _functions.httpsCallable('sendPushNotification').call(data);
-      print('Notification sent successfully: ${result.data}');
+      await _flutterLocalNotificationsPlugin.show(
+        DateTime.now().microsecond, // Generate a unique ID
+        title,
+        body,
+        NotificationDetails(
+          android: const AndroidNotificationDetails(
+            'trip_reminders_channel',
+            'Trip Reminders',
+            channelDescription: 'Notifications for upcoming trips',
+            importance: Importance.high,
+            priority: Priority.high,
+            playSound: true,
+            enableVibration: true,
+          ),
+          iOS: const DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+          ),
+        ),
+        payload: payload,
+      );
+      debugPrint('Local notification sent successfully');
     } catch (e) {
-      print('Error sending notification: $e');
-      // Add more detailed error reporting
-      if (e is FirebaseFunctionsException) {
-        print('Function error code: ${e.code}');
-        print('Function error details: ${e.details}');
-      }
+      debugPrint('Error showing local notification: $e');
     }
-  }
-
-  Future<void> sendFriendRequestNotification(String receiverUserId, String senderName) async {
-    final userDoc = await FirebaseFirestore.instance.collection('appUsers').doc(receiverUserId).get();
-
-    if (!userDoc.exists) return;
-
-    final AppUser user = AppUser.fromJson(userDoc.data()!);
-    final String? fcmToken = user.fcmToken;
-
-    if (fcmToken == null || fcmToken.isEmpty) return;
-
-    print('Would send notification to token: $fcmToken');
-    print('Notification content: New friend request from $senderName');
-
-    await _showLocalNotification(
-      title: 'New Friend Request',
-      body: 'You received a friend request from $senderName',
-      payload: 'friend_request',
-    );
-  }
-
-  void scheduleUpcomingTripChecks() {
-    _checkUpcomingTrips();
   }
 }
-
-// Future<void> sendPushNotification({
-//   required String fcmToken,
-//   required String title,
-//   required String body,
-// }) async {
-//   try {
-//     // Format exactly as the cloud function expects
-//     final data = {
-//       'fcmToken': fcmToken,
-//       'title': title,
-//       'body': body,
-//     };
-    
-//     // Debug print to verify data being sent
-//     print('Sending notification with data: $data');
-    
-//     final result = await _functions.httpsCallable('sendPushNotification').call(data);
-//     print('Notification sent successfully: ${result.data}');
-//   } catch (e) {
-//     print('Error sending notification: $e');
-//     // Add more detailed error reporting
-//     if (e is FirebaseFunctionsException) {
-//       print('Function error code: ${e.code}');
-//       print('Function error details: ${e.details}');
-//     }
-//   }
-// }
 
 Future<void> sendPushNotification({
   required String fcmToken,
   required String title,
   required String body,
 }) async {
+  final callable = FirebaseFunctions.instance.httpsCallable('sendPushNotification');
   try {
-    // Format exactly as the cloud function expects
-    final data = {
-      "to": fcmToken, // Use 'to' for the FCM token
-      "notification": {
-        "title": title,
-        "body": body,
-      },
-      "data": {
-        "fcmToken": fcmToken, // Optional: include the token in data if needed
-      },
-    };
-    
-    // Debug print to verify data being sent
-    print('Sending notification with data: $data');
-    
-    final result = await _functions.httpsCallable('sendPushNotification').call(data);
-    print('Notification sent successfully: ${result.data}');
+    final result = await callable.call({
+      'token': fcmToken,
+      'notification': {'title': title, 'body': body},
+    });
+    print('Push notification sent, response: ${result.data}');
   } catch (e) {
-    print('Error sending notification: $e');
-    // Add more detailed error reporting
-    if (e is FirebaseFunctionsException) {
-      print('Function error code: ${e.code}');
-      print('Function error details: ${e.details}');
-    }
+    print('Failed to send push notification: $e');
   }
 }
