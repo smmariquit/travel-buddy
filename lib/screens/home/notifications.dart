@@ -691,4 +691,109 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
       ),
     );
   }
+  
 }
+
+class NotificationHelper {
+  static Future<void> fetchCurrentUserAndRequests(
+      BuildContext context,
+      Function(AppUser user) onUserFetched,
+      Function(List<AppUser> requestUsers) onRequestsFetched,
+      Function(String error) onError,
+      ) async {
+    try {
+      final currentUserDoc = await FirebaseFirestore.instance
+          .collection('appUsers')
+          .doc(FirebaseAuth.instance.currentUser?.uid)
+          .get();
+
+      if (!currentUserDoc.exists) {
+        onError('User profile not found');
+        return;
+      }
+
+      final currentUser = AppUser.fromJson(currentUserDoc.data()!);
+      onUserFetched(currentUser);
+
+      final receivedRequests = currentUser.receivedFriendRequests ?? [];
+      if (receivedRequests.isEmpty) {
+        onRequestsFetched([]);
+        return;
+      }
+
+      final users = <AppUser>[];
+      for (var uid in receivedRequests) {
+        final userDoc = await FirebaseFirestore.instance
+            .collection('appUsers')
+            .doc(uid)
+            .get();
+        if (userDoc.exists) {
+          users.add(AppUser.fromJson(userDoc.data()!));
+        }
+      }
+
+      onRequestsFetched(users);
+    } catch (e) {
+      onError('Error loading friend requests: $e');
+    }
+  }
+
+  static Future<void> fetchTravelNotifications(
+      BuildContext context,
+      Function(List<TravelNotification>) onDone,
+      Function(String error) onError,
+      NotificationService notificationService
+  ) async {
+    try {
+      final userId = FirebaseAuth.instance.currentUser?.uid;
+      if (userId == null) return;
+
+      final now = DateTime.now();
+      final notifications = <TravelNotification>[];
+
+      final ownerSnapshot = await FirebaseFirestore.instance
+          .collection('travel')
+          .where('uid', isEqualTo: userId)
+          .get();
+
+      final sharedSnapshot = await FirebaseFirestore.instance
+          .collection('travel')
+          .where('sharedWith', arrayContains: userId)
+          .get();
+
+      final allDocs = [...ownerSnapshot.docs, ...sharedSnapshot.docs];
+
+      for (var doc in allDocs) {
+        final data = doc.data();
+        final startDateTimestamp = data['startDate'] as Timestamp?;
+        if (startDateTimestamp == null) continue;
+
+        final startDate = startDateTimestamp.toDate();
+        final daysUntilTrip = startDate.difference(now).inDays;
+
+        if (daysUntilTrip <= 5 && daysUntilTrip >= 0) {
+          final notification = TravelNotification(
+            tripId: doc.id,
+            tripName: data['name'] ?? 'Unnamed Trip',
+            destination: data['destination'] ?? 'Unknown',
+            startDate: startDate,
+            daysUntil: daysUntilTrip,
+          );
+          notifications.add(notification);
+
+          await notificationService.showTripReminderNotification(
+            title: 'Upcoming Trip Reminder',
+            body:
+                'Your trip "${data['name'] ?? 'Unnamed Trip'}" starts in $daysUntilTrip day(s)!',
+            payload: doc.id,
+          );
+        }
+      }
+
+      onDone(notifications);
+    } catch (e) {
+      onError('Error fetching travel notifications: $e');
+    }
+  }
+}
+
