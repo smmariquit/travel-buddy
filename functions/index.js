@@ -1,125 +1,58 @@
-// /**
-//  * Import function triggers from their respective submodules:
-//  *
-//  * const {onCall} = require("firebase-functions/v2/https");
-//  * const {onDocumentWritten} = require("firebase-functions/v2/firestore");
-//  *
-//  * See a full list of supported triggers at https://firebase.google.com/docs/functions
-//  */
-
-// // const {onRequest} = require("firebase-functions/v2/https");
-// // const logger = require("firebase-functions/logger");
-
-// // Create and deploy your first functions
-// // https://firebase.google.com/docs/functions/get-started
-
-// // exports.helloWorld = onRequest((request, response) => {
-// //   logger.info("Hello logs!", {structuredData: true});
-// //   response.send("Hello from Firebase!");
-// // });
-
-// const functions = require("firebase-functions");
-// const admin = require("firebase-admin");
-// admin.initializeApp();
-
-// // exports.sendNotification = functions.https.onCall((data, context) => {
-// //   const token = data.fcmToken;
-// //   const title = data.title;
-// //   const body = data.body;
-
-// //   if (!token || !title || !body) {
-// //     throw new functions.https.HttpsError(
-// //     'invalid-argument', 'Missing notification data');
-// //   }
-
-// //   const message = {
-// //     token: token,
-// //     notification: {
-// //       title: title,
-// //       body: body
-// //     }
-// //   };
-
-// //   return admin.messaging().send(message);
-// // });
-
-
-// // exports.sendPushNotification = functions
-// // .https.onCall(async (data, context) => {
-// //   const {fcmToken, title, body} = data;
-
-// //   if (!fcmToken || !title || !body) {
-// //     throw new functions.https.HttpsError(
-// //         "invalid-argument",
-// //         "Missing notification data");
-// //   }
-
-// //   const message = {
-// //     token: fcmToken,
-// //     notification: {
-// //       title,
-// //       body,
-// //     },
-// //   };
-
-// //   try {
-// //     const response = await admin.messaging().send(message);
-// //     return {success: true, response};
-// //   } catch (error) {
-// //     throw new functions.https.HttpsError("unknown", error.message, error);
-// //   }
-// // });
-
-// exports.sendNotification = functions.https.onCall(async (data, context) => {
-//   console.log("Received data:", data);
-
-//   const {fcmToken, title, body} = data;
-
-//   if (!fcmToken || !title || !body) {
-//     console.error("Missing fields:", {fcmToken, title, body});
-//     throw new functions.https.HttpsError(
-//         "invalid-argument", "Missing notification data");
-//   }
-
-//   const message = {
-//     token: fcmToken,
-//     notification: {
-//       title,
-//       body,
-//     },
-//   };
-
-//   try {
-//     const response = await admin.messaging().send(message);
-//     return {success: true, response};
-//   } catch (err) {
-//     console.error("Failed to send message:", err);
-//     throw new functions.https.HttpsError(
-//         "internal", "Notification sending failed");
-//   }
-// });
-
-const functions = require('firebase-functions');
-const admin = require('firebase-admin');
+// Enhanced Firebase Cloud Function with debugging
+const functions = require("firebase-functions");
+const admin = require("firebase-admin");
 admin.initializeApp();
 
 exports.sendPushNotification = functions.https.onCall(async (data, context) => {
-  const {to, notification, data: additionalData} = data;
-
-  // Check if the required fields are present
-  if (!to || !notification) {
-    throw new functions.https.HttpsError('invalid-argument', 'The function must be called with "to" and "notification" fields.');
+  // Add detailed logging to troubleshoot the structure of incoming data
+  console.log("Received data:", JSON.stringify(data));
+  
+  // Validate the data structure more explicitly
+  if (!data) {
+    console.error("No data provided");
+    throw new functions.https.HttpsError(
+      "invalid-argument",
+      "No data provided to the function"
+    );
+  }
+  
+  // Check token exists
+  if (!data.token) {
+    console.error("Missing token in request");
+    throw new functions.https.HttpsError(
+      "invalid-argument",
+      "Missing token field in request data"
+    );
+  }
+  
+  // Check notification exists and has required fields
+  if (!data.notification || !data.notification.title || !data.notification.body) {
+    console.error("Missing or incomplete notification object", data.notification);
+    throw new functions.https.HttpsError(
+      "invalid-argument",
+      "Missing or incomplete notification object"
+    );
   }
 
-  const payload = {
-    notification: notification,
-    data: additionalData || {}, // Use an empty object if additionalData is not provided
-  };
-
   try {
-    const response = await admin.messaging().sendToDevice(to, payload);
-    return { success: true, response: response };
+    // Build message payload according to FCM requirements
+    const message = {
+      token: data.token,
+      notification: {
+        title: data.notification.title,
+        body: data.notification.body
+      },
+      data: data.data || {},
+    };
+    
+    console.log("Sending message:", JSON.stringify(message));
+    
+    // Send using the correct FCM method
+    const response = await admin.messaging().send(message);
+    console.log("Successfully sent message:", response);
+    return { success: true, messageId: response };
   } catch (error) {
-    throw new functions.https.HttpsError('internal', error.message);
+    console.error("Error sending message:", error);
+    throw new functions.https.HttpsError("unknown", error.message, error);
   }
 });
