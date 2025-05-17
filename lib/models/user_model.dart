@@ -14,6 +14,7 @@ class AppUser {
   String? location;
   List<String>? interests;
   List<String>? travelStyles;
+  final String? fcmToken;
 
   AppUser({
     required this.uid,
@@ -31,6 +32,7 @@ class AppUser {
     this.location,
     this.interests,
     this.travelStyles,
+    this.fcmToken,
   });
 
   AppUser copyWith({
@@ -49,6 +51,7 @@ class AppUser {
     List<String>? friendUIDs,
     List<String>? sentFriendRequests,
     List<String>? receivedFriendRequests,
+    String? fcmToken,
   }) {
     return AppUser(
       uid: uid ?? this.uid,
@@ -67,6 +70,7 @@ class AppUser {
       sentFriendRequests: sentFriendRequests ?? this.sentFriendRequests,
       receivedFriendRequests:
           receivedFriendRequests ?? this.receivedFriendRequests,
+       fcmToken: fcmToken ?? this.fcmToken,
     );
   }
 
@@ -102,6 +106,7 @@ class AppUser {
           json['travelStyles'] != null
               ? List<String>.from(json['travelStyles'])
               : null,
+      fcmToken: json['fcmToken'],
     );
   }
 
@@ -122,6 +127,7 @@ class AppUser {
       'location': location,
       'interests': interests,
       'travelStyles': travelStyles,
+      'fcmToken': fcmToken,
     };
   }
 }
