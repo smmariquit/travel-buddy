@@ -19,6 +19,7 @@
 // Flutter & Material
 import 'package:flutter/material.dart';
 import 'package:travel_app/utils/notification_service.dart'; 
+
  
 
 // Firebase & External Services
@@ -27,6 +28,9 @@ import 'package:firebase_auth/firebase_auth.dart';
 // State Management
 import 'package:provider/provider.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:travel_app/api/firebase_user_api.dart';
+import 'package:travel_app/models/user_model.dart';
+import 'package:travel_app/models/travel_notification_model.dart';
 
 // App-specific
 import 'package:travel_app/models/travel_plan_model.dart';
@@ -68,14 +72,41 @@ class MainPage extends StatefulWidget {
 class _MainPageState extends State<MainPage> {
   List<Travel> _travelPlans = [];
   bool _isLoading = true;
+  AppUser? _currentUser;
+  List<AppUser> _requestUsers = [];
+  List<TravelNotification> _travelNotifications = [];
+  String? _errorMessage;
   late final TravelTrackerProvider _travelProvider;
   late final AppUserProvider _userProvider;
+  final NotificationService _notificationService = NotificationService();
 
   @override
   void initState() {
     super.initState();
-    setupFCM();
+    // setupFCM();
+     _notificationService.init().then((_) {
+    NotificationHelper.fetchCurrentUserAndRequests(
+      context,
+      (user) => setState(() => _currentUser = user),
+      (requests) => setState(() {
+        _requestUsers = requests;
+        _isLoading = false;
+      }),
+      (error) => setState(() {
+        _errorMessage = error;
+        _isLoading = false;
+      }),
+    );
 
+    NotificationHelper.fetchTravelNotifications(
+      context,
+      (notifications) => setState(() {
+        _travelNotifications = notifications;
+      }),
+      (error) => debugPrint(error),
+      _notificationService,
+    );
+  });
     _travelProvider = context.read<TravelTrackerProvider>();
     _userProvider = context.read<AppUserProvider>();
 
@@ -113,18 +144,18 @@ class _MainPageState extends State<MainPage> {
 
     NotificationSettings settings = await messaging.requestPermission();
     if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-      print('✅ User granted notification permission');
+      print('User granted notification permission');
     } else {
-      print('🚫 Notification permission denied');
+      print('Notification permission denied');
     }
 
     FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      print('📩 Received push notification: ${message.notification?.title}');
+      print('Received push notification: ${message.notification?.title}');
       // Optionally show an alert dialog or Snackbar
     });
 
     String? token = await messaging.getToken();
-    print("📱 FCM Token: $token");
+    print("FCM Token: $token");
 
     // Optional: upload this token to Firestore
     String? token2 = await FirebaseMessaging.instance.getToken();
