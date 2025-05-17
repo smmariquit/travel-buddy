@@ -59,7 +59,10 @@ dependencies:
   path_provider: ^2.1.5
   google_sign_in_web: ^0.12.4+4
   image_gallery_saver_plus: ^4.0.1
-
+  firebase_messaging: ^15.2.5
+  flutter_local_notifications: ^18.0.1
+  cloud_functions: ^5.5.0
+  firebase_app_check: ^0.3.2+5
 
 
 

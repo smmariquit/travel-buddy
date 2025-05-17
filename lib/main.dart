@@ -35,6 +35,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'firebase_options.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
 
 // State Management
 import 'package:provider/provider.dart';
@@ -54,6 +55,10 @@ import 'screens/auth/signin_page.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await FirebaseAppCheck.instance.activate(
+    // For development only - use debug provider
+    androidProvider: AndroidProvider.debug,
+  );
   runApp(
     MultiProvider(
       providers: [
