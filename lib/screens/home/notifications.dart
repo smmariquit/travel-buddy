@@ -236,6 +236,12 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
 
       // }
 
+
+      // Show local notification that the friend request was accepted
+      await _notificationService.showFriendRequestAcceptedNotification(
+        friendName: user.firstName,
+        friendId: user.uid,
+      );
       // Update local state
       setState(() {
         _currentUser = _currentUser!.copyWith(
@@ -315,6 +321,11 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
 
       }
 
+      // Show local notification that the friend request was rejected
+      await _notificationService.showFriendRequestRejectedNotification(
+        friendName: user.firstName,
+        friendId: user.uid,
+      );
       // Update local state
       setState(() {
         _currentUser = _currentUser!.copyWith(

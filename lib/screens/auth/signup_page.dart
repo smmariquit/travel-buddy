@@ -525,73 +525,97 @@ class _SignUpPageState extends State<SignUpPage> {
 
   ////Submit function
   void _submitSignUp() async {
+    // Show loading indicator
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
     final FirebaseAuthAPI authService = FirebaseAuthAPI();
     File? profileImage = _signUpData.profileImage;
     String imageUrl = '';
     String uid = '';
 
     try {
+      // First try to create the user account
       String? signUpMessage = await authService.signUp(
         _signUpData.email!,
         _signUpData.password!,
       );
 
+      // Close loading dialog
+      Navigator.pop(context);
+
+      // Check if there was an error during sign up
       if (signUpMessage != null) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(signUpMessage)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error creating account: $signUpMessage")),
+        );
         return;
       }
 
+      // Get the current user
       User? user = FirebaseAuth.instance.currentUser;
 
       if (user != null) {
         uid = user.uid;
-        final storageRef = FirebaseStorage.instance.ref().child(
-          'profile_images/$uid.jpg',
-        );
+        
+        // Handle profile image
+        try {
+          final storageRef = FirebaseStorage.instance.ref().child(
+            'profile_images/$uid.jpg',
+          );
 
-        if (profileImage != null && await profileImage.exists()) {
-          // If the user selected a profile image, upload it
-          await storageRef.putFile(profileImage);
-        } else {
-          // For web platform, use a default image URL instead of file operations
-          imageUrl =
-              'https://firebasestorage.googleapis.com/v0/b/travel-buddy-23.appspot.com/o/default_avatar.jpg?alt=media';
+          if (profileImage != null && await profileImage.exists()) {
+            // If the user selected a profile image, upload it
+            await storageRef.putFile(profileImage);
+            imageUrl = await storageRef.getDownloadURL();
+          } else {
+            // Use a default image URL
+            imageUrl = 'https://firebasestorage.googleapis.com/v0/b/nth-autumn-458710-t7.firebasestorage.app/o/profile_images%2Fdefault_avatar.jpg?alt=media&token=99f110bf-3c7c-4fd4-a77a-ad29ce5f4653';
+          }
 
-          // Update Firestore with the default image URL
-          await FirebaseFirestore.instance
-              .collection('appUsers')
-              .doc(uid)
-              .update({'profileImageUrl': imageUrl});
-        }
+          // Continue with user provider update
+          await context.read<AppUserProvider>().signUp(
+            _signUpData.firstName!,
+            _signUpData.lastName!,
+            _signUpData.email!,
+            _signUpData.password!,
+            _signUpData.middleName,
+            _signUpData.username!,
+            _signUpData.phone,
+            imageUrl,
+          );
 
-        if (imageUrl.isEmpty) {
-          imageUrl = await storageRef.getDownloadURL();
-        }
-
-        await context.read<AppUserProvider>().signUp(
-          _signUpData.firstName!,
-          _signUpData.lastName!,
-          _signUpData.email!,
-          _signUpData.password!,
-          _signUpData.middleName,
-          _signUpData.username!,
-          _signUpData.phone,
-          imageUrl,
-        );
-
-        if (mounted) {
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(builder: (_) => const InterestsPage()),
+          // Navigate to interests page on success
+          if (mounted) {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(builder: (_) => const InterestsPage()),
+            );
+          }
+        } catch (imageError) {
+          // Handle image upload errors specifically
+          // print('Error during image upload: $imageError');
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error uploading profile image: ${imageError.toString().substring(0, 100)}')),
           );
         }
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('User account created but session not established. Please try logging in.')),
+        );
       }
     } catch (e) {
-      print('Error during sign up or image upload: $e');
+      // Close loading dialog if still showing
+      if (Navigator.canPop(context)) {
+        Navigator.pop(context);
+      }
+      
+      // print('Detailed error during sign up: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Sign-up failed. Please try again.')),
+        SnackBar(content: Text('Sign-up failed: ${e.toString().substring(0, 100)}')),
       );
     }
   }
