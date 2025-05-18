@@ -120,39 +120,40 @@ class _MainPageState extends State<MainPage> {
   }
 
   Future<void> _initializeNotificationsOnce() async {
-    final prefs = await SharedPreferences.getInstance();
-    final hasInitialized = prefs.getBool('hasInitializedNotifications') ?? false;
+  final prefs = await SharedPreferences.getInstance();
+  final hasInitialized = prefs.getBool('hasInitializedNotifications') ?? false;
 
-    if (!hasInitialized) {
-      await _notificationService.init();
+  // Initialize notification service regardless of first run or not
+  await _notificationService.init();
 
-      NotificationHelper.fetchCurrentUserAndRequests(
-        context,
-        (user) => setState(() => _currentUser = user),
-        (requests) => setState(() {
-          _requestUsers = requests;
-          _isLoading = false;
-        }),
-        (error) => setState(() {
-          _errorMessage = error;
-          _isLoading = false;
-        }),
-      );
+  // Fetch notifications data
+  NotificationHelper.fetchCurrentUserAndRequests(
+    context,
+    (user) => setState(() => _currentUser = user),
+    (requests) => setState(() {
+      _requestUsers = requests;
+      _isLoading = false;
+    }),
+    (error) => setState(() {
+      _errorMessage = error;
+      _isLoading = false;
+    }),
+  );
 
-      NotificationHelper.fetchTravelNotifications(
-        context,
-        (notifications) => setState(() {
-          _travelNotifications = notifications;
-        }),
-        (error) => debugPrint(error),
-        _notificationService,
-      );
+  NotificationHelper.fetchTravelNotifications(
+    context,
+    (notifications) => setState(() {
+      _travelNotifications = notifications;
+    }),
+    (error) => debugPrint(error),
+    _notificationService,
+  );
 
-      await prefs.setBool('hasInitializedNotifications', true);
-    } else {
-      // Optional: handle fallback logic if needed
-    }
+  // Only set the flag on first run
+  if (!hasInitialized) {
+    await prefs.setBool('hasInitializedNotifications', true);
   }
+}
 
 
   // void setupFCM() async {
