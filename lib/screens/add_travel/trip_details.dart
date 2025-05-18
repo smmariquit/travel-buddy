@@ -641,7 +641,6 @@ class _TripDetailsState extends State<TripDetails>
       appBar: AppBar(
         automaticallyImplyLeading: false,
         title: Text(_travel.name),
-        backgroundColor: Color(0xFF2E7D32),
         bottom: TabBar(
           controller: _tabController,
           tabs: [Tab(text: 'Overview'), Tab(text: 'Itineraries')],

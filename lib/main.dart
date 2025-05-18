@@ -34,6 +34,7 @@ import 'package:flutter/material.dart';
 // Firebase & External Services
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'firebase_options.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -143,7 +144,21 @@ class _MyAppState extends State<MyApp> {
         '/signin': (context) => const SignInPage(), // Sign-in page
         '/main': (context) => const MainPage(), // Main page after sign-in
       },
-      theme: ThemeData(primaryColor: const Color(0xFF3b665c)),
+      theme: ThemeData(
+        useMaterial3: true,
+        colorScheme: const ColorScheme(
+          brightness: Brightness.light,
+          primary: Color(0xFF017E03), 
+          onPrimary: Colors.white,
+          secondary: Color.fromARGB(255, 27, 188, 32), 
+          onSecondary: Colors.white,
+          surface: Colors.white,
+          onSurface: Colors.black,
+          error: Colors.red,
+          onError: Colors.white,
+        ),
+        textTheme: GoogleFonts.poppinsTextTheme(),
+      ),
       // no need for home: since initialRoute is already set.
     );
   }

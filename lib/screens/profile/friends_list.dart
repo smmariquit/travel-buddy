@@ -159,12 +159,7 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
           onPressed: () => _removeFriend(friend.uid),
         ),
         onTap: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ViewFriendProfileScreen(friendUID: friend.uid),
-            ),
-          );
+          showFriendProfileBottomSheet(context, friend.uid);
         },
       ),
     );

@@ -623,8 +623,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     interest['selected'] = selected;
                                   });
                                 },
-                                selectedColor: Colors.green.shade100,
-                                checkmarkColor: Colors.green,
+                                selectedColor: Colors.green,
+                                checkmarkColor: Colors.white,
                               );
                             }).toList(),
                           ),
@@ -649,8 +649,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     style['selected'] = selected;
                                   });
                                 },
-                                selectedColor: Colors.green.shade100,
-                                checkmarkColor: Colors.green,
+                                selectedColor: Colors.green,
+                                checkmarkColor: Colors.white,
                               );
                             }).toList(),
                           ),

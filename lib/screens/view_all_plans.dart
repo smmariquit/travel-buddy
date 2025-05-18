@@ -148,6 +148,7 @@ class _ViewAllPlansState extends State<ViewAllPlans>
         ),
       ),
       body: _buildBody(),
+      backgroundColor: Colors.grey[100],
       bottomNavigationBar: const BottomNavBar(selectedIndex: 1),
       floatingActionButton: FloatingActionButton(
         onPressed:
