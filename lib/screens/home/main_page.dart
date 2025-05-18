@@ -236,7 +236,7 @@ class _MainPageState extends State<MainPage> {
                               height: MainPageConstants.rowSpacing,
                             ),
 
-                            _GreetingRow(userProvider: _userProvider),
+                            _GreetingRow(userProvider: _userProvider, notificationCount: _travelNotifications.length),
 
                             const SizedBox(
                               height: MainPageConstants.rowSpacing,
@@ -308,7 +308,12 @@ class _MainPageState extends State<MainPage> {
 /// Displays the greeting row with the user's name and notification icon.
 class _GreetingRow extends StatelessWidget {
   final AppUserProvider userProvider;
-  const _GreetingRow({required this.userProvider});
+  final int notificationCount; 
+
+  const _GreetingRow({
+    required this.userProvider,
+    required this.notificationCount,
+    });
 
   @override
   Widget build(BuildContext context) {
@@ -328,13 +333,42 @@ class _GreetingRow extends StatelessWidget {
             ),
           ],
         ),
-        IconButton(icon: const Icon(Icons.notifications),
-        onPressed: () {
-          Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const NotificationPage()),
-    );
-        }),
+        Stack(
+          children: [
+            IconButton(icon: const Icon(Icons.notifications),
+            onPressed: () {
+              Navigator.push(
+              context,
+              MaterialPageRoute(builder: (context) => const NotificationPage()),
+            );
+          },
+        ),
+        Positioned(
+                right: 6,
+                top: 6,
+                child: Container(
+                  padding: const EdgeInsets.all(2),
+                  decoration: BoxDecoration(
+                    color: Colors.red,
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  constraints: const BoxConstraints(
+                    minWidth: 16,
+                    minHeight: 16,
+                  ),
+                  child: Text(
+                    notificationCount > 99 ? '99+' : notificationCount.toString(),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 10,
+                      fontWeight: FontWeight.bold,
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                ),
+              ),
+          ],
+        ),
       ],
     );
   }
