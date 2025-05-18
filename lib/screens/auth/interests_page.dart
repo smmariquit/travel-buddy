@@ -63,7 +63,8 @@ class _InterestsPageState extends State<InterestsPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        leading: BackButton(onPressed: () => Navigator.pop(context)),
+        automaticallyImplyLeading: false,
+        // leading: BackButton(onPressed: () => Navigator.pop(context)),
         elevation: 0,
         backgroundColor: Colors.transparent,
         foregroundColor: Colors.black,

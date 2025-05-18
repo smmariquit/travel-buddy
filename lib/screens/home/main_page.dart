@@ -19,6 +19,8 @@
 // Flutter & Material
 import 'package:flutter/material.dart';
 import 'package:travel_app/utils/notification_service.dart'; 
+import 'package:shared_preferences/shared_preferences.dart';
+
 
  
 
@@ -84,31 +86,9 @@ class _MainPageState extends State<MainPage> {
   void initState() {
     super.initState();
     // setupFCM();
-     _notificationService.init().then((_) {
-    NotificationHelper.fetchCurrentUserAndRequests(
-      context,
-      (user) => setState(() => _currentUser = user),
-      (requests) => setState(() {
-        _requestUsers = requests;
-        _isLoading = false;
-      }),
-      (error) => setState(() {
-        _errorMessage = error;
-        _isLoading = false;
-      }),
-    );
-
-    NotificationHelper.fetchTravelNotifications(
-      context,
-      (notifications) => setState(() {
-        _travelNotifications = notifications;
-      }),
-      (error) => debugPrint(error),
-      _notificationService,
-    );
-  });
     _travelProvider = context.read<TravelTrackerProvider>();
     _userProvider = context.read<AppUserProvider>();
+    _initializeNotificationsOnce();
 
     // Initialize providers after the widget is mounted
     WidgetsBinding.instance.addPostFrameCallback((_) async {
@@ -139,28 +119,64 @@ class _MainPageState extends State<MainPage> {
     });
   }
 
-  void setupFCM() async {
-    FirebaseMessaging messaging = FirebaseMessaging.instance;
+  Future<void> _initializeNotificationsOnce() async {
+    final prefs = await SharedPreferences.getInstance();
+    final hasInitialized = prefs.getBool('hasInitializedNotifications') ?? false;
 
-    NotificationSettings settings = await messaging.requestPermission();
-    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
-      print('User granted notification permission');
+    if (!hasInitialized) {
+      await _notificationService.init();
+
+      NotificationHelper.fetchCurrentUserAndRequests(
+        context,
+        (user) => setState(() => _currentUser = user),
+        (requests) => setState(() {
+          _requestUsers = requests;
+          _isLoading = false;
+        }),
+        (error) => setState(() {
+          _errorMessage = error;
+          _isLoading = false;
+        }),
+      );
+
+      NotificationHelper.fetchTravelNotifications(
+        context,
+        (notifications) => setState(() {
+          _travelNotifications = notifications;
+        }),
+        (error) => debugPrint(error),
+        _notificationService,
+      );
+
+      await prefs.setBool('hasInitializedNotifications', true);
     } else {
-      print('Notification permission denied');
+      // Optional: handle fallback logic if needed
     }
-
-    FirebaseMessaging.onMessage.listen((RemoteMessage message) {
-      print('Received push notification: ${message.notification?.title}');
-      // Optionally show an alert dialog or Snackbar
-    });
-
-    String? token = await messaging.getToken();
-    print("FCM Token: $token");
-
-    // Optional: upload this token to Firestore
-    String? token2 = await FirebaseMessaging.instance.getToken();
-    print("FCM Token: $token2");
   }
+
+
+  // void setupFCM() async {
+  //   FirebaseMessaging messaging = FirebaseMessaging.instance;
+
+  //   NotificationSettings settings = await messaging.requestPermission();
+  //   if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+  //     print('User granted notification permission');
+  //   } else {
+  //     print('Notification permission denied');
+  //   }
+
+  //   FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+  //     print('Received push notification: ${message.notification?.title}');
+  //     // Optionally show an alert dialog or Snackbar
+  //   });
+
+  //   String? token = await messaging.getToken();
+  //   print("FCM Token: $token");
+
+  //   // Optional: upload this token to Firestore
+  //   String? token2 = await FirebaseMessaging.instance.getToken();
+  //   print("FCM Token: $token2");
+  // }
   /// Builds the main page UI, including travel plans, shared plans, and navigation.
   @override
   Widget build(BuildContext context) {

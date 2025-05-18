@@ -241,6 +241,120 @@ class NotificationService {
       debugPrint('Error showing local notification: $e');
     }
   }
+  
+  // Show a friend request accepted notification
+  Future<void> showFriendRequestAcceptedNotification({
+    required String friendName,
+    String? friendId,
+  }) async {
+    if (!_isInitialized) {
+      await init();
+    }
+
+    try {
+      await _flutterLocalNotificationsPlugin.show(
+        DateTime.now().microsecond, // Generate a unique ID
+        'Friend Request Accepted',
+        'You accepted $friendName\'s friend request',
+        NotificationDetails(
+          android: const AndroidNotificationDetails(
+            'friend_requests_channel',
+            'Friend Requests',
+            channelDescription: 'Notifications for friend request activities',
+            importance: Importance.high,
+            priority: Priority.high,
+            playSound: true,
+            enableVibration: true,
+          ),
+          iOS: const DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+          ),
+        ),
+        payload: friendId,
+      );
+      debugPrint('Friend request accepted notification sent successfully');
+    } catch (e) {
+      debugPrint('Error showing friend request accepted notification: $e');
+    }
+  }
+
+  // Show a friend request rejected notification
+  Future<void> showFriendRequestRejectedNotification({
+    required String friendName,
+    String? friendId,
+  }) async {
+    if (!_isInitialized) {
+      await init();
+    }
+
+    try {
+      await _flutterLocalNotificationsPlugin.show(
+        DateTime.now().microsecond, // Generate a unique ID
+        'Friend Request Rejected',
+        'You rejected $friendName\'s friend request',
+        NotificationDetails(
+          android: const AndroidNotificationDetails(
+            'friend_requests_channel',
+            'Friend Requests',
+            channelDescription: 'Notifications for friend request activities',
+            importance: Importance.high,
+            priority: Priority.high,
+            playSound: true,
+            enableVibration: true,
+          ),
+          iOS: const DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+          ),
+        ),
+        payload: friendId,
+      );
+      debugPrint('Friend request rejected notification sent successfully');
+    } catch (e) {
+      debugPrint('Error showing friend request rejected notification: $e');
+    }
+  }
+
+  // Show a friend request received notification
+  Future<void> showFriendRequestReceivedNotification({
+    required String friendName,
+    String? friendId,
+  }) async {
+    if (!_isInitialized) {
+      await init();
+    }
+
+    try {
+      await _flutterLocalNotificationsPlugin.show(
+        DateTime.now().microsecond, // Generate a unique ID
+        'New Friend Request',
+        'You received a friend request from $friendName',
+        NotificationDetails(
+          android: const AndroidNotificationDetails(
+            'friend_requests_channel',
+            'Friend Requests',
+            channelDescription: 'Notifications for friend request activities',
+            importance: Importance.high,
+            priority: Priority.high,
+            playSound: true,
+            enableVibration: true,
+          ),
+          iOS: const DarwinNotificationDetails(
+            presentAlert: true,
+            presentBadge: true,
+            presentSound: true,
+          ),
+        ),
+        payload: friendId,
+      );
+      debugPrint('Friend request received notification sent successfully');
+    } catch (e) {
+      debugPrint('Error showing friend request received notification: $e');
+    }
+  }
 }
 
 Future<void> sendPushNotification({
