@@ -149,13 +149,13 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
               daysUntil: daysUntilTrip,
             ),
           );
-          // await sendPushNotification(
+          
+         // await sendPushNotification(
           //   fcmToken: _currentUser?.fcmToken ?? '',
           //   title: 'Upcoming Trip Reminder',
           //   body: 'Your trip "${data['name'] ?? 'Unnamed Trip'}" starts in $daysUntilTrip day(s)!',
-          // );
+          // ); 
 
-                    
           // Send a local notification for upcoming trip
           await _notificationService.showTripReminderNotification(
             title: 'Upcoming Trip Reminder',
@@ -170,6 +170,42 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
       });
     } catch (e) {
       debugPrint('Error fetching travel notifications: $e');
+    }
+  }
+
+  // Delete travel notification
+  Future<void> _deleteNotification(TravelNotification notification) async {
+    try {
+      setState(() {
+        _travelNotifications.removeWhere((n) => n.tripId == notification.tripId);
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Notification dismissed',
+            style: GoogleFonts.poppins(),
+          ),
+          action: SnackBarAction(
+            label: 'UNDO',
+            onPressed: () {
+              // Re-add the notification if user taps UNDO
+              setState(() {
+                _travelNotifications.add(notification);
+              });
+            },
+          ),
+        ),
+      );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Error dismissing notification: $e',
+            style: GoogleFonts.poppins(),
+          ),
+        ),
+      );
     }
   }
 
@@ -233,7 +269,6 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
         //     body: '${_currentUser!.firstName} accepted your friend request!',
         //   );
         }
-
       // }
 
 
@@ -242,6 +277,7 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
         friendName: user.firstName,
         friendId: user.uid,
       );
+
       // Update local state
       setState(() {
         _currentUser = _currentUser!.copyWith(
@@ -269,6 +305,11 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
         ),
       );
     }
+  }
+
+  // Delete friend request (similar to reject but with different UI)
+  Future<void> _deleteFriendRequest(AppUser user) async {
+    await _rejectFriendRequest(user);
   }
 
   Future<void> _rejectFriendRequest(AppUser user) async {
@@ -304,28 +345,29 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
             .update({'sentFriendRequests': otherUserSentRequests});
       }
       
-      // Send rejection notification (optional - this is often skipped in real apps)
+      // Send rejection notification
       final otherUserFcmToken = otherUser.fcmToken;
       if (otherUserFcmToken != null && otherUserFcmToken.isNotEmpty) {
         await _notificationService.showTripReminderNotification(
           title: 'Friend Request Update',
           body: '${_currentUser!.firstName} has responded to your friend request',
         );
-      //   if (otherUserFcmToken != null && otherUserFcmToken.isNotEmpty) {
-      //     await sendPushNotification(
-      //       fcmToken: otherUserFcmToken,
-      //       title: 'Friend Request Update',
-      //       body: '${_currentUser!.firstName} has responded to your friend request',
-      //     );
-      // }
-
       }
+
+//   if (otherUserFcmToken != null && otherUserFcmToken.isNotEmpty) {
+//     await sendPushNotification(
+//       fcmToken: otherUserFcmToken,
+//       title: 'Friend Request Update',
+//       body: '${_currentUser!.firstName} has responded to your friend request',
+//     );
+// }
 
       // Show local notification that the friend request was rejected
       await _notificationService.showFriendRequestRejectedNotification(
         friendName: user.firstName,
         friendId: user.uid,
       );
+      
       // Update local state
       setState(() {
         _currentUser = _currentUser!.copyWith(
@@ -391,83 +433,104 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
                     itemCount: _requestUsers.length,
                     itemBuilder: (context, index) {
                       final user = _requestUsers[index];
-                      return Card(
-                        margin: EdgeInsets.only(bottom: 16),
-                        elevation: 2,
-                        child: Padding(
-                          padding: EdgeInsets.all(16),
-                          child: Row(
-                            children: [
-                              CircleAvatar(
-                                radius: 30,
-                                backgroundImage: user.profileImageUrl != null
-                                    ? NetworkImage(user.profileImageUrl!)
-                                    : AssetImage('assets/default_avatar.jpg')
-                                        as ImageProvider,
-                                child: user.profileImageUrl == null
-                                    ? Text(
-                                        '${user.firstName[0]}${user.lastName[0]}',
-                                        style: GoogleFonts.poppins(fontSize: 20),
-                                      )
-                                    : null,
-                              ),
-                              SizedBox(width: 16),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      '${user.firstName} ${user.lastName}',
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 18,
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    Text(
-                                      '@${user.username}',
-                                      style: GoogleFonts.poppins(
-                                        fontSize: 14,
-                                        color: Colors.grey[600],
-                                      ),
-                                    ),
-                                    SizedBox(height: 12),
-                                    Row(
-                                      children: [
-                                        Expanded(
-                                          child: ElevatedButton.icon(
-                                            icon: Icon(Icons.check, color: Colors.white),
-                                            label: Text(
-                                              'Accept',
-                                              style: GoogleFonts.poppins(color: Colors.white),
-                                            ),
-                                            onPressed: () => _acceptFriendRequest(user),
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor: Colors.green,
-                                              padding: EdgeInsets.symmetric(vertical: 10),
-                                            ),
-                                          ),
-                                        ),
-                                        SizedBox(width: 8),
-                                        Expanded(
-                                          child: ElevatedButton.icon(
-                                            icon: Icon(Icons.close, color: Colors.white),
-                                            label: Text(
-                                              'Reject',
-                                              style: GoogleFonts.poppins(color: Colors.white),
-                                            ),
-                                            onPressed: () => _rejectFriendRequest(user),
-                                            style: ElevatedButton.styleFrom(
-                                              backgroundColor: Colors.red,
-                                              padding: EdgeInsets.symmetric(vertical: 10),
-                                            ),
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                  ],
+                      return Dismissible(
+                        key: Key(user.uid),
+                        background: Container(
+                          color: Colors.red,
+                          alignment: Alignment.centerRight,
+                          padding: EdgeInsets.only(right: 20),
+                          child: Icon(
+                            Icons.delete,
+                            color: Colors.white,
+                          ),
+                        ),
+                        direction: DismissDirection.endToStart,
+                        onDismissed: (direction) {
+                          _deleteFriendRequest(user);
+                        },
+                        child: Card(
+                          margin: EdgeInsets.only(bottom: 16),
+                          elevation: 2,
+                          child: Padding(
+                            padding: EdgeInsets.all(16),
+                            child: Row(
+                              children: [
+                                CircleAvatar(
+                                  radius: 30,
+                                  backgroundImage: user.profileImageUrl != null
+                                      ? NetworkImage(user.profileImageUrl!)
+                                      : AssetImage('assets/default_avatar.jpg')
+                                          as ImageProvider,
+                                  child: user.profileImageUrl == null
+                                      ? Text(
+                                          '${user.firstName[0]}${user.lastName[0]}',
+                                          style: GoogleFonts.poppins(fontSize: 20),
+                                        )
+                                      : null,
                                 ),
-                              ),
-                            ],
+                                SizedBox(width: 16),
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        '${user.firstName} ${user.lastName}',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      Text(
+                                        '@${user.username}',
+                                        style: GoogleFonts.poppins(
+                                          fontSize: 14,
+                                          color: Colors.grey[600],
+                                        ),
+                                      ),
+                                      SizedBox(height: 12),
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: ElevatedButton.icon(
+                                              icon: Icon(Icons.check, color: Colors.white),
+                                              label: Text(
+                                                'Accept',
+                                                style: GoogleFonts.poppins(color: Colors.white),
+                                              ),
+                                              onPressed: () => _acceptFriendRequest(user),
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Colors.green,
+                                                padding: EdgeInsets.symmetric(vertical: 10),
+                                              ),
+                                            ),
+                                          ),
+                                          SizedBox(width: 8),
+                                          Expanded(
+                                            child: ElevatedButton.icon(
+                                              icon: Icon(Icons.close, color: Colors.white),
+                                              label: Text(
+                                                'Reject',
+                                                style: GoogleFonts.poppins(color: Colors.white),
+                                              ),
+                                              onPressed: () => _rejectFriendRequest(user),
+                                              style: ElevatedButton.styleFrom(
+                                                backgroundColor: Colors.red,
+                                                padding: EdgeInsets.symmetric(vertical: 10),
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                // Delete button
+                                IconButton(
+                                  icon: Icon(Icons.delete_outline, color: Colors.red),
+                                  onPressed: () => _deleteFriendRequest(user),
+                                ),
+                              ],
+                            ),
                           ),
                         ),
                       );
@@ -475,7 +538,7 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
                   );
   }
 
-  // Updated travel tab with actual notifications
+  // Updated travel tab with delete buttons
   Widget _buildTravelTab() {
     if (_travelNotifications.isEmpty) {
       return Center(
@@ -524,87 +587,117 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
       itemCount: _travelNotifications.length,
       itemBuilder: (context, index) {
         final notification = _travelNotifications[index];
-        return Card(
-          margin: EdgeInsets.only(bottom: 16),
-          elevation: 2,
-          child: ListTile(
-            contentPadding: EdgeInsets.all(16),
-            leading: CircleAvatar(
-              backgroundColor: Colors.blue[100],
-              child: Icon(
-                Icons.flight_takeoff,
-                color: Colors.blue[800],
-              ),
+        return Dismissible(
+          key: Key(notification.tripId),
+          background: Container(
+            color: Colors.red,
+            alignment: Alignment.centerRight,
+            padding: EdgeInsets.only(right: 20),
+            child: Icon(
+              Icons.delete,
+              color: Colors.white,
             ),
-            title: Text(
-              notification.tripName,
-              style: GoogleFonts.poppins(
-                fontWeight: FontWeight.bold,
-                fontSize: 18,
-              ),
-            ),
-            subtitle: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
+          ),
+          direction: DismissDirection.endToStart,
+          onDismissed: (direction) {
+            _deleteNotification(notification);
+          },
+          child: Card(
+            margin: EdgeInsets.only(bottom: 16),
+            elevation: 2,
+            child: Stack(
               children: [
-                SizedBox(height: 4),
-                Text(
-                  'Destination: ${notification.destination}',
-                  style: GoogleFonts.poppins(),
-                ),
-                SizedBox(height: 4),
-                Text(
-                  notification.daysUntil == 0
-                      ? 'Your trip starts today!'
-                      : 'Starting in ${notification.daysUntil} day${notification.daysUntil > 1 ? "s" : ""}',
-                  style: GoogleFonts.poppins(
-                    color: notification.daysUntil <= 1 ? Colors.red : Colors.green[700],
-                    fontWeight: FontWeight.w500,
+                ListTile(
+                  contentPadding: EdgeInsets.all(16),
+                  leading: CircleAvatar(
+                    backgroundColor: Colors.blue[100],
+                    child: Icon(
+                      Icons.flight_takeoff,
+                      color: Colors.blue[800],
+                    ),
+                  ),
+                  title: Text(
+                    notification.tripName,
+                    style: GoogleFonts.poppins(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 18,
+                    ),
+                  ),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SizedBox(height: 4),
+                      Text(
+                        'Destination: ${notification.destination}',
+                        style: GoogleFonts.poppins(),
+                      ),
+                      SizedBox(height: 4),
+                      Text(
+                        notification.daysUntil == 0
+                            ? 'Your trip starts today!'
+                            : 'Starting in ${notification.daysUntil} day${notification.daysUntil > 1 ? "s" : ""}',
+                        style: GoogleFonts.poppins(
+                          color: notification.daysUntil <= 1 ? Colors.red : Colors.green[700],
+                          fontWeight: FontWeight.w500,
+                        ),
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        'Date: ${_formatDate(notification.startDate)}',
+                        style: GoogleFonts.poppins(color: Colors.grey[600]),
+                      ),
+                    ],
+                  ),
+                  trailing: Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Delete button
+                      IconButton(
+                        icon: Icon(Icons.delete_outline, color: Colors.red),
+                        onPressed: () => _deleteNotification(notification),
+                      ),
+                      IconButton(
+                        icon: Icon(Icons.arrow_forward_ios),
+                        onPressed: () async {
+                          try {
+                            // Fetch the full travel document from Firestore by tripId
+                            final doc = await FirebaseFirestore.instance
+                                .collection('travel')
+                                .doc(notification.tripId)
+                                .get();
+
+                            if (!doc.exists) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('Trip details not found'),
+                                ),
+                              );
+                              return;
+                            }
+
+                            // Parse the document into a Travel instance
+                            final travelData = doc.data()!;
+                            final travel = Travel.fromJson(travelData, doc.id);
+
+                            // Navigate to TripDetails page with the Travel instance
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (_) => TripDetails(travel: travel),
+                              ),
+                            );
+                          } catch (e) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Error loading trip details: $e'),
+                              ),
+                            );
+                          }
+                        },
+                      ),
+                    ],
                   ),
                 ),
-                SizedBox(height: 8),
-                Text(
-                  'Date: ${_formatDate(notification.startDate)}',
-                  style: GoogleFonts.poppins(color: Colors.grey[600]),
-                ),
               ],
-            ),
-            trailing: IconButton(
-              icon: Icon(Icons.arrow_forward_ios),
-              onPressed: () async {
-                try {
-                  // Fetch the full travel document from Firestore by tripId
-                  final doc = await FirebaseFirestore.instance
-                      .collection('travel')
-                      .doc(notification.tripId)
-                      .get();
-
-                  if (!doc.exists) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        content: Text('Trip details not found'),
-                      ),
-                    );
-                    return;
-                  }
-
-                  // Parse the document into a Travel instance
-                  final travelData = doc.data()!;
-                  final travel = Travel.fromJson(travelData, doc.id);
-
-                  // Navigate to TripDetails page with the Travel instance
-                  Navigator.of(context).push(
-                    MaterialPageRoute(
-                      builder: (_) => TripDetails(travel: travel),
-                    ),
-                  );
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text('Error loading trip details: $e'),
-                    ),
-                  );
-                }
-              },
             ),
           ),
         );
@@ -702,8 +795,8 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
       ),
     );
   }
-  
 }
+
 
 class NotificationHelper {
   static Future<void> fetchCurrentUserAndRequests(
@@ -807,4 +900,3 @@ class NotificationHelper {
     }
   }
 }
-
