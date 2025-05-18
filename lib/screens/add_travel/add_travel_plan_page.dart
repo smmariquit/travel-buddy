@@ -18,7 +18,9 @@ import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
 import 'dart:io';
 import 'package:travel_app/utils/notification_service.dart'; 
 import 'package:permission_handler/permission_handler.dart';
-
+import 'package:image_picker/image_picker.dart'; 
+import 'package:scan/scan.dart';
+import 'dart:convert';
 
 class AddTravelPlanPage extends StatefulWidget {
   @override
@@ -34,6 +36,8 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
   final GlobalKey qrKey = GlobalKey();
   final FirebaseTravelAPI _firebaseTravelAPI = FirebaseTravelAPI();
   final NotificationService _notificationService = NotificationService();
+  final ImagePicker _imagePicker = ImagePicker(); 
+
   late String _name, _location;
   DateTime? _startDate, _endDate;
   String? _flightDetails, _accommodation, _notes;
@@ -90,13 +94,26 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
                 children: [
                   _buildHeader(
                     'Trip Info',
-                    trailing: TextButton.icon(
-                      icon: Icon(Icons.qr_code_scanner, color: primaryColor),
-                      label: Text(
-                        "or scan QR",
-                        style: TextStyle(color: primaryColor),
-                      ),
-                      onPressed: _scanQRCode,
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        TextButton.icon(
+                          icon: Icon(Icons.qr_code_scanner, color: primaryColor),
+                          label: Text(
+                            "Scan QR",
+                            style: TextStyle(color: primaryColor),
+                          ),
+                          onPressed: _scanQRCode,
+                        ),
+                        TextButton.icon(
+                          icon: Icon(Icons.image, color: primaryColor),
+                          label: Text(
+                            "Upload QR",
+                            style: TextStyle(color: primaryColor),
+                          ),
+                          onPressed: _uploadQRCode,
+                        ),
+                      ],
                     ),
                   ),
                   _buildTextField(
@@ -193,6 +210,103 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
       ),
     );
   }
+
+  // Method to handle uploading QR from gallery
+  Future<void> _uploadQRCode() async {
+    try {
+      // Request storage permissions if needed
+      await Permission.storage.request();
+      
+      // Pick image from gallery
+      final pickedFile = await _imagePicker.pickImage(
+        source: ImageSource.gallery,
+      );
+      
+      if (pickedFile == null) {
+        // User canceled image picking
+        return;
+      }
+      
+      // Show loading indicator
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => Center(
+          child: CircularProgressIndicator(),
+        ),
+      );
+      
+      // Read the image file
+      final imageBytes = await File(pickedFile.path).readAsBytes();
+      
+      // Scan QR code from the image
+      final qrResult = await Scan.parse(pickedFile.path);
+      
+      // Hide loading indicator
+      Navigator.of(context).pop();
+      
+      if (qrResult == null || qrResult.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("No valid QR code found in the image")),
+        );
+        return;
+      }
+      
+      // Process the QR code result (same logic as in _scanQRCode)
+      _processQRResult(qrResult);
+      
+    } catch (e) {
+      // Hide loading indicator if still showing
+      if (Navigator.canPop(context)) {
+        Navigator.of(context).pop();
+      }
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text("Error processing QR code: ${e.toString()}")),
+      );
+    }
+  }
+
+  // Helper method to process QR result from either scanning or uploading
+  void _processQRResult(String result) async {
+    if (result.isNotEmpty) {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser != null) {
+        const successMessage = "Travel plan shared successfully";
+        final message = await _firebaseTravelAPI.shareTravelWithUser(
+          result,
+          currentUser.uid,
+        );
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(message)),
+        );
+
+        if (message != successMessage) {
+          return;
+        }
+
+        // Fetch the travel data using the scanned travel ID
+        final doc = await FirebaseFirestore.instance
+            .collection('travel')
+            .doc(result)
+            .get();
+
+        if (doc.exists) {
+          final travel = Travel.fromJson(doc.data()!, doc.id);
+
+          // Navigate to TripDetails page
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => TripDetails(travel: travel)),
+          );
+        } else {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("Travel plan not found.")),
+          );
+        }
+      }
+    }
+  }
+
 
   Widget _buildHeader(String text, {Widget? trailing}) {
     return Padding(
