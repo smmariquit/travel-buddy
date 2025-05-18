@@ -64,7 +64,7 @@ dependencies:
   cloud_functions: ^5.5.0
   firebase_app_check: ^0.3.2+5
   shared_preferences: ^2.5.3
-  scan: ^1.6.0
+  # scan: ^1.6.0
 
 
 
