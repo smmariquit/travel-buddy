@@ -13,6 +13,7 @@
 
 // Flutter & Material
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 
 // Firebase & External Services
 import 'package:cloud_firestore/cloud_firestore.dart';
@@ -254,6 +255,6 @@ class TravelPlanCard extends StatelessWidget {
   ///
   /// Returns a string in the format 'dd/mm/yyyy'.
   String _formatDate(DateTime date) {
-    return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
+    return DateFormat('EEEE, MMM d, yyyy').format(date);
   }
 }

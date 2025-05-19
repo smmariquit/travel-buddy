@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
+import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 
 // State Management
@@ -772,20 +773,18 @@ class _TripDetailsState extends State<TripDetails>
                                 _buildDetailRow(
                                   Icons.calendar_today,
                                   'Start Date',
-                                  _travel.startDate?.toLocal().toString().split(
-                                        " ",
-                                      )[0] ??
-                                      'Not set',
+                                  DateFormat(
+                                    'EEEE, MMM d, yyyy',
+                                  ).format(_travel.startDate!),
                                 ),
                                 SizedBox(height: 8),
                                 _buildDetailRow(
                                   Icons.calendar_today,
                                   'End Date',
                                   _travel.endDate != null
-                                      ? _travel.endDate!
-                                          .toLocal()
-                                          .toString()
-                                          .split(' ')[0]
+                                      ? DateFormat(
+                                        'EEEE, MMM d, yyyy',
+                                      ).format(_travel.endDate!)
                                       : 'Not set',
                                 ),
                                 if (_travel.flightDetails?.isNotEmpty ??
