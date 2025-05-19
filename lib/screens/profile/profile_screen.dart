@@ -749,7 +749,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                       );
                     },
-                    icon: Icon(Icons.exit_to_app),
+                    icon: Icon(Icons.exit_to_app, color: Colors.white),
                     label: Text('Sign Out'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: Colors.red,

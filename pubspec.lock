@@ -816,6 +816,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "3.0.1"
+  linear_progress_bar:
+    dependency: "direct main"
+    description:
+      name: linear_progress_bar
+      sha256: "8265c87323e661092adc96ae04d18072c34dce318b586965c3818d5d979f60d6"
+      url: "https://pub.dev"
+    source: hosted
+    version: "1.2.0"
   lints:
     dependency: transitive
     description:
@@ -920,6 +928,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "1.0.0"
+  password_strength:
+    dependency: "direct main"
+    description:
+      name: password_strength
+      sha256: "0e51e3d864e37873a1347e658147f88b66e141ee36c58e19828dc5637961e1ce"
+      url: "https://pub.dev"
+    source: hosted
+    version: "0.2.0"
   path:
     dependency: transitive
     description:
