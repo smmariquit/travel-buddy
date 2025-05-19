@@ -19,7 +19,7 @@ import 'dart:io';
 import 'package:travel_app/utils/notification_service.dart'; 
 import 'package:permission_handler/permission_handler.dart';
 import 'package:image_picker/image_picker.dart'; 
-//import 'package:scan/scan.dart';
+import 'package:google_mlkit_barcode_scanning/google_mlkit_barcode_scanning.dart';
 import 'dart:convert';
 
 class AddTravelPlanPage extends StatefulWidget {
@@ -94,26 +94,13 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
                 children: [
                   _buildHeader(
                     'Trip Info',
-                    trailing: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        TextButton.icon(
-                          icon: Icon(Icons.qr_code_scanner, color: primaryColor),
-                          label: Text(
-                            "Scan QR",
-                            style: TextStyle(color: primaryColor),
-                          ),
-                          onPressed: _scanQRCode,
-                        ),
-                        // TextButton.icon(
-                        //   icon: Icon(Icons.image, color: primaryColor),
-                        //   label: Text(
-                        //     "Upload QR",
-                        //     style: TextStyle(color: primaryColor),
-                        //   ),
-                        //   onPressed: _uploadQRCode,
-                        // ),
-                      ],
+                    trailing: TextButton.icon(
+                      icon: Icon(Icons.qr_code_scanner, color: primaryColor),
+                      label: Text(
+                        "or Scan QR",
+                        style: TextStyle(color: primaryColor),
+                      ),
+                      onPressed: _showQRScanOptions,
                     ),
                   ),
                   _buildTextField(
@@ -211,62 +198,90 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
     );
   }
 
+void _showQRScanOptions() {
+  showModalBottomSheet(
+    context: context,
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+    ),
+    builder: (BuildContext context) {
+      return SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: Icon(Icons.camera_alt),
+              title: Text("Scan using Camera"),
+              onTap: () {
+                Navigator.pop(context);
+                _scanQRCode(); // Call your existing camera scanner
+              },
+            ),
+            ListTile(
+              leading: Icon(Icons.image),
+              title: Text("Upload QR Image"),
+              onTap: () {
+                Navigator.pop(context);
+                _uploadQRCode(); // Call your image upload scanner
+              },
+            ),
+          ],
+        ),
+      );
+    },
+  );
+}
 
   // // Method to handle uploading QR from gallery
-  // Future<void> _uploadQRCode() async {
-  //   try {
-  //     // Request storage permissions if needed
-  //     await Permission.storage.request();
-      
-  //     // Pick image from gallery
-  //     final pickedFile = await _imagePicker.pickImage(
-  //       source: ImageSource.gallery,
-  //     );
-      
-  //     if (pickedFile == null) {
-  //       // User canceled image picking
-  //       return;
-  //     }
-      
-  //     // Show loading indicator
-  //     showDialog(
-  //       context: context,
-  //       barrierDismissible: false,
-  //       builder: (context) => Center(
-  //         child: CircularProgressIndicator(),
-  //       ),
-  //     );
-      
-  //     // Read the image file
-  //     final imageBytes = await File(pickedFile.path).readAsBytes();
-      
-  //     // Scan QR code from the image
-  //     final qrResult = await Scan.parse(pickedFile.path);
-      
-  //     // Hide loading indicator
-  //     Navigator.of(context).pop();
-      
-  //     if (qrResult == null || qrResult.isEmpty) {
-  //       ScaffoldMessenger.of(context).showSnackBar(
-  //         SnackBar(content: Text("No valid QR code found in the image")),
-  //       );
-  //       return;
-  //     }
-      
-  //     // Process the QR code result (same logic as in _scanQRCode)
-  //     _processQRResult(qrResult);
-      
-  //   } catch (e) {
-  //     // Hide loading indicator if still showing
-  //     if (Navigator.canPop(context)) {
-  //       Navigator.of(context).pop();
-  //     }
-      
-  //     ScaffoldMessenger.of(context).showSnackBar(
-  //       SnackBar(content: Text("Error processing QR code: ${e.toString()}")),
-  //     );
-  //   }
-  // }
+ Future<void> _uploadQRCode() async {
+  final picker = ImagePicker();
+  final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+
+  if (pickedFile == null) return;
+
+  final inputImage = InputImage.fromFilePath(pickedFile.path);
+  final barcodeScanner = BarcodeScanner();
+
+  try {
+    final barcodes = await barcodeScanner.processImage(inputImage);
+    if (barcodes.isEmpty) {
+      _showDialog("No QR code found in the image.");
+    } else {
+      final qrCode = barcodes.first.rawValue;
+      if (qrCode != null) {
+        _processQRResult(qrCode);
+      } else {
+        _showDialog("Unable to extract QR code.");
+      }
+    }
+  } catch (e) {
+    print("Error scanning QR from image: $e");
+    _showDialog("Error scanning QR code.");
+  } finally {
+    barcodeScanner.close();
+  }
+}
+
+void _showDialog(String message) {
+  showDialog(
+    context: context,
+    builder: (BuildContext context) {
+      return AlertDialog(
+        title: const Text("QR Scan Result"),
+        content: Text(message),
+        actions: [
+          TextButton(
+            child: const Text("OK"),
+            onPressed: () {
+              Navigator.of(context).pop();
+            },
+          ),
+        ],
+      );
+    },
+  );
+}
+
 
   // Helper method to process QR result from either scanning or uploading
   void _processQRResult(String result) async {
