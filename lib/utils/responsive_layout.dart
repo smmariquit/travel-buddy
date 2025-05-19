@@ -18,6 +18,7 @@
 ///
 /// # See Also
 /// - [MediaQuery](https://api.flutter.dev/flutter/widgets/MediaQuery-class.html) - useful for good UI and adaptability :O
+library;
 
 import 'package:flutter/material.dart';
 
@@ -32,7 +33,7 @@ class ResponsiveLayout extends StatelessWidget {
 
   /// Creates a [ResponsiveLayout] that wraps [child] with horizontal padding
   /// according to the current screen width.
-  const ResponsiveLayout({Key? key, required this.child}) : super(key: key);
+  const ResponsiveLayout({super.key, required this.child});
 
   @override
   Widget build(BuildContext context) {

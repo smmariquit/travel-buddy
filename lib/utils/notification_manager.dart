@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:intl/intl.dart';
-import 'package:travel_app/models/travel_plan_model.dart'; // Add import for Travel model
+// Add import for Travel model
 import 'package:travel_app/utils/notification_service.dart'; // Updated path based on actual service
 import 'package:travel_app/providers/travel_plans_provider.dart'; // Updated provider name
 import 'package:travel_app/providers/user_provider.dart';
@@ -20,7 +19,7 @@ class NotificationManager {
 
       final TwilioFlutter twilioFlutter = TwilioFlutter(
         accountSid: 'ACa6cfdca8cf8927d69fda634125c3d138',
-        authToken: 'b2ad8ed6fc74654884123560e2fb3bfb',
+        authToken: 'd',
         twilioNumber: 'whatsapp:+14155238886',
       );
 
@@ -55,10 +54,6 @@ class NotificationManager {
 
       for (final trip in trips) {
         // Skip if notification was dismissed or trip has no ID
-        if (trip.id == null) {
-          continue;
-        }
-
         try {
           // Since startDate is DateTime?, we need to check if it's null
           if (trip.startDate == null) {

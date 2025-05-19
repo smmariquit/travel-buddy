@@ -67,6 +67,7 @@ dependencies:
   google_mlkit_barcode_scanning: ^0.14.1
   # scan: ^1.6.0
   password_strength: ^0.2.0
+  intl: ^0.20.2
 
 
 

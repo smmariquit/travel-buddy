@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:geocoding/geocoding.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:flutter_google_maps_webservices/places.dart' as places;
 
@@ -7,7 +6,11 @@ class MapPickerPage extends StatefulWidget {
   final LatLng initialPosition;
   final void Function(String, LatLng)? onLocationSelected;
 
-  MapPickerPage({required this.initialPosition, this.onLocationSelected});
+  const MapPickerPage({
+    super.key,
+    required this.initialPosition,
+    this.onLocationSelected,
+  });
 
   @override
   _MapPickerPageState createState() => _MapPickerPageState();
@@ -16,7 +19,6 @@ class MapPickerPage extends StatefulWidget {
 class _MapPickerPageState extends State<MapPickerPage> {
   GoogleMapController? _mapController;
   late LatLng _selectedLocation;
-  bool _isMapReady = false;
 
   final TextEditingController _searchController = TextEditingController();
   List<places.Prediction> _placePredictions = [];
@@ -38,9 +40,7 @@ class _MapPickerPageState extends State<MapPickerPage> {
 
   void _onMapCreated(GoogleMapController controller) {
     _mapController = controller;
-    setState(() {
-      _isMapReady = true;
-    });
+    setState(() {});
   }
 
   void _onTap(LatLng location) {

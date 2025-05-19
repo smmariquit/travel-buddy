@@ -7,8 +7,6 @@ import 'dart:ui'; // For ImageFilter.blur
 // Firebase & External Services
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:provider/provider.dart';
-import 'package:firebase_messaging/firebase_messaging.dart';
-import 'package:travel_app/api/firebase_user_api.dart';
 import 'package:travel_app/models/user_model.dart';
 import 'package:travel_app/models/travel_notification_model.dart';
 
@@ -61,7 +59,6 @@ class MainPage extends StatefulWidget {
 class _MainPageState extends State<MainPage> {
   List<Travel> _travelPlans = [];
   bool _isLoading = true;
-  AppUser? _currentUser;
   List<AppUser> _requestUsers = [];
   List<TravelNotification> _travelNotifications = [];
   String? _errorMessage;
@@ -111,19 +108,6 @@ class _MainPageState extends State<MainPage> {
         prefs.getBool('hasInitializedNotifications') ?? false;
 
     await _notificationService.init();
-
-    NotificationHelper.fetchCurrentUserAndRequests(
-      context,
-      (user) => setState(() => _currentUser = user),
-      (requests) => setState(() {
-        _requestUsers = requests;
-        _isLoading = false;
-      }),
-      (error) => setState(() {
-        _errorMessage = error;
-        _isLoading = false;
-      }),
-    );
 
     NotificationHelper.fetchTravelNotifications(
       context,

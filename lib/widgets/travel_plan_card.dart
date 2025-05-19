@@ -10,6 +10,7 @@
 /// - [TextOverflow](https://api.flutter.dev/flutter/painting/TextOverflow.html)
 /// - [Image.asset](https://api.flutter.dev/flutter/widgets/Image/Image.asset.html)
 /// - [Image.network](https://api.flutter.dev/flutter/widgets/Image/Image.network.html)
+library;
 
 // Flutter & Material
 import 'package:flutter/material.dart';
@@ -17,16 +18,11 @@ import 'package:intl/intl.dart';
 
 // Firebase & External Services
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:firebase_auth/firebase_auth.dart';
 
 // State Management
-import 'package:provider/provider.dart';
 
 // App-specific
 import 'package:travel_app/models/travel_plan_model.dart';
-import 'package:travel_app/providers/travel_plans_provider.dart';
-import 'package:travel_app/providers/user_provider.dart';
-import 'package:travel_app/utils/constants.dart';
 import 'package:travel_app/screens/add_travel/trip_details.dart';
 
 /// Constants for styling the [TravelPlanCard].
@@ -57,7 +53,7 @@ class TravelPlanCard extends StatelessWidget {
   ///
   /// All parameters are required and must not be null.
   const TravelPlanCard({
-    Key? key,
+    super.key,
     required this.travelId,
     required this.uid,
     required this.name,

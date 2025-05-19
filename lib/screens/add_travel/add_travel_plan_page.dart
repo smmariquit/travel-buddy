@@ -11,20 +11,17 @@ import 'package:travel_app/screens/add_travel/scan_qr_page.dart';
 import 'package:travel_app/utils/constants.dart';
 import 'package:travel_app/screens/add_travel/trip_details.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/rendering.dart';
-import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
-import 'dart:io';
 import 'package:travel_app/utils/notification_service.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_mlkit_barcode_scanning/google_mlkit_barcode_scanning.dart';
-import 'dart:convert';
-import 'package:geocoding/geocoding.dart';
 import 'package:travel_app/screens/add_travel/map_picker_page.dart';
 
 class AddTravelPlanPage extends StatefulWidget {
+  const AddTravelPlanPage({super.key});
+
   @override
   _AddTravelPlanPageState createState() => _AddTravelPlanPageState();
 }
@@ -37,14 +34,12 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
   final _formKey = GlobalKey<FormState>();
   final GlobalKey qrKey = GlobalKey();
   final FirebaseTravelAPI _firebaseTravelAPI = FirebaseTravelAPI();
-  final NotificationService _notificationService = NotificationService();
-  final ImagePicker _imagePicker = ImagePicker();
 
   late String _name, _location;
   DateTime? _startDate, _endDate;
   String? _flightDetails, _accommodation, _notes;
-  List<String> _checklist = [];
-  List<Activity>? _activities = [];
+  final List<String> _checklist = [];
+  final List<Activity> _activities = [];
   bool _isOneDayTrip = false;
   String _tripDuration = '';
 
@@ -72,6 +67,7 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
     super.dispose();
   }
 
+  @override
   Widget build(BuildContext context) {
     return Scaffold(
       resizeToAvoidBottomInset: true,
@@ -517,7 +513,20 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
         return;
       }
 
-      if (_startDate!.isBefore(DateTime.now())) {
+      // Get today's date without time component
+      final today = DateTime(
+        DateTime.now().year,
+        DateTime.now().month,
+        DateTime.now().day,
+      );
+      // Get start date without time component
+      final startDate = DateTime(
+        _startDate!.year,
+        _startDate!.month,
+        _startDate!.day,
+      );
+
+      if (startDate.isBefore(today)) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text("Start date can't be in the past"),
@@ -780,13 +789,8 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
         format: ui.ImageByteFormat.png,
       );
       if (byteData != null) {
-        final pngBytes = byteData.buffer.asUint8List();
+        byteData.buffer.asUint8List();
 
-        final result = await ImageGallerySaverPlus.saveImage(
-          pngBytes,
-          quality: 100,
-          name: "qr_code_white_bg_${DateTime.now().millisecondsSinceEpoch}",
-        );
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('QR Code to gallery!')));
