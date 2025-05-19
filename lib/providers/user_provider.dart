@@ -5,7 +5,6 @@ import 'package:flutter/foundation.dart';
 // Firebase & External Services
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 
 // State Management
@@ -13,8 +12,6 @@ import 'package:google_sign_in/google_sign_in.dart';
 
 // App-specific
 import 'package:travel_app/api/firebase_auth_api.dart';
-import 'dart:io';
-import 'dart:convert';
 
 Stream<QuerySnapshot>? _userStream;
 
@@ -203,7 +200,6 @@ class AppUserProvider with ChangeNotifier {
         return "Google sign-in failed";
       }
     } catch (e) {
-      print("Error during Google sign-in: ${e.toString()}");
       return e.toString(); // Return error message
     }
   }
@@ -221,7 +217,7 @@ class AppUserProvider with ChangeNotifier {
       _uid = null;
       notifyListeners();
     } catch (e) {
-      print('Error signing out from Google: $e');
+      rethrow;
     }
   }
 

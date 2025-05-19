@@ -4,26 +4,19 @@ import 'package:flutter/material.dart';
 // Firebase & External Services
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/foundation.dart';
-import 'package:firebase_auth/firebase_auth.dart';
-import 'package:firebase_storage/firebase_storage.dart';
 
 // State Management
-import 'package:provider/provider.dart';
 
 // App-specific
 import 'package:travel_app/api/firebase_travel_api.dart';
 import 'package:travel_app/models/travel_plan_model.dart';
-import 'dart:io';
-import 'package:flutter/foundation.dart';
 import 'package:async/async.dart';
 
 class TravelTrackerProvider with ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   FirebaseTravelAPI? _firebaseService;
   FirebaseTravelAPI get firebaseService {
-    if (_firebaseService == null) {
-      _firebaseService = FirebaseTravelAPI();
-    }
+    _firebaseService ??= FirebaseTravelAPI();
     return _firebaseService!;
   }
 
@@ -98,7 +91,6 @@ class TravelTrackerProvider with ChangeNotifier {
   // Fetch travel plans into local list
   Future<List<Travel>> getTravelPlans() async {
     if (_userId == null) return [];
-    print('Fetching travel plans for user $_userId');
 
     try {
       _isLoading = true;
@@ -120,7 +112,6 @@ class TravelTrackerProvider with ChangeNotifier {
       notifyListeners();
       return _travels;
     } catch (e) {
-      print('Error fetching travel plans: $e');
       _isLoading = false;
       notifyListeners();
       return [];
@@ -144,7 +135,6 @@ class TravelTrackerProvider with ChangeNotifier {
       notifyListeners();
       return newTravel;
     } catch (e) {
-      print('Error adding travel plan: $e');
       _isLoading = false;
       notifyListeners();
       return null;
@@ -153,7 +143,7 @@ class TravelTrackerProvider with ChangeNotifier {
 
   // Edit a travel plan
   Future<bool> updateTravelPlan(Travel travel) async {
-    if (_userId == null || travel.id == null) return false;
+    if (_userId == null) return false;
 
     try {
       _isLoading = true;
@@ -173,7 +163,6 @@ class TravelTrackerProvider with ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      print('Error updating travel plan: $e');
       _isLoading = false;
       notifyListeners();
       return false;
@@ -195,7 +184,6 @@ class TravelTrackerProvider with ChangeNotifier {
       notifyListeners();
       return true;
     } catch (e) {
-      print('Error deleting travel plan: $e');
       _isLoading = false;
       notifyListeners();
       return false;
@@ -210,7 +198,7 @@ class TravelTrackerProvider with ChangeNotifier {
       });
       notifyListeners();
     } catch (e) {
-      print("Error sharing travel: $e");
+      rethrow;
     }
   }
 
@@ -222,7 +210,7 @@ class TravelTrackerProvider with ChangeNotifier {
       });
       notifyListeners();
     } catch (e) {
-      print("Error unsharing travel: $e");
+      rethrow;
     }
   }
 
@@ -237,7 +225,6 @@ class TravelTrackerProvider with ChangeNotifier {
       await firebaseService.updateActivities(travelId, activities);
       notifyListeners();
     } catch (e) {
-      print("Error updating activities: $e");
       rethrow; // Rethrow to let the caller handle the error
     }
   }

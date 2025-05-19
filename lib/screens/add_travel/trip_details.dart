@@ -14,25 +14,21 @@ import 'package:provider/provider.dart';
 // App-specific
 import 'package:travel_app/models/travel_plan_model.dart';
 import 'package:travel_app/providers/travel_plans_provider.dart';
-import 'package:travel_app/providers/user_provider.dart';
-import 'package:travel_app/screens/view_all_plans.dart';
 import 'package:travel_app/utils/constants.dart';
 import 'dart:io';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:travel_app/widgets/bottom_navigation_bar.dart';
-import 'dart:typed_data';
 import 'dart:ui' as ui;
 import 'package:flutter/rendering.dart';
-import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:path_provider/path_provider.dart';
 
 class TripDetails extends StatefulWidget {
   final Travel travel;
 
-  TripDetails({Key? key, required this.travel}) : super(key: key);
+  const TripDetails({super.key, required this.travel});
 
   @override
+  // ignore: library_private_types_in_public_api
   _TripDetailsState createState() => _TripDetailsState();
 }
 
@@ -42,11 +38,11 @@ class _TripDetailsState extends State<TripDetails>
   String? _coverImageUrl;
   final picker = ImagePicker();
   late TabController _tabController;
-  TravelTrackerProvider? _travelPlansProvider;
   bool _isLoading = true;
   final GlobalKey qrKey = GlobalKey();
   late Travel _travel;
   final _usernameController = TextEditingController();
+  final _errorMessage = ValueNotifier<String?>(null);
 
   Widget _buildDetailRow(IconData icon, String label, String value) {
     return Row(
@@ -79,7 +75,6 @@ class _TripDetailsState extends State<TripDetails>
     super.initState();
     _travel = widget.travel;
     _loadTravelData();
-    _travelPlansProvider = TravelTrackerProvider();
     _tabController = TabController(length: 2, vsync: this);
     _tabController.addListener(() {
       setState(() {});
@@ -128,8 +123,6 @@ class _TripDetailsState extends State<TripDetails>
 
       _generateEmptyActivities();
       _loadCoverImageUrl();
-    } catch (e) {
-      print('Error loading travel data: $e');
     } finally {
       setState(() {
         _isLoading = false;
@@ -138,8 +131,6 @@ class _TripDetailsState extends State<TripDetails>
   }
 
   Future<void> _saveActivitiesToFirestore() async {
-    if (_travel.id == null) return;
-
     try {
       final List<Map<String, dynamic>> activitiesData =
           _travel.activities?.map((activity) => activity.toJson()).toList() ??
@@ -149,9 +140,7 @@ class _TripDetailsState extends State<TripDetails>
           .collection('travel')
           .doc(_travel.id)
           .update({'activities': activitiesData});
-    } catch (e) {
-      print('Error saving activities to Firestore: $e');
-    }
+    } catch (e) {}
   }
 
   void _generateEmptyActivities() {
@@ -193,9 +182,7 @@ class _TripDetailsState extends State<TripDetails>
         _coverImageUrl = url;
         _travel = _travel.copyWith(imageUrl: url);
       });
-    } catch (e) {
-      print('Error fetching cover image URL: $e');
-    }
+    } catch (e) {}
   }
 
   Future<void> _pickCoverImage() async {
@@ -222,7 +209,6 @@ class _TripDetailsState extends State<TripDetails>
         _travel = _travel.copyWith(imageUrl: imageUrl);
       });
     } catch (e) {
-      print('Upload failed: $e');
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -291,9 +277,8 @@ class _TripDetailsState extends State<TripDetails>
       if (pickedFile == null) return;
 
       final file = File(pickedFile.path);
-      if (_travel.id == null) return;
 
-      final filename = '${_travel.id}_activity_${index}.jpg';
+      final filename = '${_travel.id}_activity_$index.jpg';
       final ref = FirebaseStorage.instance.ref().child(
         'itinerary_images/$filename',
       );
@@ -394,7 +379,6 @@ class _TripDetailsState extends State<TripDetails>
                   fit: BoxFit.cover,
                   // Add error handling for network images
                   errorBuilder: (context, error, stackTrace) {
-                    print('Error loading image: $error');
                     return Container(
                       height: 150,
                       width: double.infinity,
@@ -550,19 +534,13 @@ class _TripDetailsState extends State<TripDetails>
         format: ui.ImageByteFormat.png,
       );
       if (byteData != null) {
-        final pngBytes = byteData.buffer.asUint8List();
+        byteData.buffer.asUint8List();
 
-        final result = await ImageGallerySaverPlus.saveImage(
-          pngBytes,
-          quality: 100,
-          name: "qr_code_white_bg_${DateTime.now().millisecondsSinceEpoch}",
-        );
         ScaffoldMessenger.of(
           context,
         ).showSnackBar(SnackBar(content: Text('QR Code to gallery!')));
       }
     } catch (e) {
-      print('Error saving QR code: $e');
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to save QR code.'),
@@ -926,6 +904,32 @@ class _TripDetailsState extends State<TripDetails>
                                                       ),
                                                 ),
                                                 const SizedBox(height: 16),
+                                                // Add error message display
+                                                ValueListenableBuilder<String?>(
+                                                  valueListenable:
+                                                      _errorMessage,
+                                                  builder: (
+                                                    context,
+                                                    error,
+                                                    child,
+                                                  ) {
+                                                    if (error == null)
+                                                      return SizedBox.shrink();
+                                                    return Padding(
+                                                      padding:
+                                                          const EdgeInsets.only(
+                                                            bottom: 16.0,
+                                                          ),
+                                                      child: Text(
+                                                        error,
+                                                        style: TextStyle(
+                                                          color: Colors.red,
+                                                          fontSize: 14,
+                                                        ),
+                                                      ),
+                                                    );
+                                                  },
+                                                ),
                                                 ElevatedButton(
                                                   onPressed: () async {
                                                     final username =
@@ -945,6 +949,11 @@ class _TripDetailsState extends State<TripDetails>
                                                     }
 
                                                     try {
+                                                      // Clear any previous error
+                                                      _errorMessage.value =
+                                                          null;
+
+                                                      // First check if user exists
                                                       final userQuery =
                                                           await FirebaseFirestore
                                                               .instance
@@ -961,15 +970,8 @@ class _TripDetailsState extends State<TripDetails>
                                                       if (userQuery
                                                           .docs
                                                           .isEmpty) {
-                                                        ScaffoldMessenger.of(
-                                                          context,
-                                                        ).showSnackBar(
-                                                          const SnackBar(
-                                                            content: Text(
-                                                              'User not found',
-                                                            ),
-                                                          ),
-                                                        );
+                                                        _errorMessage.value =
+                                                            'User not found';
                                                         return;
                                                       }
 
@@ -978,6 +980,44 @@ class _TripDetailsState extends State<TripDetails>
                                                               .docs
                                                               .first
                                                               .id;
+
+                                                      // Check if they are friends
+                                                      final targetUserDoc =
+                                                          await FirebaseFirestore
+                                                              .instance
+                                                              .collection(
+                                                                'appUsers',
+                                                              )
+                                                              .doc(targetUserId)
+                                                              .get();
+
+                                                      final currentUserId =
+                                                          FirebaseAuth
+                                                              .instance
+                                                              .currentUser
+                                                              ?.uid;
+                                                      if (currentUserId ==
+                                                          null) {
+                                                        _errorMessage.value =
+                                                            'You must be logged in to share';
+                                                        return;
+                                                      }
+
+                                                      final isFriend =
+                                                          targetUserDoc
+                                                              .data()?['friends']
+                                                              ?.contains(
+                                                                currentUserId,
+                                                              ) ??
+                                                          false;
+
+                                                      if (!isFriend) {
+                                                        _errorMessage.value =
+                                                            'User is not a friend';
+                                                        return;
+                                                      }
+
+                                                      // If they are friends, share the travel plan
                                                       await FirebaseFirestore
                                                           .instance
                                                           .collection('travel')
@@ -1012,21 +1052,10 @@ class _TripDetailsState extends State<TripDetails>
                                                       );
                                                       Navigator.pop(context);
                                                     } catch (e) {
-                                                      print(
-                                                        'Error sharing travel plan: $e',
-                                                      );
-                                                      ScaffoldMessenger.of(
-                                                        context,
-                                                      ).showSnackBar(
-                                                        const SnackBar(
-                                                          content: Text(
-                                                            'Failed to share travel plan',
-                                                          ),
-                                                        ),
-                                                      );
+                                                      _errorMessage.value =
+                                                          'Failed to share travel plan: ${e.toString()}';
                                                     }
                                                   },
-                                                  child: const Text('Share'),
                                                   style:
                                                       ElevatedButton.styleFrom(
                                                         backgroundColor:
@@ -1034,6 +1063,7 @@ class _TripDetailsState extends State<TripDetails>
                                                         foregroundColor:
                                                             Colors.white,
                                                       ),
+                                                  child: const Text('Share'),
                                                 ),
                                               ],
                                             ),
@@ -1189,8 +1219,8 @@ class _TripDetailsState extends State<TripDetails>
               ? FloatingActionButton(
                 onPressed: _addManualItinerary,
                 backgroundColor: primaryColor,
-                child: const Icon(Icons.add),
                 tooltip: 'Add Itinerary',
+                child: const Icon(Icons.add),
               )
               : null,
       floatingActionButtonLocation:
@@ -1220,9 +1250,7 @@ class _TripDetailsState extends State<TripDetails>
             'username': userDoc.data()?['username'] ?? 'Unknown User',
           });
         }
-      } catch (e) {
-        print('Error fetching user info: $e');
-      }
+      } catch (e) {}
     }
     return usersInfo;
   }
@@ -1257,133 +1285,6 @@ class _TripDetailsState extends State<TripDetails>
         );
       }
     }
-  }
-
-  Future<void> _showShareByUsernameDialog() async {
-    final usernameController = TextEditingController();
-
-    return showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: Text('Share with Friend'),
-            content: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                TextField(
-                  controller: usernameController,
-                  decoration: InputDecoration(
-                    labelText: 'Enter friend\'s username',
-                    hintText: 'e.g., john_doe',
-                    border: OutlineInputBorder(),
-                  ),
-                ),
-              ],
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: () async {
-                  final username = usernameController.text.trim();
-                  if (username.isEmpty) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Please enter a username')),
-                    );
-                    return;
-                  }
-
-                  // Find user by username
-                  final userQuery =
-                      await FirebaseFirestore.instance
-                          .collection('appUsers')
-                          .where('username', isEqualTo: username)
-                          .get();
-
-                  if (userQuery.docs.isEmpty) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('User not found'),
-                          behavior: SnackBarBehavior.floating,
-                          margin: EdgeInsets.only(
-                            bottom: MediaQuery.of(context).size.height * 0.15,
-                            left: 16,
-                            right: 16,
-                          ),
-                        ),
-                      );
-                    }
-                    return;
-                  }
-
-                  final friendUid = userQuery.docs.first.id;
-
-                  // Don't allow sharing with yourself
-                  if (friendUid == FirebaseAuth.instance.currentUser?.uid) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Cannot share with yourself')),
-                      );
-                    }
-                    return;
-                  }
-
-                  // Check if already shared
-                  if (_travel.sharedWith?.contains(friendUid) ?? false) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Already shared with this user'),
-                        ),
-                      );
-                    }
-                    return;
-                  }
-
-                  try {
-                    // Add to sharedWith array
-                    await FirebaseFirestore.instance
-                        .collection('travel')
-                        .doc(_travel.id)
-                        .update({
-                          'sharedWith': FieldValue.arrayUnion([friendUid]),
-                        });
-
-                    // Refresh the travel data
-                    await _loadTravelData();
-
-                    if (context.mounted) {
-                      Navigator.pop(context); // Close the dialog
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Successfully shared with $username'),
-                          backgroundColor: Colors.green,
-                        ),
-                      );
-                    }
-                  } catch (e) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Error sharing: $e'),
-                          backgroundColor: Colors.red,
-                        ),
-                      );
-                    }
-                  }
-                },
-                child: Text('Share'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green.shade700,
-                  foregroundColor: Colors.white,
-                ),
-              ),
-            ],
-          ),
-    );
   }
 
   Future<void> _editTravelPlan() async {
@@ -1491,11 +1392,11 @@ class _TripDetailsState extends State<TripDetails>
                     }
                   }
                 },
-                child: Text('Save'),
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.green.shade700,
                   foregroundColor: Colors.white,
                 ),
+                child: Text('Save'),
               ),
             ],
           ),

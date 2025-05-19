@@ -3,8 +3,6 @@
 
 // Firebase & External Services
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:flutter_google_maps_webservices/places.dart';
-import 'package:latlong2/latlong.dart';
 
 // State Management
 // (none in this file)
@@ -101,10 +99,10 @@ class Travel {
   /// Creates a Travel object from a JSON map, using the document ID if provided
   factory Travel.fromJson(Map<String, dynamic> json, String docId) {
     // Use docId if provided, otherwise use id from json, or generate an error
-    final id = docId ?? json['id'];
+    final id = docId;
 
     // Validate ID to ensure it's never null or empty
-    if (id == null || id.isEmpty) {
+    if (id.isEmpty) {
       throw ArgumentError('Travel ID cannot be null or empty');
     }
 
