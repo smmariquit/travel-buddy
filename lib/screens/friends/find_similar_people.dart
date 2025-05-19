@@ -815,14 +815,14 @@ class _FindSimilarPeopleScreenState extends State<FindSimilarPeopleScreen> {
         ],
       ),
       bottomNavigationBar: BottomNavBar(selectedIndex: 2),
-      floatingActionButtonLocation:
-              FloatingActionButtonLocation.centerDocked,
-          floatingActionButton: FloatingActionButton(
-            backgroundColor: Colors.green.shade700,
-            onPressed: _scanQRCodeToAddFriend,
-            tooltip: "Scan QR to Add Friend",
-            child: Icon(Icons.qr_code_scanner),
-    ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+      floatingActionButton: FloatingActionButton(
+        backgroundColor: primaryColor,
+        onPressed: _scanQRCodeToAddFriend,
+        tooltip: "Scan QR to Add Friend",
+        child: Icon(Icons.qr_code_scanner),
+        shape: CircleBorder(),
+      ),
     );
   }
 }

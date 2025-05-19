@@ -20,6 +20,7 @@ import 'package:travel_app/providers/user_provider.dart';
 import 'package:travel_app/screens/add_travel/add_travel_plan_page.dart';
 import 'package:travel_app/widgets/bottom_navigation_bar.dart';
 import 'package:travel_app/widgets/travel_plan_card.dart';
+import 'package:travel_app/utils/constants.dart';
 
 /// A widget that displays all travel plans in a tabbed interface.
 ///
@@ -157,7 +158,7 @@ class _ViewAllPlansState extends State<ViewAllPlans>
               MaterialPageRoute(builder: (context) => AddTravelPlanPage()),
             ),
         child: const Icon(Icons.add),
-        backgroundColor: Colors.green,
+        backgroundColor: primaryColor,
         shape: const CircleBorder(),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
@@ -227,7 +228,6 @@ class _PlansList extends StatelessWidget {
       padding: const EdgeInsets.all(16),
       itemCount: plans.length,
       itemBuilder: (context, index) {
-        
         final travel = plans[index];
         print("${travel.name} ${travel.endDate}");
         return Padding(
