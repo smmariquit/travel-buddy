@@ -34,7 +34,11 @@ import 'package:flutter/material.dart';
 // Firebase & External Services
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_fonts/google_fonts.dart';
 import 'firebase_options.dart';
+import 'package:firebase_app_check/firebase_app_check.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:travel_app/utils/notification_service.dart';
 
 // State Management
 import 'package:provider/provider.dart';
@@ -51,9 +55,24 @@ import 'screens/auth/signin_page.dart';
 ///
 /// The [TravelTrackerProvider] manages travel-related state, while the [AppUserProvider] manages user authentication state.
 // [] means it will render in DartDoc. It will also ignore comments with //.
+
+@pragma('vm:entry-point')
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  // Ensure Firebase is initialized
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  
+  print("Handling a background message: ${message.messageId}");
+}
+
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
+  final notificationService = NotificationService();
+  await notificationService.init();
+
   runApp(
     MultiProvider(
       providers: [
@@ -125,7 +144,21 @@ class _MyAppState extends State<MyApp> {
         '/signin': (context) => const SignInPage(), // Sign-in page
         '/main': (context) => const MainPage(), // Main page after sign-in
       },
-      theme: ThemeData(primaryColor: const Color(0xFF3b665c)),
+      theme: ThemeData(
+        useMaterial3: true,
+        colorScheme: const ColorScheme(
+          brightness: Brightness.light,
+          primary: Color(0xFF017E03), 
+          onPrimary: Colors.white,
+          secondary: Color.fromARGB(255, 27, 188, 32), 
+          onSecondary: Colors.white,
+          surface: Colors.white,
+          onSurface: Colors.black,
+          error: Colors.red,
+          onError: Colors.white,
+        ),
+        textTheme: GoogleFonts.poppinsTextTheme(),
+      ),
       // no need for home: since initialRoute is already set.
     );
   }

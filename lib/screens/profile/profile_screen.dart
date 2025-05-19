@@ -13,6 +13,7 @@ import 'package:provider/provider.dart';
 // App-specific
 import 'package:travel_app/models/user_model.dart';
 import 'package:travel_app/providers/user_provider.dart';
+import 'package:travel_app/screens/profile/friends_list.dart';
 import 'package:travel_app/utils/constants.dart';
 import 'package:travel_app/utils/pick_profile_image.dart';
 import 'package:travel_app/widgets/bottom_navigation_bar.dart';
@@ -63,6 +64,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   AppUser? _currentUserData;
   bool _isPrivate = false;
 
+
+  int _friendsCount = 0;
+
   @override
   void initState() {
     super.initState();
@@ -108,6 +112,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
             final selectedInterests = user.interests ?? [];
             final selectedStyles = user.travelStyles ?? [];
 
+            // Fetch friends count
+            final friendsList = user.friendUIDs ?? [];
+            int friendsCount = friendsList.length;
+
             setState(() {
               _currentUserData = user;
               _firstNameController.text = user.firstName;
@@ -116,6 +124,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
               _phoneController.text = user.phoneNumber ?? '';
               _locationController.text = user.location ?? '';
               _isPrivate = user.isPrivate;
+              _friendsCount = friendsCount;
 
               _interests =
                   masterInterests.map((interest) {
@@ -208,6 +217,26 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+  // Navigate to Friends List Screen
+  void _navigateToFriendsList() {
+    if (_currentUserData == null || (_currentUserData!.friendUIDs?.isEmpty ?? true)) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('No friends to display'))
+      );
+      return;
+    }
+    
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => FriendsListScreen(
+          friendUIDs: _currentUserData!.friendUIDs!,
+          currentUserID: _currentUserData!.uid,
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     if (_currentUserData == null) {
@@ -252,173 +281,264 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
                 SizedBox(height: 20),
-                // Profile Image and Name
-                Center(
-                  child: Column(
-                    children: [
-                      GestureDetector(
-                        onTap: () async {
-                          final source =
-                              await showModalBottomSheet<ImageSource>(
-                                context: context,
-                                builder:
-                                    (context) => SafeArea(
-                                      child: Column(
-                                        mainAxisSize: MainAxisSize.min,
-                                        children: [
-                                          ListTile(
-                                            leading: const Icon(
-                                              Icons.camera_alt,
-                                            ),
-                                            title: const Text('Take a photo'),
-                                            onTap:
-                                                () => Navigator.pop(
-                                                  context,
-                                                  ImageSource.camera,
-                                                ),
-                                          ),
-                                          ListTile(
-                                            leading: const Icon(
-                                              Icons.photo_library,
-                                            ),
-                                            title: const Text(
-                                              'Choose from gallery',
-                                            ),
-                                            onTap:
-                                                () => Navigator.pop(
-                                                  context,
-                                                  ImageSource.gallery,
-                                                ),
-                                          ),
-                                        ],
-                                      ),
+                
+                Card(
+                  margin: EdgeInsets.symmetric(horizontal: 20),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Padding(
+                    padding: const EdgeInsets.all(20.0),
+                    child: Column(
+                      children: [
+                        // Profile Image
+                        GestureDetector(
+                          onTap: () async {
+                            final source = await showModalBottomSheet<ImageSource>(
+                              context: context,
+                              builder: (context) => SafeArea(
+                                child: Column(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    ListTile(
+                                      leading: const Icon(Icons.camera_alt),
+                                      title: const Text('Take a photo'),
+                                      onTap: () => Navigator.pop(context, ImageSource.camera),
                                     ),
-                              );
-
-                          if (source == null) return;
-
-                          final permission =
-                              source == ImageSource.camera
-                                  ? Permission.camera
-                                  : Permission.photos;
-
-                          final status = await permission.request();
-
-                          if (!status.isGranted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text(
-                                  '${permission.toString().split('.').last} permission denied',
+                                    ListTile(
+                                      leading: const Icon(Icons.photo_library),
+                                      title: const Text('Choose from gallery'),
+                                      onTap: () => Navigator.pop(context, ImageSource.gallery),
+                                    ),
+                                  ],
                                 ),
                               ),
                             );
-                            return;
-                          }
 
-                          final picker = ImagePicker();
-                          final pickedFile = await picker.pickImage(
-                            source: source,
-                          );
-                          if (pickedFile == null) return;
+                            if (source == null) return;
 
-                          final uid = _currentUserData!.uid;
-                          final file = File(pickedFile.path);
-                          final storageRef = FirebaseStorage.instance
-                              .ref()
-                              .child('profile_images/$uid.jpg');
+                            final permission = source == ImageSource.camera
+                                ? Permission.camera
+                                : Permission.photos;
 
-                          try {
-                            await storageRef.putFile(file);
-                            final imageUrl = await storageRef.getDownloadURL();
-                            await FirebaseFirestore.instance
-                                .collection('appUsers')
-                                .doc(uid)
-                                .update({'profileImageUrl': imageUrl});
+                            final status = await permission.request();
 
-                            setState(() {
-                              _currentUserData = _currentUserData!.copyWith(
-                                profileImageUrl: imageUrl,
+                            if (!status.isGranted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    '${permission.toString().split('.').last} permission denied',
+                                  ),
+                                ),
                               );
-                            });
-                          } catch (e) {
-                            print('Upload failed: $e');
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(content: Text('Failed to upload image')),
-                            );
-                          }
-                        },
-                        child: CircleAvatar(
-                          radius: 50,
-                          backgroundColor: Colors.grey[300],
-                          backgroundImage:
-                              _currentUserData!.profileImageUrl != null
-                                  ? NetworkImage(
-                                    _currentUserData!.profileImageUrl!,
-                                  )
-                                  : null,
-                          child:
-                              _currentUserData!.profileImageUrl == null
-                                  ? Icon(
+                              return;
+                            }
+
+                            final picker = ImagePicker();
+                            final pickedFile = await picker.pickImage(source: source);
+                            if (pickedFile == null) return;
+
+                            final uid = _currentUserData!.uid;
+                            final file = File(pickedFile.path);
+                            final storageRef = FirebaseStorage.instance
+                                .ref()
+                                .child('profile_images/$uid.jpg');
+
+                            try {
+                              await storageRef.putFile(file);
+                              final imageUrl = await storageRef.getDownloadURL();
+                              await FirebaseFirestore.instance
+                                  .collection('appUsers')
+                                  .doc(uid)
+                                  .update({'profileImageUrl': imageUrl});
+
+                              setState(() {
+                                _currentUserData = _currentUserData!.copyWith(
+                                  profileImageUrl: imageUrl,
+                                );
+                              });
+                            } catch (e) {
+                              print('Upload failed: $e');
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(content: Text('Failed to upload image')),
+                              );
+                            }
+                          },
+                          child: CircleAvatar(
+                            radius: 50,
+                            backgroundColor: Colors.grey[300],
+                            backgroundImage: _currentUserData!.profileImageUrl != null
+                                ? NetworkImage(_currentUserData!.profileImageUrl!)
+                                : null,
+                            child: _currentUserData!.profileImageUrl == null
+                                ? Icon(
                                     Icons.person,
                                     size: 50,
                                     color: Colors.grey[600],
                                   )
-                                  : null,
-                        ),
-                      ),
-                      SizedBox(height: 16),
-                      Text(
-                        '${_currentUserData!.firstName} ${_currentUserData!.lastName}',
-                        style: TextStyle(
-                          fontSize: 24,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      if (_currentUserData!.username != null) ...[
-                        SizedBox(height: 4),
-                        Text(
-                          '@${_currentUserData!.username}',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.grey[600],
+                                : null,
                           ),
                         ),
-                      ],
-                    ],
-                  ),
-                ),
-                SizedBox(height: 32),
-                // Private Profile Toggle
-                Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 20),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      Text(
-                        'Private Profile',
-                        style: TextStyle(
-                          fontSize: 16,
-                          fontWeight: FontWeight.w500,
+                        SizedBox(height: 16),
+                        
+                        // Full Name
+                        Text(
+                          '${_currentUserData!.firstName} ${_currentUserData!.lastName}',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                          ),
                         ),
-                      ),
-                      Switch(
-                        value: _isPrivate,
-                        onChanged: (value) async {
-                          setState(() {
-                            _isPrivate = value;
-                          });
-                          await FirebaseFirestore.instance
-                              .collection('appUsers')
-                              .doc(_currentUserData!.uid)
-                              .update({'isPrivate': value});
-                        },
-                        activeColor: Colors.green,
-                      ),
-                    ],
+                        
+                        // Username
+                        if (_currentUserData!.username != null) ...[
+                          SizedBox(height: 4),
+                          Text(
+                            '@${_currentUserData!.username}',
+                            style: TextStyle(
+                              fontSize: 16,
+                              color: Colors.grey[600],
+                            ),
+                          ),
+                        ],
+                        
+                        SizedBox(height: 24),
+                        
+                        // User Stats Row
+                        FutureBuilder<QuerySnapshot>(
+                          future: FirebaseFirestore.instance
+                              .collection('travel')
+                              .where('uid', isEqualTo: _currentUserData!.uid)
+                              .get(),
+                          builder: (context, snapshot) {
+                            int travelCount = 0;
+                            if (snapshot.connectionState == ConnectionState.done) {
+                              if (snapshot.hasData) {
+                                travelCount = snapshot.data!.docs.length;
+                              }
+                            }
+                            
+                            return Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+                                // Friends Count - Now clickable
+                                GestureDetector(
+                                  onTap: _navigateToFriendsList,
+                                  child: Container(
+                                    padding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                                    decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(8),
+                                      color: Colors.transparent,
+                                    ),
+                                    child: Column(
+                                      children: [
+                                        Text(
+                                          '$_friendsCount',
+                                          style: TextStyle(
+                                            fontSize: 22,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.green,
+                                          ),
+                                        ),
+                                        Row(
+                                          children: [
+                                            Text(
+                                              'Friends',
+                                              style: TextStyle(
+                                                fontSize: 14,
+                                                color: Colors.grey[600],
+                                              ),
+                                            ),
+                                            SizedBox(width: 4),
+                                            Icon(
+                                              Icons.arrow_forward_ios,
+                                              size: 12,
+                                              color: Colors.grey[600],
+                                            ),
+                                          ],
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                
+                                // Divider
+                                Container(
+                                  height: 40,
+                                  width: 1,
+                                  color: Colors.grey[300],
+                                ),
+                                
+                                // Travels Count
+                                Column(
+                                  children: [
+                                    snapshot.connectionState == ConnectionState.waiting
+                                        ? SizedBox(
+                                            height: 22,
+                                            width: 22,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2,
+                                              color: Colors.green,
+                                            ),
+                                          )
+                                        : Text(
+                                            '$travelCount',
+                                            style: TextStyle(
+                                              fontSize: 22,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.green,
+                                            ),
+                                          ),
+                                    Text(
+                                      'Travels',
+                                      style: TextStyle(
+                                        fontSize: 14,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            );
+                          },
+                        ),
+                        
+                        SizedBox(height: 24),
+                        
+                        // Private Profile Toggle
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            Text(
+                              'Private Profile',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            Switch(
+                              value: _isPrivate,
+                              onChanged: (value) async {
+                                setState(() {
+                                  _isPrivate = value;
+                                });
+                                await FirebaseFirestore.instance
+                                    .collection('appUsers')
+                                    .doc(_currentUserData!.uid)
+                                    .update({'isPrivate': value});
+                              },
+                              activeColor: Colors.green,
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
                   ),
                 ),
+                
                 SizedBox(height: 24),
-                // Profile Information Section
+                
+                // Profile Information Section - The existing form card
                 Card(
                   margin: EdgeInsets.symmetric(horizontal: 20),
                   shape: RoundedRectangleBorder(
@@ -494,20 +614,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           Wrap(
                             spacing: 8,
                             runSpacing: 8,
-                            children:
-                                _interests.map((interest) {
-                                  return FilterChip(
-                                    label: Text(interest['interest']),
-                                    selected: interest['selected'],
-                                    onSelected: (selected) {
-                                      setState(() {
-                                        interest['selected'] = selected;
-                                      });
-                                    },
-                                    selectedColor: Colors.green.shade100,
-                                    checkmarkColor: Colors.green,
-                                  );
-                                }).toList(),
+                            children: _interests.map((interest) {
+                              return FilterChip(
+                                label: Text(interest['interest']),
+                                selected: interest['selected'],
+                                onSelected: (selected) {
+                                  setState(() {
+                                    interest['selected'] = selected;
+                                  });
+                                },
+                                selectedColor: Colors.green,
+                                checkmarkColor: Colors.white,
+                              );
+                            }).toList(),
                           ),
                           SizedBox(height: 24),
                           Text(
@@ -521,20 +640,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           Wrap(
                             spacing: 8,
                             runSpacing: 8,
-                            children:
-                                _travelStyles.map((style) {
-                                  return FilterChip(
-                                    label: Text(style['style']),
-                                    selected: style['selected'],
-                                    onSelected: (selected) {
-                                      setState(() {
-                                        style['selected'] = selected;
-                                      });
-                                    },
-                                    selectedColor: Colors.green.shade100,
-                                    checkmarkColor: Colors.green,
-                                  );
-                                }).toList(),
+                            children: _travelStyles.map((style) {
+                              return FilterChip(
+                                label: Text(style['style']),
+                                selected: style['selected'],
+                                onSelected: (selected) {
+                                  setState(() {
+                                    style['selected'] = selected;
+                                  });
+                                },
+                                selectedColor: Colors.green,
+                                checkmarkColor: Colors.white,
+                              );
+                            }).toList(),
                           ),
                           SizedBox(height: 24),
                           ElevatedButton.icon(
@@ -560,9 +678,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     onPressed: () async {
                       await context.read<AppUserProvider>().signOut();
                       if (mounted) {
-                        Navigator.of(
-                          context,
-                        ).pushNamedAndRemoveUntil('/signin', (route) => false);
+                        Navigator.of(context).pushNamedAndRemoveUntil('/signin', (route) => false);
                       }
                     },
                     icon: Icon(Icons.exit_to_app),
