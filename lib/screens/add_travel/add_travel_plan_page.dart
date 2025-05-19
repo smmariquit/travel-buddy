@@ -442,7 +442,7 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
 
     final picked = await showDatePicker(
       context: context,
-      initialDate: isStartDate ? today : (_startDate ?? today),
+      initialDate: isStartDate ? _startDate ?? today : (_endDate ?? today),
       firstDate: today,
       lastDate: DateTime(2100),
     );
@@ -544,6 +544,16 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text("End date can't be before start date"),
+              backgroundColor: errorColor,
+              duration: Duration(seconds: 2),
+            ),
+          );
+          return;
+        }
+        if (_startDate!.isAfter(_endDate!)) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Start date can't be after end date"),
               backgroundColor: errorColor,
               duration: Duration(seconds: 2),
             ),
@@ -944,6 +954,7 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
               },
             ),
           ),
+        SizedBox(height: 10),
       ],
     );
   }

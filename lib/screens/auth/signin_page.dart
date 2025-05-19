@@ -46,44 +46,69 @@ class _SignInPageState extends State<SignInPage> {
           Container(color: Colors.black.withOpacity(0.5)),
 
           // Content
-          SingleChildScrollView(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 32,
-                vertical: 100,
-              ),
-              child: Form(
-                key: _formKey,
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    const Text(
-                      "Sign In",
-                      style: TextStyle(
-                        fontSize: 32,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
+          SafeArea(
+            child: Column(
+              children: [
+                Expanded(
+                  child: SingleChildScrollView(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 32,
+                        vertical: 60,
+                      ),
+                      child: Form(
+                        key: _formKey,
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            const Text(
+                              "Welcome Back!",
+                              style: TextStyle(
+                                fontSize: 32,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 10),
+                            const Text(
+                              "Sign in to continue planning your next adventure.",
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.white70,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 50),
+                            usernameField,
+                            passwordField,
+                            if (showSignInErrorMessage) signInErrorMessage,
+                          ],
+                        ),
                       ),
                     ),
-                    const SizedBox(height: 10),
-                    const Text(
-                      "Welcome back! Log in to plan your next trip.",
-                      style: TextStyle(fontSize: 16, color: Colors.white70),
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 50),
-                    usernameField,
-                    passwordField,
-                    if (showSignInErrorMessage) signInErrorMessage,
-                    const SizedBox(height: 10),
-                    submitButton,
-                    const SizedBox(height: 20),
-                    orConnect,
-                    googleSignInButton,
-                    signUpButton,
-                  ],
+                  ),
                 ),
-              ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 32,
+                    vertical: 16,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      _signUpCTAButton(context),
+                      const SizedBox(height: 16),
+                      Row(
+                        children: [
+                          Expanded(child: submitButton),
+                          const SizedBox(width: 12),
+                          Expanded(child: googleSignInButton),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
             ),
           ),
         ],
@@ -159,6 +184,7 @@ class _SignInPageState extends State<SignInPage> {
         suffixIcon: IconButton(
           icon: Icon(
             _obscurePassword ? Icons.visibility_off : Icons.visibility,
+            color: Colors.white,
           ),
           onPressed: () {
             setState(() {
@@ -185,8 +211,7 @@ class _SignInPageState extends State<SignInPage> {
     ),
   );
 
-  Widget get submitButton => Container(
-    width: double.infinity,
+  Widget get submitButton => SizedBox(
     height: 55,
     child: ElevatedButton(
       style: ElevatedButton.styleFrom(
@@ -205,10 +230,7 @@ class _SignInPageState extends State<SignInPage> {
             setState(() {
               showSignInErrorMessage = false;
             });
-            Navigator.pushReplacementNamed(
-              context,
-              '/main',
-            ); // Navigate to main page
+            Navigator.pushReplacementNamed(context, '/main');
           } else {
             setState(() {
               showSignInErrorMessage = true;
@@ -220,95 +242,69 @@ class _SignInPageState extends State<SignInPage> {
     ),
   );
 
-  Widget get googleSignInButton => Center(
-    child: Container(
-      width: 200,
-      height: 50,
-      margin: const EdgeInsets.symmetric(vertical: 8),
-      child: TextButton.icon(
-        icon: Image.network(
-          'https://img.icons8.com/color/48/000000/google-logo.png',
-          height: 24,
-          width: 24,
-        ),
+  Widget get googleSignInButton => SizedBox(
+    height: 55,
+    child: ElevatedButton.icon(
+      icon: Image.network(
+        'https://img.icons8.com/color/48/000000/google-logo.png',
+        height: 24,
+        width: 24,
+      ),
+      label: const Text(
+        "Google",
+        style: TextStyle(color: Color.fromARGB(255, 0, 0, 0)),
+      ),
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.white,
+        foregroundColor: const Color.fromARGB(255, 0, 0, 0),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        elevation: 2,
+      ),
+      onPressed: () async {
+        final authProvider = context.read<AppUserProvider>();
+        final travelProvider = context.read<TravelTrackerProvider>();
+        await authProvider.signOutGoogle();
+        String? result = await authProvider.signInWithGoogle();
+        if (result == null) {
+          travelProvider.setUser(authProvider.uid);
+          Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(builder: (context) => MainPage()),
+          );
+        } else {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text(result)));
+        }
+      },
+    ),
+  );
+
+  Widget _signUpCTAButton(BuildContext context) {
+    return SizedBox(
+      width: double.infinity,
+      child: ElevatedButton.icon(
+        icon: const Icon(Icons.person_add, color: Colors.white),
         label: const Text(
-          "Sign in with Google",
-          style: TextStyle(color: Color.fromARGB(255, 0, 0, 0)),
+          "Don't have an account? Sign up",
+          style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
         ),
         style: ElevatedButton.styleFrom(
-          backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+          backgroundColor: const Color(0xFF3CC08E),
+          foregroundColor: Colors.white,
+          elevation: 2,
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(30),
+            borderRadius: BorderRadius.circular(20),
           ),
+          minimumSize: const Size(double.infinity, 50),
         ),
-        onPressed: () async {
-          final authProvider = context.read<AppUserProvider>();
-          final travelProvider = context.read<TravelTrackerProvider>();
-
-          // Sign out first to clear any cached credentials
-          await authProvider
-              .signOutGoogle(); // You'll need to implement this method
-
-          // Now attempt to sign in with Google
-          String? result = await authProvider.signInWithGoogle();
-
-          if (result == null) {
-            // Successful sign-in, navigate to the next page
-            travelProvider.setUser(authProvider.uid);
-
-            // Navigate to the next page
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => MainPage()),
-            );
-          } else {
-            // If sign-in fails, show error message
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text(result)));
-          }
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const SignUpPage()),
+          );
         },
       ),
-    ),
-  );
-
-  Widget get orConnect => Padding(
-    padding: const EdgeInsets.all(10),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        const Text("Or connect with", style: TextStyle(color: Colors.grey)),
-      ],
-    ),
-  );
-
-  Widget get signUpButton => Padding(
-    padding: const EdgeInsets.all(10),
-    child: Row(
-      mainAxisAlignment: MainAxisAlignment.center,
-      children: [
-        const Text(
-          "Don't have an account?",
-          style: TextStyle(color: Colors.grey),
-        ),
-        TextButton(
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const SignUpPage()),
-            ).then((_) {
-              Navigator.pushReplacementNamed(
-                context,
-                '/interests',
-              ); // Navigate to interests page after signup
-            });
-          },
-          child: const Text(
-            "Sign Up",
-            style: TextStyle(color: Color(0xFFFF7029)),
-          ),
-        ),
-      ],
-    ),
-  );
+    );
+  }
 }
