@@ -7,8 +7,9 @@ buildscript {
     dependencies {
         // Add Kotlin plugin
         classpath("org.jetbrains.kotlin:kotlin-gradle-plugin:1.8.0") // Update to the latest stable version if needed
-        classpath("com.android.tools.build:gradle:8.7.0") // Ensure you are using the correct version of AGP
-        classpath("com.google.gms:google-services:4.4.0") // Firebase and other services
+        classpath("com.google.android.libraries.mapsplatform.secrets-gradle-plugin:secrets-gradle-plugin:2.0.1")
+        classpath("com.android.tools.build:gradle:8.10.0") // Ensure you are using the correct version of AGP
+        classpath("com.google.gms:google-services:4.4.2") // Firebase and other services
     }
 }
 

@@ -17,7 +17,7 @@ import 'package:flutter/rendering.dart';
 import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
 import 'dart:io';
 import 'package:permission_handler/permission_handler.dart';
-
+import 'package:travel_app/screens/home/map_picker_page.dart';
 
 class AddTravelPlanPage extends StatefulWidget {
   @override
@@ -347,124 +347,135 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
     }
   }
 
-void showQR(String travelId) {
-  showDialog(
-    context: context,
-    builder: (_) => AlertDialog(
-      title: Text(
-        "Share Your Trip",
-        style: TextStyle(color: primaryColor),
-      ),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          RepaintBoundary(
-            key: qrKey, // Needed for capturing the QR image
-            child: SizedBox(
-              height: 200,
-              width: 200,
-              child: QrImageView(
-                data: _firebaseTravelAPI.generateQRCodeValue(travelId),
-                version: QrVersions.auto,
-                size: 200,
-              ),
+  void showQR(String travelId) {
+    showDialog(
+      context: context,
+      builder:
+          (_) => AlertDialog(
+            title: Text(
+              "Share Your Trip",
+              style: TextStyle(color: primaryColor),
             ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            "Scan or share this QR to invite others",
-            style: TextStyle(color: textColor),
-          ),
-        ],
-      ),
-      actions: [
-        TextButton(
-          onPressed: () async {
-            await saveQRToGalleryPlus();
-          },
-          child: Text("Save QR", style: TextStyle(color: primaryColor)),
-        ),
-        TextButton(
-          child: Text("Continue", style: TextStyle(color: primaryColor)),
-          onPressed: () async {
-            Navigator.of(context).pop(); // Close the dialog
-
-            final doc = await FirebaseFirestore.instance
-                .collection('travel')
-                .doc(travelId)
-                .get();
-
-            if (doc.exists) {
-              final travel = Travel.fromJson(doc.data()!, doc.id);
-
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (_) => TripDetails(travel: travel),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                RepaintBoundary(
+                  key: qrKey, // Needed for capturing the QR image
+                  child: SizedBox(
+                    height: 200,
+                    width: 200,
+                    child: QrImageView(
+                      data: _firebaseTravelAPI.generateQRCodeValue(travelId),
+                      version: QrVersions.auto,
+                      size: 200,
+                    ),
+                  ),
                 ),
-              );
-            } else {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text("Travel plan not found.")),
-              );
-            }
-          },
-        ),
-      ],
-    ),
-  );
-}
+                const SizedBox(height: 16),
+                Text(
+                  "Scan or share this QR to invite others",
+                  style: TextStyle(color: textColor),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () async {
+                  await saveQRToGalleryPlus();
+                },
+                child: Text("Save QR", style: TextStyle(color: primaryColor)),
+              ),
+              TextButton(
+                child: Text("Continue", style: TextStyle(color: primaryColor)),
+                onPressed: () async {
+                  Navigator.of(context).pop(); // Close the dialog
 
+                  final doc =
+                      await FirebaseFirestore.instance
+                          .collection('travel')
+                          .doc(travelId)
+                          .get();
 
- Future<void> saveQRToGalleryPlus() async {
-  try {
-    await Permission.storage.request();
-    await WidgetsBinding.instance.endOfFrame;
+                  if (doc.exists) {
+                    final travel = Travel.fromJson(doc.data()!, doc.id);
 
-    RenderRepaintBoundary boundary =
-        qrKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
-
-    // Capture the QR widget as image
-    ui.Image qrImage = await boundary.toImage(pixelRatio: 3.0);
-
-    // Create a new picture recorder and canvas
-    final recorder = ui.PictureRecorder();
-    final canvas = Canvas(recorder);
-
-    // Paint white background
-    final paint = Paint()..color = ui.Color(0xFFFFFFFF); // White color
-    canvas.drawRect(
-      Rect.fromLTWH(0, 0, qrImage.width.toDouble(), qrImage.height.toDouble()),
-      paint,
-    );
-
-    // Draw the QR image on top of white background
-    canvas.drawImage(qrImage, Offset.zero, Paint());
-
-    // End recording and create final image
-    final picture = recorder.endRecording();
-    final imgWithWhiteBg = await picture.toImage(qrImage.width, qrImage.height);
-
-    // Convert to bytes
-    final byteData = await imgWithWhiteBg.toByteData(format: ui.ImageByteFormat.png);
-    if (byteData != null) {
-      final pngBytes = byteData.buffer.asUint8List();
-
-      final result = await ImageGallerySaverPlus.saveImage(
-        pngBytes,
-        quality: 100,
-        name: "qr_code_white_bg_${DateTime.now().millisecondsSinceEpoch}",
-      );
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('QR Code to gallery!')),
-      );
-    }
-  } catch (e) {
-    print('Error saving QR code: $e');
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Failed to save QR code.')),
+                    Navigator.of(context).push(
+                      MaterialPageRoute(
+                        builder: (_) => TripDetails(travel: travel),
+                      ),
+                    );
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("Travel plan not found.")),
+                    );
+                  }
+                },
+              ),
+            ],
+          ),
     );
   }
-}
+
+  Future<void> saveQRToGalleryPlus() async {
+    try {
+      await Permission.storage.request();
+      await WidgetsBinding.instance.endOfFrame;
+
+      RenderRepaintBoundary boundary =
+          qrKey.currentContext!.findRenderObject() as RenderRepaintBoundary;
+
+      // Capture the QR widget as image
+      ui.Image qrImage = await boundary.toImage(pixelRatio: 3.0);
+
+      // Create a new picture recorder and canvas
+      final recorder = ui.PictureRecorder();
+      final canvas = Canvas(recorder);
+
+      // Paint white background
+      final paint = Paint()..color = ui.Color(0xFFFFFFFF); // White color
+      canvas.drawRect(
+        Rect.fromLTWH(
+          0,
+          0,
+          qrImage.width.toDouble(),
+          qrImage.height.toDouble(),
+        ),
+        paint,
+      );
+
+      // Draw the QR image on top of white background
+      canvas.drawImage(qrImage, Offset.zero, Paint());
+
+      // End recording and create final image
+      final picture = recorder.endRecording();
+      final imgWithWhiteBg = await picture.toImage(
+        qrImage.width,
+        qrImage.height,
+      );
+
+      // Convert to bytes
+      final byteData = await imgWithWhiteBg.toByteData(
+        format: ui.ImageByteFormat.png,
+      );
+      if (byteData != null) {
+        final pngBytes = byteData.buffer.asUint8List();
+
+        final result = await ImageGallerySaverPlus.saveImage(
+          pngBytes,
+          quality: 100,
+          name: "qr_code_white_bg_${DateTime.now().millisecondsSinceEpoch}",
+        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('QR Code to gallery!')));
+      }
+    } catch (e) {
+      print('Error saving QR code: $e');
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Failed to save QR code.')));
+    }
+  }
 
   Future<void> _handleLocationAutocomplete() async {
     print("Location input: ${_locationController.text}");
@@ -505,51 +516,20 @@ void showQR(String travelId) {
   }
 
   Future<void> _openMapPicker() async {
-    LatLng selectedLatLng = LatLng(14.5995, 120.9842); // Default to Manila
-
-    showDialog(
-      context: context,
-      builder:
-          (context) => Dialog(
-            child: Container(
-              height: 400,
-              child: Column(
-                children: [
-                  Expanded(
-                    child: GoogleMap(
-                      initialCameraPosition: CameraPosition(
-                        target: selectedLatLng,
-                        zoom: 10,
-                      ),
-                      onTap: (LatLng latLng) {
-                        selectedLatLng = latLng;
-                      },
-                      markers: {
-                        Marker(
-                          markerId: MarkerId("picked"),
-                          position: selectedLatLng,
-                        ),
-                      },
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () async {
-                      Navigator.of(context).pop();
-
-                      setState(() {
-                        _locationController.text =
-                            "Lat: ${selectedLatLng.latitude}, Lng: ${selectedLatLng.longitude}";
-                      });
-                    },
-                    child: Text(
-                      "Select Location",
-                      style: TextStyle(color: primaryColor),
-                    ),
-                  ),
-                ],
-              ),
+    print('[DEBUG] Opening map picker');
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder:
+            (context) => MapPickerPage(
+              onLocationSelected: (String location) {
+                print('[DEBUG] Location selected: $location');
+                setState(() {
+                  _locationController.text = location;
+                });
+              },
             ),
-          ),
+      ),
     );
   }
 
@@ -642,8 +622,8 @@ void showQR(String travelId) {
         ).showSnackBar(SnackBar(content: Text(message)));
 
         if (message != successMessage) {
-        return;
-      }
+          return;
+        }
 
         // Fetch the travel data using the scanned travel ID
         final doc =

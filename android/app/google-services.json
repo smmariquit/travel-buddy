@@ -9,7 +9,7 @@
       "client_info": {
         "mobilesdk_app_id": "1:594361835820:android:3a7a1f67163c6dfe71cc89",
         "android_client_info": {
-          "package_name": "com.example.travel_app"
+          "package_name": "com.travel.buddy"
         }
       },
       "oauth_client": [
@@ -17,7 +17,7 @@
           "client_id": "594361835820-47ufplfqrpco91g2ht650q10j5nftb8m.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
-            "package_name": "com.example.travel_app",
+            "package_name": "com.travel.buddy",
             "certificate_hash": "a8bec7171947e6cf707e0b19c43ebb611f75effe"
           }
         },
@@ -42,7 +42,7 @@
               "client_id": "594361835820-6b113iki8j2ruqd5cblc9n88mqa5qnti.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.example.travelApp"
+                "bundle_id": "com.travel.buddy"
               }
             }
           ]
@@ -86,7 +86,7 @@
               "client_id": "594361835820-6b113iki8j2ruqd5cblc9n88mqa5qnti.apps.googleusercontent.com",
               "client_type": 2,
               "ios_info": {
-                "bundle_id": "com.example.travelApp"
+                "bundle_id": "com.travel.buddy"
               }
             }
           ]

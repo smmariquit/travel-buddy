@@ -1,4 +1,4 @@
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.travel.buddy">
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE"/>
@@ -19,10 +19,9 @@
         <!-- enableOnBackInvokedCallback is to enable the new predictive back gesture navigation system introduced in Android 13 (API 33).
              This provides a preview of the previous screen when the user starts the back gesture,
              allowing them to either complete the gesture to go back or cancel it to stay on the current screen. -->
-
         <meta-data
             android:name="com.google.android.geo.API_KEY"
-            android:value="AIzaSyDEBqD6XjeQ23H-XB0LOkcL73oy931VAYE" />
+            android:value="AIzaSyACuAzPzmDxoadk9GGleOWBi-0luHFDYhs" />
 
         <meta-data
             android:name="com.google.android.gms.version"
