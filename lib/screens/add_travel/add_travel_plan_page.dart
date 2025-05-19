@@ -45,6 +45,8 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
   String? _flightDetails, _accommodation, _notes;
   List<String> _checklist = [];
   List<Activity>? _activities = [];
+  bool _isOneDayTrip = false;
+  String _tripDuration = '';
 
   // Controllers
   final _nameController = TextEditingController();
@@ -138,16 +140,52 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
                           true,
                         ),
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        child: _buildDateField(
-                          'End Date',
-                          _endDateController,
-                          false,
+                      if (!_isOneDayTrip) ...[
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: _buildDateField(
+                            'End Date',
+                            _endDateController,
+                            false,
+                          ),
                         ),
+                      ],
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Checkbox(
+                        value: _isOneDayTrip,
+                        onChanged: (value) {
+                          setState(() {
+                            _isOneDayTrip = value ?? false;
+                            if (_isOneDayTrip && _startDate != null) {
+                              _endDate = _startDate;
+                              _endDateController.text =
+                                  _startDateController.text;
+                              _updateTripDuration();
+                            }
+                          });
+                        },
+                      ),
+                      Text(
+                        'This is a one-day trip',
+                        style: TextStyle(color: primaryColor),
                       ),
                     ],
                   ),
+                  if (_startDate != null && _endDate != null && !_isOneDayTrip)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 8.0),
+                      child: Text(
+                        _tripDuration,
+                        style: TextStyle(
+                          color: primaryColor,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
                   const SizedBox(height: 16),
                   _buildHeader('Additional Info'),
                   _buildTextField(
@@ -390,17 +428,22 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
         if (isStart && (value == null || value.isEmpty)) {
           return 'Please select a start date';
         }
-        // No validation for end date
+        if (!isStart && !_isOneDayTrip && (value == null || value.isEmpty)) {
+          return 'Please select an end date';
+        }
         return null;
       },
     );
   }
 
   void _selectDate(BuildContext context, bool isStartDate) async {
+    final DateTime now = DateTime.now();
+    final DateTime today = DateTime(now.year, now.month, now.day);
+
     final picked = await showDatePicker(
       context: context,
-      initialDate: DateTime.now(),
-      firstDate: DateTime(2023),
+      initialDate: isStartDate ? today : (_startDate ?? today),
+      firstDate: today,
       lastDate: DateTime(2100),
     );
 
@@ -409,9 +452,46 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
         if (isStartDate) {
           _startDate = picked;
           _startDateController.text = DateFormat('yyyy-MM-dd').format(picked);
+          if (_isOneDayTrip) {
+            _endDate = picked;
+            _endDateController.text = DateFormat('yyyy-MM-dd').format(picked);
+          }
+          _updateTripDuration();
         } else {
-          _endDate = picked;
-          _endDateController.text = DateFormat('yyyy-MM-dd').format(picked);
+          // Only allow end date selection if it's not a one-day trip
+          if (!_isOneDayTrip) {
+            // Ensure end date is not before start date
+            if (picked.isBefore(_startDate!)) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text(
+                    "End date can't be before start date",
+                    style: TextStyle(color: backgroundColor),
+                  ),
+                  backgroundColor: errorColor,
+                ),
+              );
+              return;
+            }
+            _endDate = picked;
+            _endDateController.text = DateFormat('yyyy-MM-dd').format(picked);
+            _updateTripDuration();
+          }
+        }
+      });
+    }
+  }
+
+  void _updateTripDuration() {
+    if (_startDate != null && _endDate != null) {
+      final days = _endDate!.difference(_startDate!).inDays;
+      setState(() {
+        if (days == 0) {
+          _tripDuration = 'This is a one-day trip';
+          _isOneDayTrip = true; // Automatically set one-day trip
+        } else {
+          _tripDuration = 'Trip Duration: ${days + 1} days';
+          _isOneDayTrip = false; // Automatically set multi-day trip
         }
       });
     }
@@ -419,17 +499,74 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
 
   void _submitForm() async {
     if (_formKey.currentState!.validate()) {
-      // Check if end date is before start date if both are present
-      if (_endDate != null &&
-          _startDate != null &&
-          _endDate!.isBefore(_startDate!)) {
+      // Validate dates
+      if (_startDate == null) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              "End date can't be before start date",
-              style: TextStyle(color: backgroundColor),
-            ),
+            content: Text("Start date can't be empty"),
             backgroundColor: errorColor,
+            duration: Duration(seconds: 2),
+          ),
+        );
+        return;
+      }
+
+      if (_startDate!.isBefore(DateTime.now())) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Start date can't be in the past"),
+            backgroundColor: errorColor,
+            duration: Duration(seconds: 2),
+          ),
+        );
+        return;
+      }
+
+      if (!_isOneDayTrip) {
+        if (_endDate == null) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("End date can't be empty"),
+              backgroundColor: errorColor,
+              duration: Duration(seconds: 2),
+            ),
+          );
+          return;
+        }
+
+        if (_endDate!.isBefore(_startDate!)) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("End date can't be before start date"),
+              backgroundColor: errorColor,
+              duration: Duration(seconds: 2),
+            ),
+          );
+          return;
+        }
+      } else {
+        // For one-day trips, set end date same as start date
+        _endDate = _startDate;
+      }
+
+      // Validate required fields
+      if (_nameController.text.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Trip name can't be empty"),
+            backgroundColor: errorColor,
+            duration: Duration(seconds: 2),
+          ),
+        );
+        return;
+      }
+
+      if (_locationController.text.isEmpty) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("Location can't be empty"),
+            backgroundColor: errorColor,
+            duration: Duration(seconds: 2),
           ),
         );
         return;
@@ -439,9 +576,13 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
       final currentUser = FirebaseAuth.instance.currentUser;
 
       if (currentUser == null) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text("User not logged in")));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text("User not logged in"),
+            backgroundColor: errorColor,
+            duration: Duration(seconds: 2),
+          ),
+        );
         return;
       }
 
@@ -466,35 +607,26 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
       if (travelId.isNotEmpty && !travelId.startsWith("Error")) {
         showQR(travelId); // Show QR first
 
-        // Always send notification with days until trip (if _startDate is available)
-        if (_startDate != null) {
-          final daysUntilTrip = _startDate!.difference(DateTime.now()).inDays;
-          final tripName =
-              travel.name.isNotEmpty ? travel.name : 'Unnamed Trip';
+        // Always send notification with days until trip
+        final daysUntilTrip = _startDate!.difference(DateTime.now()).inDays;
+        final tripName = travel.name.isNotEmpty ? travel.name : 'Unnamed Trip';
 
-          // await _notificationService.showTripReminderNotification(
-          //   title: 'Upcoming Trip Reminder',
-          //   body: 'Your trip "$tripName" starts in $daysUntilTrip day(s)!',
-          //   payload: travelId,
-          // );
+        // Fetch current user's FCM token from Firestore
+        final currentUserDoc =
+            await FirebaseFirestore.instance
+                .collection('appUsers')
+                .doc(currentUser.uid)
+                .get();
 
-          // Fetch current user's FCM token from Firestore
-          final currentUserDoc =
-              await FirebaseFirestore.instance
-                  .collection('appUsers')
-                  .doc(currentUser.uid)
-                  .get();
+        final currentUserData = currentUserDoc.data();
+        final fcmToken = currentUserData?['fcmToken'] as String?;
 
-          final currentUserData = currentUserDoc.data();
-          final fcmToken = currentUserData?['fcmToken'] as String?;
-
-          if (fcmToken != null && fcmToken.isNotEmpty) {
-            await NotificationService().sendPushNotification(
-              fcmToken: fcmToken,
-              title: 'Upcoming Trip Reminder',
-              body: 'Your trip "$tripName" starts in $daysUntilTrip day(s)!',
-            );
-          }
+        if (fcmToken != null && fcmToken.isNotEmpty) {
+          await NotificationService().sendPushNotification(
+            fcmToken: fcmToken,
+            title: 'Upcoming Trip Reminder',
+            body: 'Your trip "$tripName" starts in $daysUntilTrip day(s)!',
+          );
         }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -504,9 +636,20 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
                   ? travelId
                   : "Failed to save travel plan",
             ),
+            backgroundColor: errorColor,
+            duration: Duration(seconds: 2),
           ),
         );
       }
+    } else {
+      // Show a general validation error if the form is invalid
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text("Please fill in all required fields correctly"),
+          backgroundColor: errorColor,
+          duration: Duration(seconds: 2),
+        ),
+      );
     }
   }
 
