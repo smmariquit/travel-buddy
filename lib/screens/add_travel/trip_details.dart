@@ -239,7 +239,9 @@ class _TripDetailsState extends State<TripDetails>
   }
 
   void _addChecklistItem(int index) {
+    if (_travel.uid == FirebaseAuth.instance.currentUser?.uid) {
     final controller = TextEditingController();
+    
 
     showDialog(
       context: context,
@@ -276,9 +278,17 @@ class _TripDetailsState extends State<TripDetails>
             ],
           ),
     );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('You cannot edit shared travel plans.'),
+        ),
+      );
+    }
   }
 
   Future<void> _pickAndUploadImage(int index) async {
+    if (_travel.uid == FirebaseAuth.instance.currentUser?.uid) {
     final pickedFile = await picker.pickImage(source: ImageSource.gallery);
     if (pickedFile == null) return;
 
@@ -340,9 +350,10 @@ class _TripDetailsState extends State<TripDetails>
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Upload failed: $e"),
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(
+          content: Text("Upload failed: $e"),
             behavior: SnackBarBehavior.floating,
             margin: EdgeInsets.only(
               bottom: MediaQuery.of(context).size.height * 0.15,
@@ -352,6 +363,12 @@ class _TripDetailsState extends State<TripDetails>
           ),
         );
       }
+    }} else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('You cannot edit shared travel plans.'),
+        ),
+      );
     }
   }
 
@@ -624,7 +641,6 @@ class _TripDetailsState extends State<TripDetails>
       appBar: AppBar(
         automaticallyImplyLeading: false,
         title: Text(_travel.name),
-        backgroundColor: Color(0xFF2E7D32),
         bottom: TabBar(
           controller: _tabController,
           tabs: [Tab(text: 'Overview'), Tab(text: 'Itineraries')],
@@ -655,6 +671,7 @@ class _TripDetailsState extends State<TripDetails>
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
+                        // Cover Image Section
                         Card(
                           elevation: 4,
                           shape: RoundedRectangleBorder(
@@ -728,7 +745,10 @@ class _TripDetailsState extends State<TripDetails>
                             ],
                           ),
                         ),
-                        SizedBox(height: 24),
+                        SizedBox(height: 16),
+                        
+                        
+                        // SizedBox(height: 24),
 
                         // Trip Details Section
                         Card(
@@ -807,8 +827,7 @@ class _TripDetailsState extends State<TripDetails>
                         SizedBox(height: 24),
 
                         // Share buttons (only for trip owner)
-                        if (_travel.uid ==
-                            FirebaseAuth.instance.currentUser?.uid)
+                        if (_travel.uid == FirebaseAuth.instance.currentUser?.uid)
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 20),
                             child: Column(
@@ -894,87 +913,53 @@ class _TripDetailsState extends State<TripDetails>
                                   onPressed: () {
                                     showDialog(
                                       context: context,
-                                      builder:
-                                          (context) => AlertDialog(
-                                            title: const Text(
-                                              'Share by Username',
+                                      builder: (context) => AlertDialog(
+                                        title: const Text('Share by Username'),
+                                        content: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            TextField(
+                                              controller: _usernameController,
+                                              decoration: const InputDecoration(
+                                                labelText: 'Username',
+                                                border: OutlineInputBorder(),
+                                              ),
                                             ),
-                                            content: Column(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                TextField(
-                                                  controller:
-                                                      _usernameController,
-                                                  decoration:
-                                                      const InputDecoration(
-                                                        labelText: 'Username',
-                                                        border:
-                                                            OutlineInputBorder(),
+                                            const SizedBox(height: 16),
+                                            ElevatedButton(
+                                              onPressed: () async {
+                                                final username = _usernameController.text.trim();
+                                                if (username.isEmpty) {
+                                                  ScaffoldMessenger.of(context).showSnackBar(
+                                                    const SnackBar(
+                                                      content: Text('Please enter a username'),
+                                                    ),
+                                                  );
+                                                  return;
+                                                }
+
+                                                try {
+                                                  final userQuery = await FirebaseFirestore.instance
+                                                      .collection('appUsers')
+                                                      .where('username', isEqualTo: username)
+                                                      .get();
+
+                                                  if (userQuery.docs.isEmpty) {
+                                                    ScaffoldMessenger.of(context).showSnackBar(
+                                                      const SnackBar(
+                                                        content: Text('User not found'),
                                                       ),
-                                                ),
-                                                const SizedBox(height: 16),
-                                                ElevatedButton(
-                                                  onPressed: () async {
-                                                    final username =
-                                                        _usernameController.text
-                                                            .trim();
-                                                    if (username.isEmpty) {
-                                                      ScaffoldMessenger.of(
-                                                        context,
-                                                      ).showSnackBar(
-                                                        const SnackBar(
-                                                          content: Text(
-                                                            'Please enter a username',
-                                                          ),
-                                                        ),
-                                                      );
-                                                      return;
-                                                    }
+                                                    );
+                                                    return;
+                                                  }
 
-                                                    try {
-                                                      final userQuery =
-                                                          await FirebaseFirestore
-                                                              .instance
-                                                              .collection(
-                                                                'appUsers',
-                                                              )
-                                                              .where(
-                                                                'username',
-                                                                isEqualTo:
-                                                                    username,
-                                                              )
-                                                              .get();
-
-                                                      if (userQuery
-                                                          .docs
-                                                          .isEmpty) {
-                                                        ScaffoldMessenger.of(
-                                                          context,
-                                                        ).showSnackBar(
-                                                          const SnackBar(
-                                                            content: Text(
-                                                              'User not found',
-                                                            ),
-                                                          ),
-                                                        );
-                                                        return;
-                                                      }
-
-                                                      final targetUserId =
-                                                          userQuery
-                                                              .docs
-                                                              .first
-                                                              .id;
-                                                      await FirebaseFirestore
-                                                          .instance
-                                                          .collection('travel')
-                                                          .doc(_travel.id)
-                                                          .update({
-                                                            'sharedWith':
-                                                                FieldValue.arrayUnion([
-                                                                  targetUserId,
-                                                                ]),
-                                                          });
+                                                  final targetUserId = userQuery.docs.first.id;
+                                                  await FirebaseFirestore.instance
+                                                      .collection('travel')
+                                                      .doc(_travel.id)
+                                                      .update({
+                                                    'sharedWith': FieldValue.arrayUnion([targetUserId]),
+                                                  });
 
                                                       ScaffoldMessenger.of(
                                                         context,
@@ -1032,62 +1017,31 @@ class _TripDetailsState extends State<TripDetails>
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.green,
                                     foregroundColor: Colors.white,
-                                    minimumSize: const Size(
-                                      double.infinity,
-                                      48,
-                                    ),
+                                    minimumSize: const Size(double.infinity, 48),
                                   ),
                                 ),
                                 const SizedBox(height: 16),
                                 ElevatedButton.icon(
-                                  onPressed: () {
-                                    showDialog(
-                                      context: context,
-                                      builder:
-                                          (context) => AlertDialog(
-                                            title: const Text('Share QR Code'),
-                                            content: Column(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                QrImageView(
-                                                  data: _travel.id!,
-                                                  version: QrVersions.auto,
-                                                  size: 200.0,
-                                                ),
-                                                const SizedBox(height: 16),
-                                                const Text(
-                                                  'Scan this QR code to view the travel plan',
-                                                  textAlign: TextAlign.center,
-                                                ),
-                                              ],
-                                            ),
-                                            actions: [
-                                              TextButton(
-                                                onPressed:
-                                                    () =>
-                                                        Navigator.pop(context),
-                                                child: const Text('Close'),
-                                              ),
-                                            ],
-                                          ),
-                                    );
-                                  },
+                                  onPressed: showQRDialog,
                                   icon: const Icon(Icons.qr_code),
-                                  label: const Text('Generate QR Code'),
+                                  label: const Text("Generate QR Code"),
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.green,
                                     foregroundColor: Colors.white,
-                                    minimumSize: const Size(
-                                      double.infinity,
-                                      48,
+                                    minimumSize: const Size(double.infinity, 48),
+                                    padding: const EdgeInsets.symmetric(
+                                      vertical: 14,
+                                      horizontal: 24,
+                                    ),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(30),
                                     ),
                                   ),
                                 ),
                               ],
                             ),
                           ),
-                        SizedBox(height: 24),
-
+                        const SizedBox(height: 24),
                         // Delete Button (only for trip owner)
                         if (_travel.uid ==
                             FirebaseAuth.instance.currentUser?.uid)
@@ -1153,6 +1107,7 @@ class _TripDetailsState extends State<TripDetails>
                                             child: Text(
                                               'Delete',
                                               style: TextStyle(
+                                                
                                                 color: Colors.red,
                                               ),
                                             ),
@@ -1196,13 +1151,18 @@ class _TripDetailsState extends State<TripDetails>
                 ],
               ),
       bottomNavigationBar: BottomNavBar(selectedIndex: 1),
-      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
-      floatingActionButton: FloatingActionButton(
-        onPressed: _addManualItinerary,
-        backgroundColor: Colors.green.shade700,
-        child: Icon(Icons.add),
-        tooltip: 'Add Itinerary',
-      ),
+      floatingActionButton: _travel.uid == FirebaseAuth.instance.currentUser?.uid
+          ? FloatingActionButton(
+              onPressed: _addManualItinerary,
+              backgroundColor: Colors.green.shade700,
+              child: const Icon(Icons.add),
+              tooltip: 'Add Itinerary',
+            )
+          : null,
+      floatingActionButtonLocation:
+          _travel.uid == FirebaseAuth.instance.currentUser?.uid
+              ? FloatingActionButtonLocation.centerDocked
+              : null,
     );
   }
 
@@ -1259,86 +1219,6 @@ class _TripDetailsState extends State<TripDetails>
           SnackBar(
             content: Text('Error removing user: $e'),
             backgroundColor: Colors.red,
-          ),
-        );
-      }
-    }
-  }
-
-  Future<void> _saveQRCodeToStorage() async {
-    try {
-      // Request storage permission for Android
-      var status = await Permission.storage.request();
-      if (!status.isGranted) {
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Storage permission is required to save QR code'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-        return;
-      }
-
-      // Show loading indicator
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Saving QR code...'),
-            duration: Duration(seconds: 1),
-          ),
-        );
-      }
-
-      // Create a QR code painter
-      final qrPainter = QrPainter(
-        data: _travel.id!,
-        version: QrVersions.auto,
-        gapless: true,
-      );
-
-      final directory = await getExternalStorageDirectory();
-      if (directory == null) {
-        throw Exception('Could not access storage directory');
-      }
-
-      final file = File('${directory.path}/travel_qr_${_travel.id}.png');
-
-      // Create a picture recorder
-      final recorder = ui.PictureRecorder();
-      final canvas = Canvas(recorder);
-      final size = Size(200, 200);
-
-      // Paint the QR code
-      qrPainter.paint(canvas, size);
-      final picture = recorder.endRecording();
-      final img = await picture.toImage(
-        size.width.toInt(),
-        size.height.toInt(),
-      );
-      final byteData = await img.toByteData(format: ui.ImageByteFormat.png);
-      final buffer = byteData!.buffer.asUint8List();
-
-      // Save the file
-      await file.writeAsBytes(buffer);
-
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('QR code saved successfully'),
-            backgroundColor: Colors.green,
-            duration: Duration(seconds: 2),
-          ),
-        );
-      }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error saving QR code: $e'),
-            backgroundColor: Colors.red,
-            duration: Duration(seconds: 2),
           ),
         );
       }

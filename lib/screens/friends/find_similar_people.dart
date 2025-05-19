@@ -465,6 +465,17 @@ class _FindSimilarPeopleScreenState extends State<FindSimilarPeopleScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
+                      Center(
+                        child: Container(
+                          width: 40,
+                          height: 5,
+                          margin: const EdgeInsets.only(bottom: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.grey[400],
+                            borderRadius: BorderRadius.circular(10),
+                          ),
+                        ),
+                      ),
                       Row(
                         children: [
                           CircleAvatar(

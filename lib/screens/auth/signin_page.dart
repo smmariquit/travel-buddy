@@ -130,6 +130,7 @@ class _SignInPageState extends State<SignInPage> {
     padding: const EdgeInsets.only(bottom: 30),
     child: TextFormField(
       controller: _usernameController,
+      style: const TextStyle(color: Colors.white),
       decoration: _inputDecoration("Username", "e.g. travelguru123"),
       onSaved: (value) => username = value,
       validator: (value) {
@@ -152,6 +153,7 @@ class _SignInPageState extends State<SignInPage> {
     padding: const EdgeInsets.only(bottom: 30),
     child: TextFormField(
       controller: _passwordController,
+      style: const TextStyle(color: Colors.white),
       obscureText: _obscurePassword,
       decoration: _inputDecoration("Password", "******").copyWith(
         suffixIcon: IconButton(

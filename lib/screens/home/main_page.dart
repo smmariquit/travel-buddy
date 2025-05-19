@@ -1,29 +1,16 @@
-/// main_page.dart
-///
-/// The main landing page for the TravelBuddy app. This screen displays the user's travel plans,
-/// shared travel plans, and provides navigation to other parts of the app. It also handles
-/// authentication state and updates the UI accordingly.
-///
-/// # Features
-/// - Displays greeting and user info
-/// - Shows user's travel plans and shared plans
-/// - Handles authentication state and redirects to sign-in if needed
-/// - Provides navigation via a bottom navigation bar and a floating action button
-///
-/// # See Also
-/// - [TravelPlanCard]
-/// - [BottomNavBar]
-/// - [AddTravelPlanPage]
-/// - [SignInPage]
-
 // Flutter & Material
 import 'package:flutter/material.dart';
+import 'package:travel_app/utils/notification_service.dart';
+import 'package:shared_preferences/shared_preferences.dart';
+import 'dart:ui'; // For ImageFilter.blur
 
 // Firebase & External Services
 import 'package:firebase_auth/firebase_auth.dart';
-
-// State Management
 import 'package:provider/provider.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:travel_app/api/firebase_user_api.dart';
+import 'package:travel_app/models/user_model.dart';
+import 'package:travel_app/models/travel_notification_model.dart';
 
 // App-specific
 import 'package:travel_app/models/travel_plan_model.dart';
@@ -51,6 +38,11 @@ class MainPageConstants {
   static const ShapeBorder fabShape = CircleBorder();
   static const Color fabColor = Colors.green;
   static const int numTravelPlans = 5;
+  static const Color paddingColor = Color(0xFFE0E0E0); // Light gray for padding
+  static const double greetingBorderRadius = 12.0; // Border radius for GreetingRow
+  static const double greetingBlurSigma = 5.0; // Blur strength for GreetingRow
+  static const Color greetingBackgroundColor = Colors.white; // Base color for blur
+  static const double greetingBackgroundOpacity = 0.7; // Opacity for frosted effect
 }
 
 /// The main page of the app, displaying travel plans and navigation options.
@@ -65,154 +57,188 @@ class MainPage extends StatefulWidget {
 class _MainPageState extends State<MainPage> {
   List<Travel> _travelPlans = [];
   bool _isLoading = true;
+  AppUser? _currentUser;
+  List<AppUser> _requestUsers = [];
+  List<TravelNotification> _travelNotifications = [];
+  String? _errorMessage;
   late final TravelTrackerProvider _travelProvider;
   late final AppUserProvider _userProvider;
+  final NotificationService _notificationService = NotificationService();
+  final ScrollController _scrollController = ScrollController();
+  bool _isInitialized = false;
 
   @override
   void initState() {
     super.initState();
     _travelProvider = context.read<TravelTrackerProvider>();
     _userProvider = context.read<AppUserProvider>();
+    _initializeNotificationsOnce();
 
-    // Initialize providers after the widget is mounted
-    WidgetsBinding.instance.addPostFrameCallback((_) async {
-      if (!mounted) return;
-      final user = FirebaseAuth.instance.currentUser;
-      if (user != null) {
-        _travelProvider.setUser(user.uid);
-        _userProvider.fetchUserForCurrentUser();
-
-        // Fetch travel plans
-        try {
-          final plans = await _travelProvider.getTravelPlans();
-          if (mounted) {
-            setState(() {
-              _travelPlans = plans;
-              _isLoading = false;
-            });
-          }
-        } catch (e) {
-          print('Error fetching travel plans: $e');
-          if (mounted) {
-            setState(() {
-              _isLoading = false;
-            });
-          }
-        }
-      }
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _loadInitialData();
     });
   }
 
-  /// Builds the main page UI, including travel plans, shared plans, and navigation.
+  Future<void> _loadInitialData() async {
+    if (!mounted || _isInitialized) return;
+    _isInitialized = true;
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user != null) {
+      _travelProvider.setUser(user.uid);
+      _userProvider.fetchUserForCurrentUser();
+      try {
+        final plans = await _travelProvider.getTravelPlans();
+        if (mounted) {
+          setState(() {
+            _travelPlans = plans;
+            _isLoading = false;
+          });
+        }
+      } catch (e) {
+        if (mounted) setState(() => _isLoading = false);
+      }
+    }
+  }
+
+  Future<void> _initializeNotificationsOnce() async {
+    final prefs = await SharedPreferences.getInstance();
+    final hasInitialized = prefs.getBool('hasInitializedNotifications') ?? false;
+
+    await _notificationService.init();
+
+    NotificationHelper.fetchCurrentUserAndRequests(
+      context,
+      (user) => setState(() => _currentUser = user),
+      (requests) => setState(() {
+        _requestUsers = requests;
+        _isLoading = false;
+      }),
+      (error) => setState(() {
+        _errorMessage = error;
+        _isLoading = false;
+      }),
+    );
+
+    NotificationHelper.fetchTravelNotifications(
+      context,
+      (notifications) => setState(() => _travelNotifications = notifications),
+      (error) => debugPrint(error),
+      _notificationService,
+    );
+
+    if (!hasInitialized) {
+      await prefs.setBool('hasInitializedNotifications', true);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final args =
-        ModalRoute.of(context)
-            ?.settings
-            .arguments; // Gets any arguments passed to the page via navigation. Cast to Travel?. It relies on the argument being the correct type, else, the line below will return null.
+    final args = ModalRoute.of(context)?.settings.arguments;
     final Travel? newTravelPlan = args is Travel ? args : null;
-    if (newTravelPlan != null) {
-      // If merong new travel plan, add it to the list.
+    if (newTravelPlan != null && !_travelPlans.any((plan) => plan.id == newTravelPlan.id)) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
-        // addPostFrameCallback is used to ensure that the state is updated after the widget is built. This makes sure that you don't cause recursion.
-        setState(() {
-          _travelPlans.add(newTravelPlan);
-        });
+        setState(() => _travelPlans.add(newTravelPlan));
       });
     }
 
-    // Get the user stream
-    final userStream = _userProvider.userStream;
-
-    //
     return StreamBuilder<User?>(
-      stream: userStream,
-      // initialData: data - this returns the data if the stream is not yet ready.
+      stream: _userProvider.userStream,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return const Scaffold(
-            body: Center(child: Text("Something went wrong.")),
-          );
+          return const Scaffold(body: Center(child: Text("Something went wrong.")));
         } else if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(
-            body: Center(child: CircularProgressIndicator()),
-          );
+          return const Scaffold(body: Center(child: CircularProgressIndicator()));
         } else if (!snapshot.hasData) {
           return const SignInPage();
         }
 
-        final user = snapshot.data!;
         return Scaffold(
-          resizeToAvoidBottomInset: true,
-          body: SafeArea(
-            child: LayoutBuilder(
-              builder: (context, constraints) {
-                return SingleChildScrollView(
-                  child: ResponsiveLayout(
-                    child: ConstrainedBox(
-                      constraints: BoxConstraints(
-                        minHeight: constraints.maxHeight,
-                      ),
-                      child: IntrinsicHeight(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const SizedBox(
-                              height: MainPageConstants.rowSpacing,
-                            ),
-
-                            _GreetingRow(userProvider: _userProvider),
-
-                            const SizedBox(
-                              height: MainPageConstants.rowSpacing,
-                            ),
-
-                            _MainTitle(userProvider: _userProvider),
-
-                            const SizedBox(
-                              height: MainPageConstants.sectionSpacing,
-                            ),
-
-                            _PlansHeader(),
-
-                            const SizedBox(
-                              height: MainPageConstants.rowSpacing,
-                            ),
-
-                            _TravelPlansList(
-                              isLoading: _isLoading,
-                              travelPlans: _travelPlans,
-                            ),
-
-                            const SizedBox(
-                              height: MainPageConstants.rowSpacing,
-                            ),
-
-                            _SharedPlansHeader(),
-
-                            const SizedBox(
-                              height: MainPageConstants.rowSpacing,
-                            ),
-
-                            _SharedTravelPlansList(
-                              travelProvider: _travelProvider,
-                            ),
-
-                            const SizedBox(
-                              height: MainPageConstants.bottomSpacing,
-                            ),
-                          ],
-                        ),
-                      ),
+          body: Stack(
+            children: [
+              Positioned.fill(
+                child: Container(
+                  decoration: const BoxDecoration(
+                    gradient: LinearGradient(
+                      begin: Alignment.topCenter,
+                      end: Alignment.bottomCenter,
+                      colors: [
+                        Color(0xFFAED581),
+                        Colors.white,
+                      ],
+                      stops: [0.0, 0.3],
                     ),
                   ),
-                );
-              },
-            ),
+                ),
+              ),
+              SafeArea(
+                child: LayoutBuilder(
+                  builder: (context, constraints) {
+                    return SingleChildScrollView(
+                      controller: _scrollController,
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      child: ResponsiveLayout(
+                        child: ConstrainedBox(
+                          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                          child: IntrinsicHeight(
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Container(
+                                  color: MainPageConstants.paddingColor,
+                                  child: const SizedBox(height: MainPageConstants.rowSpacing),
+                                ),
+                                _GreetingRow(
+                                  userProvider: _userProvider,
+                                  notificationCount: _travelNotifications.length,
+                                ),
+                                Container(
+                                  color: MainPageConstants.paddingColor,
+                                  child: const SizedBox(height: MainPageConstants.rowSpacing),
+                                ),
+                                _MainTitle(userProvider: _userProvider),
+                                Container(
+                                  color: MainPageConstants.paddingColor,
+                                  child: const SizedBox(height: MainPageConstants.sectionSpacing),
+                                ),
+                                _PlansHeader(),
+                                Container(
+                                  color: MainPageConstants.paddingColor,
+                                  child: const SizedBox(height: MainPageConstants.rowSpacing),
+                                ),
+                                _TravelPlansList(
+                                  isLoading: _isLoading,
+                                  travelPlans: _travelPlans,
+                                ),
+                                Container(
+                                  color: MainPageConstants.paddingColor,
+                                  child: const SizedBox(height: MainPageConstants.rowSpacing),
+                                ),
+                                _SharedPlansHeader(),
+                                Container(
+                                  color: MainPageConstants.paddingColor,
+                                  child: const SizedBox(height: MainPageConstants.rowSpacing),
+                                ),
+                                _SharedTravelPlansList(
+                                  travelProvider: _travelProvider,
+                                ),
+                                Container(
+                                  color: MainPageConstants.paddingColor,
+                                  child: const SizedBox(height: MainPageConstants.bottomSpacing),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ],
           ),
           bottomNavigationBar: BottomNavBar(selectedIndex: 0),
-          floatingActionButtonLocation:
-              FloatingActionButtonLocation.centerDocked,
+          floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
           floatingActionButton: FloatingActionButton(
             backgroundColor: MainPageConstants.fabColor,
             shape: MainPageConstants.fabShape,
@@ -228,82 +254,149 @@ class _MainPageState extends State<MainPage> {
       },
     );
   }
+
+  @override
+  void dispose() {
+    _scrollController.dispose();
+    super.dispose();
+  }
 }
 
-/// Displays the greeting row with the user's name and notification icon.
 class _GreetingRow extends StatelessWidget {
   final AppUserProvider userProvider;
-  const _GreetingRow({required this.userProvider});
+  final int notificationCount;
+
+  const _GreetingRow({required this.userProvider, required this.notificationCount});
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-      children: [
-        Row(
-          children: [
-            const Icon(Icons.person, size: 28),
-            const SizedBox(width: 8),
-            Text(
-              userProvider.firstName ?? 'Traveler',
-              style: const TextStyle(
-                fontWeight: MainPageConstants.boldWeight,
-                fontSize: MainPageConstants.greetingFontSize,
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 5.0),
+      decoration: BoxDecoration(
+        color: Colors.transparent,
+        borderRadius: BorderRadius.circular(MainPageConstants.greetingBorderRadius),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 8,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(MainPageConstants.greetingBorderRadius),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(
+            sigmaX: MainPageConstants.greetingBlurSigma,
+            sigmaY: MainPageConstants.greetingBlurSigma,
+          ),
+          child: Container(
+            color: MainPageConstants.greetingBackgroundColor
+                .withOpacity(MainPageConstants.greetingBackgroundOpacity),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 5.0, vertical: 8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Padding(
+                    padding: EdgeInsets.only(left: 8.0), // Move "Travel Buddy" to the right
+                    child: Text(
+                      'Travel Buddy',
+                      style: TextStyle(
+                        fontSize: MainPageConstants.greetingFontSize,
+                        fontWeight: MainPageConstants.boldWeight,
+                        color: MainPageConstants.mainTitleColor,
+                      ),
+                    ),
+                  ),
+                  Stack(
+                    children: [
+                      IconButton(
+                        icon: const Icon(Icons.notifications),
+                        onPressed: () {
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(builder: (context) => const NotificationPage()),
+                          );
+                        },
+                      ),
+                      if (notificationCount > 0)
+                        Positioned(
+                          right: 6,
+                          top: 6,
+                          child: Container(
+                            padding: const EdgeInsets.all(2),
+                            decoration: BoxDecoration(
+                              color: Colors.red,
+                              borderRadius: BorderRadius.circular(10),
+                            ),
+                            constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                            child: Text(
+                              notificationCount > 99 ? '99+' : notificationCount.toString(),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 10,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ],
               ),
             ),
-          ],
+          ),
         ),
-        IconButton(icon: const Icon(Icons.notifications),
-        onPressed: () {
-          Navigator.push(
-          context,
-          MaterialPageRoute(builder: (context) => const NotificationPage()),
-    );
-        }),
-      ],
+      ),
     );
   }
 }
 
-/// Displays the main greeting/title.
 class _MainTitle extends StatelessWidget {
   final AppUserProvider userProvider;
   const _MainTitle({required this.userProvider});
 
   @override
   Widget build(BuildContext context) {
-    return Text(
-      'Up for a journey, ${userProvider.firstName ?? ''}?',
-      style: const TextStyle(
-        color: MainPageConstants.mainTitleColor,
-        fontSize: MainPageConstants.mainTitleFontSize,
-        fontWeight: MainPageConstants.boldWeight,
-        height: 1.4,
+    final name = userProvider.firstName ?? '';
+    return RichText(
+      text: TextSpan(
+        text: 'Up for a journey, ',
+        style: const TextStyle(
+          color: MainPageConstants.mainTitleColor,
+          fontSize: MainPageConstants.mainTitleFontSize,
+          fontWeight: MainPageConstants.boldWeight,
+          height: 1.4,
+        ),
+        children: [
+          TextSpan(
+            text: name,
+            style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
+          ),
+          const TextSpan(text: '?'),
+        ],
       ),
     );
   }
 }
 
-/// Displays the "Your Plans" header row.
 class _PlansHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
-    return Row(
+    return const Row(
       mainAxisAlignment: MainAxisAlignment.spaceBetween,
       children: [
-        const Text(
+        Text(
           'Your Plans',
-          style: TextStyle(
-            fontSize: MainPageConstants.headerFontSize,
-            fontWeight: MainPageConstants.boldWeight,
-          ),
+          style: TextStyle(fontSize: MainPageConstants.headerFontSize, fontWeight: MainPageConstants.boldWeight),
         ),
       ],
     );
   }
 }
 
-/// Displays the user's travel plans as a horizontal list.
 class _TravelPlansList extends StatelessWidget {
   final bool isLoading;
   final List<Travel> travelPlans;
@@ -318,53 +411,42 @@ class _TravelPlansList extends StatelessWidget {
     } else {
       return SingleChildScrollView(
         scrollDirection: Axis.horizontal,
+        physics: const AlwaysScrollableScrollPhysics(),
         child: Row(
-          children:
-              travelPlans
-                  .map((travel) {
-                    final imageUrl =
-                        travel.imageUrl != null && travel.imageUrl!.isNotEmpty
-                            ? travel.imageUrl!
-                            : 'assets/sample_image.jpg';
-                    return Row(
-                      children: [
-                        TravelPlanCard(
-                          travelId: travel.id,
-                          uid: travel.uid,
-                          name: travel.name,
-                          startDate: travel.startDate ?? DateTime.now(),
-                          endDate: travel.endDate,
-                          image: imageUrl,
-                          location: travel.location,
-                          createdOn: travel.createdOn,
-                        ),
-                        SizedBox(width: MainPageConstants.cardSpacing),
-                      ],
-                    );
-                  })
-                  .take(MainPageConstants.numTravelPlans)
-                  .toList(),
+          children: travelPlans
+              .map((travel) => Row(
+                    children: [
+                      TravelPlanCard(
+                        travelId: travel.id,
+                        uid: travel.uid,
+                        name: travel.name,
+                        startDate: travel.startDate ?? DateTime.now(),
+                        endDate: travel.endDate,
+                        image: travel.imageUrl?.isNotEmpty == true ? travel.imageUrl! : 'assets/sample_image.jpg',
+                        location: travel.location,
+                        createdOn: travel.createdOn,
+                      ),
+                      const SizedBox(width: MainPageConstants.cardSpacing),
+                    ],
+                  ))
+              .take(MainPageConstants.numTravelPlans)
+              .toList(),
         ),
       );
     }
   }
 }
 
-/// Displays the "Shared With You" header row.
 class _SharedPlansHeader extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Text(
       'Shared With You',
-      style: TextStyle(
-        fontSize: MainPageConstants.headerFontSize,
-        fontWeight: MainPageConstants.boldWeight,
-      ),
+      style: TextStyle(fontSize: MainPageConstants.headerFontSize, fontWeight: MainPageConstants.boldWeight),
     );
   }
 }
 
-/// Displays the shared travel plans as a horizontal list.
 class _SharedTravelPlansList extends StatelessWidget {
   final TravelTrackerProvider travelProvider;
   const _SharedTravelPlansList({required this.travelProvider});
@@ -383,33 +465,26 @@ class _SharedTravelPlansList extends StatelessWidget {
         } else {
           return SingleChildScrollView(
             scrollDirection: Axis.horizontal,
+            physics: const AlwaysScrollableScrollPhysics(),
             child: Row(
-              children:
-                  snapshot.data!
-                      .map((travel) {
-                        final imageUrl =
-                            travel.imageUrl != null &&
-                                    travel.imageUrl!.isNotEmpty
-                                ? travel.imageUrl!
-                                : 'assets/sample_image.jpg';
-                        return Row(
-                          children: [
-                            TravelPlanCard(
-                              travelId: travel.id,
-                              uid: travel.uid,
-                              name: travel.name,
-                              startDate: travel.startDate ?? DateTime.now(),
-                              endDate: travel.endDate ?? DateTime.now(),
-                              image: imageUrl,
-                              location: travel.location,
-                              createdOn: travel.createdOn,
-                            ),
-                            SizedBox(width: MainPageConstants.cardSpacing),
-                          ],
-                        );
-                      })
-                      .take(MainPageConstants.numTravelPlans)
-                      .toList(),
+              children: snapshot.data!
+                  .map((travel) => Row(
+                        children: [
+                          TravelPlanCard(
+                            travelId: travel.id,
+                            uid: travel.uid,
+                            name: travel.name,
+                            startDate: travel.startDate ?? DateTime.now(),
+                            endDate: travel.endDate ?? DateTime.now(),
+                            image: travel.imageUrl?.isNotEmpty == true ? travel.imageUrl! : 'assets/sample_image.jpg',
+                            location: travel.location,
+                            createdOn: travel.createdOn,
+                          ),
+                          const SizedBox(width: MainPageConstants.cardSpacing),
+                        ],
+                      ))
+                  .take(MainPageConstants.numTravelPlans)
+                  .toList(),
             ),
           );
         }

@@ -4,7 +4,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import 'package:travel_app/models/travel_plan_model.dart';
 import 'package:travel_app/api/firebase_travel_api.dart';
-import 'package:google_maps_webservice/places.dart';
+import 'package:flutter_google_maps_webservices/places.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'dart:async';
 import 'package:travel_app/screens/add_travel/scan_qr_page.dart';
@@ -16,8 +16,13 @@ import 'dart:ui' as ui;
 import 'package:flutter/rendering.dart';
 import 'package:image_gallery_saver_plus/image_gallery_saver_plus.dart';
 import 'dart:io';
+import 'package:travel_app/utils/notification_service.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:travel_app/screens/home/map_picker_page.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:google_mlkit_barcode_scanning/google_mlkit_barcode_scanning.dart';
+import 'dart:convert';
+import 'package:geocoding/geocoding.dart';
+import 'package:travel_app/screens/add_travel/map_picker_page.dart';
 
 class AddTravelPlanPage extends StatefulWidget {
   @override
@@ -32,6 +37,9 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
   final _formKey = GlobalKey<FormState>();
   final GlobalKey qrKey = GlobalKey();
   final FirebaseTravelAPI _firebaseTravelAPI = FirebaseTravelAPI();
+  final NotificationService _notificationService = NotificationService();
+  final ImagePicker _imagePicker = ImagePicker();
+
   late String _name, _location;
   DateTime? _startDate, _endDate;
   String? _flightDetails, _accommodation, _notes;
@@ -91,10 +99,10 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
                     trailing: TextButton.icon(
                       icon: Icon(Icons.qr_code_scanner, color: primaryColor),
                       label: Text(
-                        "or scan QR",
+                        "or Scan QR",
                         style: TextStyle(color: primaryColor),
                       ),
-                      onPressed: _scanQRCode,
+                      onPressed: _showQRScanOptions,
                     ),
                   ),
                   _buildTextField(
@@ -190,6 +198,131 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
         ),
       ),
     );
+  }
+
+  void _showQRScanOptions() {
+    showModalBottomSheet(
+      context: context,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Icon(Icons.camera_alt),
+                title: Text("Scan using Camera"),
+                onTap: () {
+                  Navigator.pop(context);
+                  _scanQRCode(); // Call your existing camera scanner
+                },
+              ),
+              ListTile(
+                leading: Icon(Icons.image),
+                title: Text("Upload QR Image"),
+                onTap: () {
+                  Navigator.pop(context);
+                  _uploadQRCode(); // Call your image upload scanner
+                },
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  // // Method to handle uploading QR from gallery
+  Future<void> _uploadQRCode() async {
+    final picker = ImagePicker();
+    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+
+    if (pickedFile == null) return;
+
+    final inputImage = InputImage.fromFilePath(pickedFile.path);
+    final barcodeScanner = BarcodeScanner();
+
+    try {
+      final barcodes = await barcodeScanner.processImage(inputImage);
+      if (barcodes.isEmpty) {
+        _showDialog("No QR code found in the image.");
+      } else {
+        final qrCode = barcodes.first.rawValue;
+        if (qrCode != null) {
+          _processQRResult(qrCode);
+        } else {
+          _showDialog("Unable to extract QR code.");
+        }
+      }
+    } catch (e) {
+      print("Error scanning QR from image: $e");
+      _showDialog("Error scanning QR code.");
+    } finally {
+      barcodeScanner.close();
+    }
+  }
+
+  void _showDialog(String message) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          title: const Text("QR Scan Result"),
+          content: Text(message),
+          actions: [
+            TextButton(
+              child: const Text("OK"),
+              onPressed: () {
+                Navigator.of(context).pop();
+              },
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // Helper method to process QR result from either scanning or uploading
+  void _processQRResult(String result) async {
+    if (result.isNotEmpty) {
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser != null) {
+        const successMessage = "Travel plan shared successfully";
+        final message = await _firebaseTravelAPI.shareTravelWithUser(
+          result,
+          currentUser.uid,
+        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(message)));
+
+        if (message != successMessage) {
+          return;
+        }
+
+        // Fetch the travel data using the scanned travel ID
+        final doc =
+            await FirebaseFirestore.instance
+                .collection('travel')
+                .doc(result)
+                .get();
+
+        if (doc.exists) {
+          final travel = Travel.fromJson(doc.data()!, doc.id);
+
+          // Navigate to TripDetails page
+          Navigator.of(context).push(
+            MaterialPageRoute(builder: (_) => TripDetails(travel: travel)),
+          );
+        } else {
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text("Travel plan not found.")));
+        }
+      }
+    }
   }
 
   Widget _buildHeader(String text, {Widget? trailing}) {
@@ -312,8 +445,7 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
         return;
       }
 
-      // Create initial travel object with a temporary placeholder ID
-      // The actual ID will be set by the FirebaseTravelAPI.addTravel method
+      // Create travel object
       final travel = Travel(
         id: 'temp_id', // This will be replaced by Firebase
         uid: currentUser.uid,
@@ -328,11 +460,42 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
         activities: _activities,
         createdOn: DateTime.now(),
       );
+
       String travelId = await _firebaseTravelAPI.addTravel(travel);
 
       if (travelId.isNotEmpty && !travelId.startsWith("Error")) {
-        // Use the travelId returned from Firestore
-        showQR(travelId);
+        showQR(travelId); // Show QR first
+
+        // Always send notification with days until trip (if _startDate is available)
+        if (_startDate != null) {
+          final daysUntilTrip = _startDate!.difference(DateTime.now()).inDays;
+          final tripName =
+              travel.name.isNotEmpty ? travel.name : 'Unnamed Trip';
+
+          // await _notificationService.showTripReminderNotification(
+          //   title: 'Upcoming Trip Reminder',
+          //   body: 'Your trip "$tripName" starts in $daysUntilTrip day(s)!',
+          //   payload: travelId,
+          // );
+
+          // Fetch current user's FCM token from Firestore
+          final currentUserDoc =
+              await FirebaseFirestore.instance
+                  .collection('appUsers')
+                  .doc(currentUser.uid)
+                  .get();
+
+          final currentUserData = currentUserDoc.data();
+          final fcmToken = currentUserData?['fcmToken'] as String?;
+
+          if (fcmToken != null && fcmToken.isNotEmpty) {
+            await NotificationService().sendPushNotification(
+              fcmToken: fcmToken,
+              title: 'Upcoming Trip Reminder',
+              body: 'Your trip "$tripName" starts in $daysUntilTrip day(s)!',
+            );
+          }
+        }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
@@ -515,22 +678,54 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
     }
   }
 
+  Future<void> _requestLocationPermission() async {
+    var status = await Permission.location.status;
+    if (!status.isGranted) {
+      status = await Permission.location.request();
+      if (!status.isGranted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Location permission is required to pick a place on the map.',
+            ),
+          ),
+        );
+        return;
+      }
+    }
+  }
+
   Future<void> _openMapPicker() async {
-    print('[DEBUG] Opening map picker');
+    await _requestLocationPermission();
+
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder:
-            (context) => MapPickerPage(
-              onLocationSelected: (String location) {
-                print('[DEBUG] Location selected: $location');
-                setState(() {
-                  _locationController.text = location;
-                });
-              },
+            (_) => MapPickerPage(
+              initialPosition: LatLng(14.5995, 120.9842), // Manila as default
             ),
       ),
     );
+
+    // Check if result is a Map containing address and location
+    if (result != null && result is Map) {
+      final address = result['address'] as String?;
+      final location = result['location'] as LatLng?;
+
+      if (address != null && location != null) {
+        setState(() {
+          _locationController.text = address;
+        });
+
+        // Store the location coordinates
+        final double latitude = location.latitude;
+        final double longitude = location.longitude;
+
+        // Optionally print to verify
+        print("Selected location: $address ($latitude, $longitude)");
+      }
+    }
   }
 
   Widget _buildLocationFieldWithAutocomplete() {
