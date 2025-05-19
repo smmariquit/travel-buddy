@@ -1,6 +1,10 @@
 // Enhanced Firebase Cloud Function with debugging
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
+
+const {logger} = require("firebase-functions");
+const {onRequest} = require("firebase-functions/v2/https");
+const {onDocumentCreated} = require("firebase-functions/v2/firestore");
 admin.initializeApp();
 
 exports.sendPushNotification = functions.https.onCall(async (data, context) => {

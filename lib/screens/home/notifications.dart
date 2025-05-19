@@ -3,10 +3,11 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
 import 'package:travel_app/models/user_model.dart';
-import 'package:travel_app/utils/notification_service.dart'; 
+import 'package:travel_app/utils/notification_service.dart';
 import 'package:travel_app/models/travel_notification_model.dart';
 import 'package:travel_app/screens/add_travel/trip_details.dart';
 import 'package:travel_app/models/travel_plan_model.dart';
+import 'package:intl/intl.dart';
 
 class NotificationPage extends StatefulWidget {
   const NotificationPage({super.key});
@@ -15,7 +16,8 @@ class NotificationPage extends StatefulWidget {
   _NotificationPageState createState() => _NotificationPageState();
 }
 
-class _NotificationPageState extends State<NotificationPage> with SingleTickerProviderStateMixin {
+class _NotificationPageState extends State<NotificationPage>
+    with SingleTickerProviderStateMixin {
   AppUser? _currentUser;
   List<AppUser> _requestUsers = [];
   List<TravelNotification> _travelNotifications = [];
@@ -49,10 +51,11 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
       });
 
       // Get current user
-      final currentUserDoc = await FirebaseFirestore.instance
-          .collection('appUsers')
-          .doc(FirebaseAuth.instance.currentUser?.uid)
-          .get();
+      final currentUserDoc =
+          await FirebaseFirestore.instance
+              .collection('appUsers')
+              .doc(FirebaseAuth.instance.currentUser?.uid)
+              .get();
 
       if (!currentUserDoc.exists) {
         setState(() {
@@ -85,10 +88,11 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
       // Fetch users who sent friend requests
       final users = <AppUser>[];
       for (var uid in receivedRequests) {
-        final userDoc = await FirebaseFirestore.instance
-            .collection('appUsers')
-            .doc(uid)
-            .get();
+        final userDoc =
+            await FirebaseFirestore.instance
+                .collection('appUsers')
+                .doc(uid)
+                .get();
         if (userDoc.exists) {
           users.add(AppUser.fromJson(userDoc.data()!));
         }
@@ -106,7 +110,7 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
     }
   }
 
-  // Fetch travel notifications 
+  // Fetch travel notifications
   Future<void> _fetchTravelNotifications() async {
     try {
       final userId = FirebaseAuth.instance.currentUser?.uid;
@@ -116,16 +120,18 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
       final notifications = <TravelNotification>[];
 
       // Query travels where user is owner
-      final ownerSnapshot = await FirebaseFirestore.instance
-          .collection('travel')
-          .where('uid', isEqualTo: userId)
-          .get();
+      final ownerSnapshot =
+          await FirebaseFirestore.instance
+              .collection('travel')
+              .where('uid', isEqualTo: userId)
+              .get();
 
       // Query travels where user is in sharedWith
-      final sharedSnapshot = await FirebaseFirestore.instance
-          .collection('travel')
-          .where('sharedWith', arrayContains: userId)
-          .get();
+      final sharedSnapshot =
+          await FirebaseFirestore.instance
+              .collection('travel')
+              .where('sharedWith', arrayContains: userId)
+              .get();
 
       // Combine both query results
       final allDocs = [...ownerSnapshot.docs, ...sharedSnapshot.docs];
@@ -149,17 +155,18 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
               daysUntil: daysUntilTrip,
             ),
           );
-          
-         // await sendPushNotification(
+
+          // await sendPushNotification(
           //   fcmToken: _currentUser?.fcmToken ?? '',
           //   title: 'Upcoming Trip Reminder',
           //   body: 'Your trip "${data['name'] ?? 'Unnamed Trip'}" starts in $daysUntilTrip day(s)!',
-          // ); 
+          // );
 
           // Send a local notification for upcoming trip
           await _notificationService.showTripReminderNotification(
             title: 'Upcoming Trip Reminder',
-            body: 'Your trip "${data['name'] ?? 'Unnamed Trip'}" starts in $daysUntilTrip day(s)!',
+            body:
+                'Your trip "${data['name'] ?? 'Unnamed Trip'}" starts in $daysUntilTrip day(s)!',
             payload: doc.id,
           );
         }
@@ -177,15 +184,14 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
   Future<void> _deleteNotification(TravelNotification notification) async {
     try {
       setState(() {
-        _travelNotifications.removeWhere((n) => n.tripId == notification.tripId);
+        _travelNotifications.removeWhere(
+          (n) => n.tripId == notification.tripId,
+        );
       });
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(
-            'Notification dismissed',
-            style: GoogleFonts.poppins(),
-          ),
+          content: Text('Notification dismissed', style: GoogleFonts.poppins()),
           action: SnackBarAction(
             label: 'UNDO',
             onPressed: () {
@@ -227,15 +233,16 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
           .collection('appUsers')
           .doc(_currentUser!.uid)
           .update({
-        'friendUIDs': currentFriends,
-        'receivedFriendRequests': currentReceivedRequests,
-      });
+            'friendUIDs': currentFriends,
+            'receivedFriendRequests': currentReceivedRequests,
+          });
 
       // Update other user's data
-      final otherUserDoc = await FirebaseFirestore.instance
-          .collection('appUsers')
-          .doc(user.uid)
-          .get();
+      final otherUserDoc =
+          await FirebaseFirestore.instance
+              .collection('appUsers')
+              .doc(user.uid)
+              .get();
       final otherUser = AppUser.fromJson(otherUserDoc.data()!);
       List<String> otherUserSentRequests = otherUser.sentFriendRequests ?? [];
       List<String> otherUserFriends = otherUser.friendUIDs ?? [];
@@ -251,9 +258,9 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
           .collection('appUsers')
           .doc(user.uid)
           .update({
-        'friendUIDs': otherUserFriends,
-        'sentFriendRequests': otherUserSentRequests,
-      });
+            'friendUIDs': otherUserFriends,
+            'sentFriendRequests': otherUserSentRequests,
+          });
 
       // Send notification to the other user
       final otherUserFcmToken = otherUser.fcmToken;
@@ -268,9 +275,8 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
         //     title: 'Friend Request Accepted',
         //     body: '${_currentUser!.firstName} accepted your friend request!',
         //   );
-        }
+      }
       // }
-
 
       // Show local notification that the friend request was accepted
       await _notificationService.showFriendRequestAcceptedNotification(
@@ -330,10 +336,11 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
           .update({'receivedFriendRequests': currentReceivedRequests});
 
       // Update other user's sent requests
-      final otherUserDoc = await FirebaseFirestore.instance
-          .collection('appUsers')
-          .doc(user.uid)
-          .get();
+      final otherUserDoc =
+          await FirebaseFirestore.instance
+              .collection('appUsers')
+              .doc(user.uid)
+              .get();
       final otherUser = AppUser.fromJson(otherUserDoc.data()!);
       List<String> otherUserSentRequests = otherUser.sentFriendRequests ?? [];
 
@@ -344,30 +351,31 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
             .doc(user.uid)
             .update({'sentFriendRequests': otherUserSentRequests});
       }
-      
+
       // Send rejection notification
       final otherUserFcmToken = otherUser.fcmToken;
       if (otherUserFcmToken != null && otherUserFcmToken.isNotEmpty) {
         await _notificationService.showTripReminderNotification(
           title: 'Friend Request Update',
-          body: '${_currentUser!.firstName} has responded to your friend request',
+          body:
+              '${_currentUser!.firstName} has responded to your friend request',
         );
       }
 
-//   if (otherUserFcmToken != null && otherUserFcmToken.isNotEmpty) {
-//     await sendPushNotification(
-//       fcmToken: otherUserFcmToken,
-//       title: 'Friend Request Update',
-//       body: '${_currentUser!.firstName} has responded to your friend request',
-//     );
-// }
+      //   if (otherUserFcmToken != null && otherUserFcmToken.isNotEmpty) {
+      //     await sendPushNotification(
+      //       fcmToken: otherUserFcmToken,
+      //       title: 'Friend Request Update',
+      //       body: '${_currentUser!.firstName} has responded to your friend request',
+      //     );
+      // }
 
       // Show local notification that the friend request was rejected
       await _notificationService.showFriendRequestRejectedNotification(
         friendName: user.firstName,
         friendId: user.uid,
       );
-      
+
       // Update local state
       setState(() {
         _currentUser = _currentUser!.copyWith(
@@ -400,142 +408,155 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
     return _isLoading
         ? Center(child: CircularProgressIndicator())
         : _errorMessage != null
-            ? Center(
+        ? Center(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Text(
+                  _errorMessage!,
+                  textAlign: TextAlign.center,
+                  style: GoogleFonts.poppins(color: Colors.grey[600]),
+                ),
+                SizedBox(height: 16),
+                ElevatedButton(
+                  onPressed: _fetchCurrentUserAndRequests,
+                  child: Text('Reload', style: GoogleFonts.poppins()),
+                ),
+              ],
+            ),
+          ),
+        )
+        : _requestUsers.isEmpty
+        ? Center(
+          child: Text(
+            'No pending friend requests',
+            textAlign: TextAlign.center,
+            style: GoogleFonts.poppins(color: Colors.grey[600]),
+          ),
+        )
+        : ListView.builder(
+          padding: EdgeInsets.all(16),
+          itemCount: _requestUsers.length,
+          itemBuilder: (context, index) {
+            final user = _requestUsers[index];
+            return Dismissible(
+              key: Key(user.uid),
+              background: Container(
+                color: Colors.red,
+                alignment: Alignment.centerRight,
+                padding: EdgeInsets.only(right: 20),
+                child: Icon(Icons.delete, color: Colors.white),
+              ),
+              direction: DismissDirection.endToStart,
+              onDismissed: (direction) {
+                _deleteFriendRequest(user);
+              },
+              child: Card(
+                margin: EdgeInsets.only(bottom: 16),
+                elevation: 2,
                 child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
+                  padding: EdgeInsets.all(16),
+                  child: Row(
                     children: [
-                      Text(
-                        _errorMessage!,
-                        textAlign: TextAlign.center,
-                        style: GoogleFonts.poppins(color: Colors.grey[600]),
+                      CircleAvatar(
+                        radius: 30,
+                        backgroundImage:
+                            user.profileImageUrl != null
+                                ? NetworkImage(user.profileImageUrl!)
+                                : AssetImage('assets/default_avatar.jpg')
+                                    as ImageProvider,
+                        child:
+                            user.profileImageUrl == null
+                                ? Text(
+                                  '${user.firstName[0]}${user.lastName[0]}',
+                                  style: GoogleFonts.poppins(fontSize: 20),
+                                )
+                                : null,
                       ),
-                      SizedBox(height: 16),
-                      ElevatedButton(
-                        onPressed: _fetchCurrentUserAndRequests,
-                        child: Text('Reload', style: GoogleFonts.poppins()),
+                      SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              '${user.firstName} ${user.lastName}',
+                              style: GoogleFonts.poppins(
+                                fontSize: 18,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              '@${user.username}',
+                              style: GoogleFonts.poppins(
+                                fontSize: 14,
+                                color: Colors.grey[600],
+                              ),
+                            ),
+                            SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    icon: Icon(
+                                      Icons.check,
+                                      color: Colors.white,
+                                    ),
+                                    label: Text(
+                                      'Accept',
+                                      style: GoogleFonts.poppins(
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    onPressed: () => _acceptFriendRequest(user),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.green,
+                                      padding: EdgeInsets.symmetric(
+                                        vertical: 10,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(width: 8),
+                                Expanded(
+                                  child: ElevatedButton.icon(
+                                    icon: Icon(
+                                      Icons.close,
+                                      color: Colors.white,
+                                    ),
+                                    label: Text(
+                                      'Reject',
+                                      style: GoogleFonts.poppins(
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                    onPressed: () => _rejectFriendRequest(user),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.red,
+                                      padding: EdgeInsets.symmetric(
+                                        vertical: 10,
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      // Delete button
+                      IconButton(
+                        icon: Icon(Icons.delete_outline, color: Colors.red),
+                        onPressed: () => _deleteFriendRequest(user),
                       ),
                     ],
                   ),
                 ),
-              )
-            : _requestUsers.isEmpty
-                ? Center(
-                    child: Text(
-                      'No pending friend requests',
-                      textAlign: TextAlign.center,
-                      style: GoogleFonts.poppins(color: Colors.grey[600]),
-                    ),
-                  )
-                : ListView.builder(
-                    padding: EdgeInsets.all(16),
-                    itemCount: _requestUsers.length,
-                    itemBuilder: (context, index) {
-                      final user = _requestUsers[index];
-                      return Dismissible(
-                        key: Key(user.uid),
-                        background: Container(
-                          color: Colors.red,
-                          alignment: Alignment.centerRight,
-                          padding: EdgeInsets.only(right: 20),
-                          child: Icon(
-                            Icons.delete,
-                            color: Colors.white,
-                          ),
-                        ),
-                        direction: DismissDirection.endToStart,
-                        onDismissed: (direction) {
-                          _deleteFriendRequest(user);
-                        },
-                        child: Card(
-                          margin: EdgeInsets.only(bottom: 16),
-                          elevation: 2,
-                          child: Padding(
-                            padding: EdgeInsets.all(16),
-                            child: Row(
-                              children: [
-                                CircleAvatar(
-                                  radius: 30,
-                                  backgroundImage: user.profileImageUrl != null
-                                      ? NetworkImage(user.profileImageUrl!)
-                                      : AssetImage('assets/default_avatar.jpg')
-                                          as ImageProvider,
-                                  child: user.profileImageUrl == null
-                                      ? Text(
-                                          '${user.firstName[0]}${user.lastName[0]}',
-                                          style: GoogleFonts.poppins(fontSize: 20),
-                                        )
-                                      : null,
-                                ),
-                                SizedBox(width: 16),
-                                Expanded(
-                                  child: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
-                                    children: [
-                                      Text(
-                                        '${user.firstName} ${user.lastName}',
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 18,
-                                          fontWeight: FontWeight.bold,
-                                        ),
-                                      ),
-                                      Text(
-                                        '@${user.username}',
-                                        style: GoogleFonts.poppins(
-                                          fontSize: 14,
-                                          color: Colors.grey[600],
-                                        ),
-                                      ),
-                                      SizedBox(height: 12),
-                                      Row(
-                                        children: [
-                                          Expanded(
-                                            child: ElevatedButton.icon(
-                                              icon: Icon(Icons.check, color: Colors.white),
-                                              label: Text(
-                                                'Accept',
-                                                style: GoogleFonts.poppins(color: Colors.white),
-                                              ),
-                                              onPressed: () => _acceptFriendRequest(user),
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor: Colors.green,
-                                                padding: EdgeInsets.symmetric(vertical: 10),
-                                              ),
-                                            ),
-                                          ),
-                                          SizedBox(width: 8),
-                                          Expanded(
-                                            child: ElevatedButton.icon(
-                                              icon: Icon(Icons.close, color: Colors.white),
-                                              label: Text(
-                                                'Reject',
-                                                style: GoogleFonts.poppins(color: Colors.white),
-                                              ),
-                                              onPressed: () => _rejectFriendRequest(user),
-                                              style: ElevatedButton.styleFrom(
-                                                backgroundColor: Colors.red,
-                                                padding: EdgeInsets.symmetric(vertical: 10),
-                                              ),
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  ),
-                                ),
-                                // Delete button
-                                IconButton(
-                                  icon: Icon(Icons.delete_outline, color: Colors.red),
-                                  onPressed: () => _deleteFriendRequest(user),
-                                ),
-                              ],
-                            ),
-                          ),
-                        ),
-                      );
-                    },
-                  );
+              ),
+            );
+          },
+        );
   }
 
   // Updated travel tab with delete buttons
@@ -554,19 +575,13 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
             Text(
               'No travel notifications yet',
               textAlign: TextAlign.center,
-              style: GoogleFonts.poppins(
-                color: Colors.grey[600],
-                fontSize: 16,
-              ),
+              style: GoogleFonts.poppins(color: Colors.grey[600], fontSize: 16),
             ),
             SizedBox(height: 8),
             Text(
               'You\'ll receive notifications 5 days before your travel',
               textAlign: TextAlign.center,
-              style: GoogleFonts.poppins(
-                color: Colors.grey[500],
-                fontSize: 14,
-              ),
+              style: GoogleFonts.poppins(color: Colors.grey[500], fontSize: 14),
             ),
             SizedBox(height: 24),
             ElevatedButton.icon(
@@ -593,10 +608,7 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
             color: Colors.red,
             alignment: Alignment.centerRight,
             padding: EdgeInsets.only(right: 20),
-            child: Icon(
-              Icons.delete,
-              color: Colors.white,
-            ),
+            child: Icon(Icons.delete, color: Colors.white),
           ),
           direction: DismissDirection.endToStart,
           onDismissed: (direction) {
@@ -611,10 +623,7 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
                   contentPadding: EdgeInsets.all(16),
                   leading: CircleAvatar(
                     backgroundColor: Colors.blue[100],
-                    child: Icon(
-                      Icons.flight_takeoff,
-                      color: Colors.blue[800],
-                    ),
+                    child: Icon(Icons.flight_takeoff, color: Colors.blue[800]),
                   ),
                   title: Text(
                     notification.tripName,
@@ -637,7 +646,10 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
                             ? 'Your trip starts today!'
                             : 'Starting in ${notification.daysUntil} day${notification.daysUntil > 1 ? "s" : ""}',
                         style: GoogleFonts.poppins(
-                          color: notification.daysUntil <= 1 ? Colors.red : Colors.green[700],
+                          color:
+                              notification.daysUntil <= 1
+                                  ? Colors.red
+                                  : Colors.green[700],
                           fontWeight: FontWeight.w500,
                         ),
                       ),
@@ -661,10 +673,11 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
                         onPressed: () async {
                           try {
                             // Fetch the full travel document from Firestore by tripId
-                            final doc = await FirebaseFirestore.instance
-                                .collection('travel')
-                                .doc(notification.tripId)
-                                .get();
+                            final doc =
+                                await FirebaseFirestore.instance
+                                    .collection('travel')
+                                    .doc(notification.tripId)
+                                    .get();
 
                             if (!doc.exists) {
                               ScaffoldMessenger.of(context).showSnackBar(
@@ -707,7 +720,7 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
 
   // Helper method to format date
   String _formatDate(DateTime date) {
-    return '${date.day}/${date.month}/${date.year}';
+    return DateFormat('EEEE, MMM d, yyyy').format(date);
   }
 
   @override
@@ -788,28 +801,25 @@ class _NotificationPageState extends State<NotificationPage> with SingleTickerPr
       ),
       body: TabBarView(
         controller: _tabController,
-        children: [
-          _buildTravelTab(),
-          _buildFriendRequestsTab(),
-        ],
+        children: [_buildTravelTab(), _buildFriendRequestsTab()],
       ),
     );
   }
 }
 
-
 class NotificationHelper {
   static Future<void> fetchCurrentUserAndRequests(
-      BuildContext context,
-      Function(AppUser user) onUserFetched,
-      Function(List<AppUser> requestUsers) onRequestsFetched,
-      Function(String error) onError,
-      ) async {
+    BuildContext context,
+    Function(AppUser user) onUserFetched,
+    Function(List<AppUser> requestUsers) onRequestsFetched,
+    Function(String error) onError,
+  ) async {
     try {
-      final currentUserDoc = await FirebaseFirestore.instance
-          .collection('appUsers')
-          .doc(FirebaseAuth.instance.currentUser?.uid)
-          .get();
+      final currentUserDoc =
+          await FirebaseFirestore.instance
+              .collection('appUsers')
+              .doc(FirebaseAuth.instance.currentUser?.uid)
+              .get();
 
       if (!currentUserDoc.exists) {
         onError('User profile not found');
@@ -827,10 +837,11 @@ class NotificationHelper {
 
       final users = <AppUser>[];
       for (var uid in receivedRequests) {
-        final userDoc = await FirebaseFirestore.instance
-            .collection('appUsers')
-            .doc(uid)
-            .get();
+        final userDoc =
+            await FirebaseFirestore.instance
+                .collection('appUsers')
+                .doc(uid)
+                .get();
         if (userDoc.exists) {
           users.add(AppUser.fromJson(userDoc.data()!));
         }
@@ -843,10 +854,10 @@ class NotificationHelper {
   }
 
   static Future<void> fetchTravelNotifications(
-      BuildContext context,
-      Function(List<TravelNotification>) onDone,
-      Function(String error) onError,
-      NotificationService notificationService
+    BuildContext context,
+    Function(List<TravelNotification>) onDone,
+    Function(String error) onError,
+    NotificationService notificationService,
   ) async {
     try {
       final userId = FirebaseAuth.instance.currentUser?.uid;
@@ -855,15 +866,17 @@ class NotificationHelper {
       final now = DateTime.now();
       final notifications = <TravelNotification>[];
 
-      final ownerSnapshot = await FirebaseFirestore.instance
-          .collection('travel')
-          .where('uid', isEqualTo: userId)
-          .get();
+      final ownerSnapshot =
+          await FirebaseFirestore.instance
+              .collection('travel')
+              .where('uid', isEqualTo: userId)
+              .get();
 
-      final sharedSnapshot = await FirebaseFirestore.instance
-          .collection('travel')
-          .where('sharedWith', arrayContains: userId)
-          .get();
+      final sharedSnapshot =
+          await FirebaseFirestore.instance
+              .collection('travel')
+              .where('sharedWith', arrayContains: userId)
+              .get();
 
       final allDocs = [...ownerSnapshot.docs, ...sharedSnapshot.docs];
 

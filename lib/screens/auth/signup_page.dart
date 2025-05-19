@@ -21,6 +21,7 @@ import 'package:travel_app/utils/pick_profile_image.dart';
 import 'package:travel_app/api/firebase_auth_api.dart';
 import 'dart:io';
 import 'dart:convert';
+import 'dart:async';
 
 class SignUpPage extends StatefulWidget {
   const SignUpPage({super.key});
@@ -44,9 +45,19 @@ class _SignUpPageState extends State<SignUpPage> {
   final PageController _pageController = PageController();
   final _formKey = GlobalKey<FormState>();
   final SignUpData _signUpData = SignUpData();
+  final TextEditingController _usernameController = TextEditingController();
   File? _profileImage;
   String? password;
   String? confirmPassword;
+  bool _isUsernameTaken = false;
+  Timer? _debounce;
+
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    _debounce?.cancel();
+    super.dispose();
+  }
 
   void _goToNextPage() {
     if (_formKey.currentState!.validate()) {
@@ -55,6 +66,22 @@ class _SignUpPageState extends State<SignUpPage> {
         duration: const Duration(milliseconds: 300),
         curve: Curves.easeInOut,
       );
+    }
+  }
+
+  void _checkUsername(String text) {
+    if (text.isNotEmpty) {
+      FirebaseFirestore.instance
+          .collection('appUsers')
+          .where('username', isEqualTo: text)
+          .get()
+          .then((snapshot) {
+            if (mounted) {
+              _isUsernameTaken = snapshot.docs.isNotEmpty;
+            }
+          });
+    } else {
+      _isUsernameTaken = false;
     }
   }
 
@@ -148,12 +175,14 @@ class _SignUpPageState extends State<SignUpPage> {
                   onSaved: (val) => _signUpData.firstName = val,
                   validator:
                       (val) => val == null || val.isEmpty ? "Required" : null,
+                  onChanged: (val) => _signUpData.firstName = val,
                 ),
                 const SizedBox(height: 16),
                 _buildTextField(
                   label: "Middle Name (optional)",
                   hint: "e.g. Santos",
                   onSaved: (val) => _signUpData.middleName = val,
+                  onChanged: (val) => _signUpData.middleName = val,
                 ),
                 const SizedBox(height: 16),
                 _buildTextField(
@@ -162,6 +191,7 @@ class _SignUpPageState extends State<SignUpPage> {
                   onSaved: (val) => _signUpData.lastName = val,
                   validator:
                       (val) => val == null || val.isEmpty ? "Required" : null,
+                  onChanged: (val) => _signUpData.lastName = val,
                 ),
                 const SizedBox(height: 140),
                 SizedBox(
@@ -195,11 +225,13 @@ class _SignUpPageState extends State<SignUpPage> {
     FormFieldSetter<String>? onSaved,
     FormFieldValidator<String>? validator,
     Widget? suffixIcon,
+    String? errorText,
+    void Function(String)? onChanged,
+    TextEditingController? controller,
   }) {
     return TextFormField(
       obscureText: obscureText,
       onSaved: onSaved,
-      validator: validator,
       decoration: InputDecoration(
         labelText: label,
         hintText: hint,
@@ -211,6 +243,9 @@ class _SignUpPageState extends State<SignUpPage> {
         ),
         suffixIcon: suffixIcon,
       ),
+      onChanged: onChanged,
+      validator: validator,
+      controller: controller,
     );
   }
 
@@ -262,9 +297,18 @@ class _SignUpPageState extends State<SignUpPage> {
               _buildTextField(
                 label: "Username",
                 hint: "e.g. juan_dlc",
+                controller: _usernameController,
                 onSaved: (val) => _signUpData.username = val,
-                validator:
-                    (val) => val == null || val.isEmpty ? "Required" : null,
+                validator: (val) {
+                  if (val == null || val.isEmpty) return "Required";
+                  if (_isUsernameTaken) return "Username is already taken";
+                  return null;
+                },
+                onChanged: (text) {
+                  _checkUsername(text);
+                },
+                errorText:
+                    _isUsernameTaken ? "Username is already taken" : null,
               ),
               const SizedBox(height: 16),
               _buildTextField(
@@ -279,12 +323,14 @@ class _SignUpPageState extends State<SignUpPage> {
                   if (!emailRegex.hasMatch(val)) return "Enter a valid email";
                   return null;
                 },
+                onChanged: (val) => _signUpData.email = val,
               ),
               const SizedBox(height: 16),
               _buildTextField(
                 label: "Phone Number",
                 hint: "e.g. 09XXXXXXXXX",
                 onSaved: (val) => _signUpData.phone = val,
+                onChanged: (val) => _signUpData.phone = val,
               ),
               const Spacer(),
               Row(
@@ -437,6 +483,7 @@ class _SignUpPageState extends State<SignUpPage> {
                         }
                         return null;
                       },
+                      onChanged: (val) => _signUpData.password = val,
                     ),
                   ),
 
@@ -474,6 +521,7 @@ class _SignUpPageState extends State<SignUpPage> {
                         }
                         return null;
                       },
+                      onChanged: (val) => _signUpData.password = val,
                     ),
                   ),
 
@@ -560,7 +608,7 @@ class _SignUpPageState extends State<SignUpPage> {
 
       if (user != null) {
         uid = user.uid;
-        
+
         // Handle profile image
         try {
           final storageRef = FirebaseStorage.instance.ref().child(
@@ -573,7 +621,8 @@ class _SignUpPageState extends State<SignUpPage> {
             imageUrl = await storageRef.getDownloadURL();
           } else {
             // Use a default image URL
-            imageUrl = 'https://firebasestorage.googleapis.com/v0/b/nth-autumn-458710-t7.firebasestorage.app/o/profile_images%2Fdefault_avatar.jpg?alt=media&token=99f110bf-3c7c-4fd4-a77a-ad29ce5f4653';
+            imageUrl =
+                'https://firebasestorage.googleapis.com/v0/b/nth-autumn-458710-t7.firebasestorage.app/o/profile_images%2Fdefault_avatar.jpg?alt=media&token=99f110bf-3c7c-4fd4-a77a-ad29ce5f4653';
           }
 
           // Continue with user provider update
@@ -599,12 +648,20 @@ class _SignUpPageState extends State<SignUpPage> {
           // Handle image upload errors specifically
           // print('Error during image upload: $imageError');
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text('Error uploading profile image: ${imageError.toString().substring(0, 100)}')),
+            SnackBar(
+              content: Text(
+                'Error uploading profile image: ${imageError.toString().substring(0, 100)}',
+              ),
+            ),
           );
         }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('User account created but session not established. Please try logging in.')),
+          const SnackBar(
+            content: Text(
+              'User account created but session not established. Please try logging in.',
+            ),
+          ),
         );
       }
     } catch (e) {
@@ -612,10 +669,12 @@ class _SignUpPageState extends State<SignUpPage> {
       if (Navigator.canPop(context)) {
         Navigator.pop(context);
       }
-      
+
       // print('Detailed error during sign up: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Sign-up failed: ${e.toString().substring(0, 100)}')),
+        SnackBar(
+          content: Text('Sign-up failed: ${e.toString().substring(0, 100)}'),
+        ),
       );
     }
   }

@@ -451,10 +451,14 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
       setState(() {
         if (isStartDate) {
           _startDate = picked;
-          _startDateController.text = DateFormat('yyyy-MM-dd').format(picked);
+          _startDateController.text = DateFormat(
+            'EEEE, MMM d, yyyy',
+          ).format(picked);
           if (_isOneDayTrip) {
             _endDate = picked;
-            _endDateController.text = DateFormat('yyyy-MM-dd').format(picked);
+            _endDateController.text = DateFormat(
+              'EEEE, MMM d, yyyy',
+            ).format(picked);
           }
           _updateTripDuration();
         } else {
@@ -474,7 +478,9 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
               return;
             }
             _endDate = picked;
-            _endDateController.text = DateFormat('yyyy-MM-dd').format(picked);
+            _endDateController.text = DateFormat(
+              'EEEE, MMM d, yyyy',
+            ).format(picked);
             _updateTripDuration();
           }
         }
