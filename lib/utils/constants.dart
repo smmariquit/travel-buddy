@@ -1,7 +1,7 @@
 /// Update this file to change settings of the app in a single place.
 import 'package:flutter/material.dart';
 
-const String apiKey = "AIzaSyCpB7URC9fBukFSqg3rOkef7xWJAksGZAM";
+const String apiKey = "AIzaSyACuAzPzmDxoadk9GGleOWBi-0luHFDYhs";
 
 /// TravelBuddy color scheme
 final Color primaryColor = const Color(0xFF004225);

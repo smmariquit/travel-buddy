@@ -21,6 +21,8 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:image_picker/image_picker.dart'; 
 import 'package:google_mlkit_barcode_scanning/google_mlkit_barcode_scanning.dart';
 import 'dart:convert';
+import 'package:geocoding/geocoding.dart';
+import 'package:travel_app/screens/add_travel/map_picker_page.dart';
 
 class AddTravelPlanPage extends StatefulWidget {
   @override
@@ -667,53 +669,50 @@ void showQR(String travelId) {
     }
   }
 
+  Future<void> _requestLocationPermission() async {
+  var status = await Permission.location.status;
+  if (!status.isGranted) {
+    status = await Permission.location.request();
+    if (!status.isGranted) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Location permission is required to pick a place on the map.')),
+      );
+      return;
+    }
+  }
+}
+
+
   Future<void> _openMapPicker() async {
-    LatLng selectedLatLng = LatLng(14.5995, 120.9842); // Default to Manila
+    await _requestLocationPermission();
 
-    showDialog(
-      context: context,
-      builder:
-          (context) => Dialog(
-            child: Container(
-              height: 400,
-              child: Column(
-                children: [
-                  Expanded(
-                    child: GoogleMap(
-                      initialCameraPosition: CameraPosition(
-                        target: selectedLatLng,
-                        zoom: 10,
-                      ),
-                      onTap: (LatLng latLng) {
-                        selectedLatLng = latLng;
-                      },
-                      markers: {
-                        Marker(
-                          markerId: MarkerId("picked"),
-                          position: selectedLatLng,
-                        ),
-                      },
-                    ),
-                  ),
-                  TextButton(
-                    onPressed: () async {
-                      Navigator.of(context).pop();
-
-                      setState(() {
-                        _locationController.text =
-                            "Lat: ${selectedLatLng.latitude}, Lng: ${selectedLatLng.longitude}";
-                      });
-                    },
-                    child: Text(
-                      "Select Location",
-                      style: TextStyle(color: primaryColor),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ),
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => MapPickerPage(
+          initialPosition: LatLng(14.5995, 120.9842), // Manila as default
+        ),
+      ),
     );
+
+    // Check if result is a Map containing address and location
+    if (result != null && result is Map) {
+      final address = result['address'] as String?;
+      final location = result['location'] as LatLng?;
+
+      if (address != null && location != null) {
+        setState(() {
+          _locationController.text = address;
+        });
+
+        // Store the location coordinates 
+        final double latitude = location.latitude;
+        final double longitude = location.longitude;
+        
+        // Optionally print to verify
+        print("Selected location: $address ($latitude, $longitude)");
+      }
+    }
   }
 
   Widget _buildLocationFieldWithAutocomplete() {
