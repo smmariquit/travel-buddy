@@ -22,6 +22,7 @@ import 'package:travel_app/widgets/bottom_navigation_bar.dart';
 import 'package:travel_app/widgets/travel_plan_card.dart';
 import '../auth/signin_page.dart';
 import '../add_travel/add_travel_plan_page.dart';
+import 'package:travel_app/utils/constants.dart';
 
 /// Holds constants for the [MainPage].
 class MainPageConstants {
@@ -39,10 +40,13 @@ class MainPageConstants {
   static const Color fabColor = Colors.green;
   static const int numTravelPlans = 5;
   static const Color paddingColor = Color(0xFFE0E0E0); // Light gray for padding
-  static const double greetingBorderRadius = 12.0; // Border radius for GreetingRow
+  static const double greetingBorderRadius =
+      12.0; // Border radius for GreetingRow
   static const double greetingBlurSigma = 5.0; // Blur strength for GreetingRow
-  static const Color greetingBackgroundColor = Colors.white; // Base color for blur
-  static const double greetingBackgroundOpacity = 0.7; // Opacity for frosted effect
+  static const Color greetingBackgroundColor =
+      Colors.white; // Base color for blur
+  static const double greetingBackgroundOpacity =
+      0.7; // Opacity for frosted effect
 }
 
 /// The main page of the app, displaying travel plans and navigation options.
@@ -103,7 +107,8 @@ class _MainPageState extends State<MainPage> {
 
   Future<void> _initializeNotificationsOnce() async {
     final prefs = await SharedPreferences.getInstance();
-    final hasInitialized = prefs.getBool('hasInitializedNotifications') ?? false;
+    final hasInitialized =
+        prefs.getBool('hasInitializedNotifications') ?? false;
 
     await _notificationService.init();
 
@@ -136,7 +141,8 @@ class _MainPageState extends State<MainPage> {
   Widget build(BuildContext context) {
     final args = ModalRoute.of(context)?.settings.arguments;
     final Travel? newTravelPlan = args is Travel ? args : null;
-    if (newTravelPlan != null && !_travelPlans.any((plan) => plan.id == newTravelPlan.id)) {
+    if (newTravelPlan != null &&
+        !_travelPlans.any((plan) => plan.id == newTravelPlan.id)) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
         setState(() => _travelPlans.add(newTravelPlan));
       });
@@ -146,9 +152,13 @@ class _MainPageState extends State<MainPage> {
       stream: _userProvider.userStream,
       builder: (context, snapshot) {
         if (snapshot.hasError) {
-          return const Scaffold(body: Center(child: Text("Something went wrong.")));
+          return const Scaffold(
+            body: Center(child: Text("Something went wrong.")),
+          );
         } else if (snapshot.connectionState == ConnectionState.waiting) {
-          return const Scaffold(body: Center(child: CircularProgressIndicator()));
+          return const Scaffold(
+            body: Center(child: CircularProgressIndicator()),
+          );
         } else if (!snapshot.hasData) {
           return const SignInPage();
         }
@@ -162,10 +172,7 @@ class _MainPageState extends State<MainPage> {
                     gradient: LinearGradient(
                       begin: Alignment.topCenter,
                       end: Alignment.bottomCenter,
-                      colors: [
-                        Color(0xFFAED581),
-                        Colors.white,
-                      ],
+                      colors: [Color(0xFFAED581), Colors.white],
                       stops: [0.0, 0.3],
                     ),
                   ),
@@ -179,32 +186,43 @@ class _MainPageState extends State<MainPage> {
                       physics: const AlwaysScrollableScrollPhysics(),
                       child: ResponsiveLayout(
                         child: ConstrainedBox(
-                          constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                          constraints: BoxConstraints(
+                            minHeight: constraints.maxHeight,
+                          ),
                           child: IntrinsicHeight(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
                                 Container(
                                   color: MainPageConstants.paddingColor,
-                                  child: const SizedBox(height: MainPageConstants.rowSpacing),
+                                  child: const SizedBox(
+                                    height: MainPageConstants.rowSpacing,
+                                  ),
                                 ),
                                 _GreetingRow(
                                   userProvider: _userProvider,
-                                  notificationCount: _travelNotifications.length,
+                                  notificationCount:
+                                      _travelNotifications.length,
                                 ),
                                 Container(
                                   color: MainPageConstants.paddingColor,
-                                  child: const SizedBox(height: MainPageConstants.rowSpacing),
+                                  child: const SizedBox(
+                                    height: MainPageConstants.rowSpacing,
+                                  ),
                                 ),
                                 _MainTitle(userProvider: _userProvider),
                                 Container(
                                   color: MainPageConstants.paddingColor,
-                                  child: const SizedBox(height: MainPageConstants.sectionSpacing),
+                                  child: const SizedBox(
+                                    height: MainPageConstants.sectionSpacing,
+                                  ),
                                 ),
                                 _PlansHeader(),
                                 Container(
                                   color: MainPageConstants.paddingColor,
-                                  child: const SizedBox(height: MainPageConstants.rowSpacing),
+                                  child: const SizedBox(
+                                    height: MainPageConstants.rowSpacing,
+                                  ),
                                 ),
                                 _TravelPlansList(
                                   isLoading: _isLoading,
@@ -212,19 +230,25 @@ class _MainPageState extends State<MainPage> {
                                 ),
                                 Container(
                                   color: MainPageConstants.paddingColor,
-                                  child: const SizedBox(height: MainPageConstants.rowSpacing),
+                                  child: const SizedBox(
+                                    height: MainPageConstants.rowSpacing,
+                                  ),
                                 ),
                                 _SharedPlansHeader(),
                                 Container(
                                   color: MainPageConstants.paddingColor,
-                                  child: const SizedBox(height: MainPageConstants.rowSpacing),
+                                  child: const SizedBox(
+                                    height: MainPageConstants.rowSpacing,
+                                  ),
                                 ),
                                 _SharedTravelPlansList(
                                   travelProvider: _travelProvider,
                                 ),
                                 Container(
                                   color: MainPageConstants.paddingColor,
-                                  child: const SizedBox(height: MainPageConstants.bottomSpacing),
+                                  child: const SizedBox(
+                                    height: MainPageConstants.bottomSpacing,
+                                  ),
                                 ),
                               ],
                             ),
@@ -238,9 +262,10 @@ class _MainPageState extends State<MainPage> {
             ],
           ),
           bottomNavigationBar: BottomNavBar(selectedIndex: 0),
-          floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+          floatingActionButtonLocation:
+              FloatingActionButtonLocation.centerDocked,
           floatingActionButton: FloatingActionButton(
-            backgroundColor: MainPageConstants.fabColor,
+            backgroundColor: primaryColor,
             shape: MainPageConstants.fabShape,
             onPressed: () {
               Navigator.push(
@@ -266,7 +291,10 @@ class _GreetingRow extends StatelessWidget {
   final AppUserProvider userProvider;
   final int notificationCount;
 
-  const _GreetingRow({required this.userProvider, required this.notificationCount});
+  const _GreetingRow({
+    required this.userProvider,
+    required this.notificationCount,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -274,7 +302,9 @@ class _GreetingRow extends StatelessWidget {
       margin: const EdgeInsets.symmetric(horizontal: 5.0),
       decoration: BoxDecoration(
         color: Colors.transparent,
-        borderRadius: BorderRadius.circular(MainPageConstants.greetingBorderRadius),
+        borderRadius: BorderRadius.circular(
+          MainPageConstants.greetingBorderRadius,
+        ),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withOpacity(0.2),
@@ -284,22 +314,30 @@ class _GreetingRow extends StatelessWidget {
         ],
       ),
       child: ClipRRect(
-        borderRadius: BorderRadius.circular(MainPageConstants.greetingBorderRadius),
+        borderRadius: BorderRadius.circular(
+          MainPageConstants.greetingBorderRadius,
+        ),
         child: BackdropFilter(
           filter: ImageFilter.blur(
             sigmaX: MainPageConstants.greetingBlurSigma,
             sigmaY: MainPageConstants.greetingBlurSigma,
           ),
           child: Container(
-            color: MainPageConstants.greetingBackgroundColor
-                .withOpacity(MainPageConstants.greetingBackgroundOpacity),
+            color: MainPageConstants.greetingBackgroundColor.withOpacity(
+              MainPageConstants.greetingBackgroundOpacity,
+            ),
             child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 5.0, vertical: 8.0),
+              padding: const EdgeInsets.symmetric(
+                horizontal: 5.0,
+                vertical: 8.0,
+              ),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
                   const Padding(
-                    padding: EdgeInsets.only(left: 8.0), // Move "Travel Buddy" to the right
+                    padding: EdgeInsets.only(
+                      left: 8.0,
+                    ), // Move "Travel Buddy" to the right
                     child: Text(
                       'Travel Buddy',
                       style: TextStyle(
@@ -316,7 +354,9 @@ class _GreetingRow extends StatelessWidget {
                         onPressed: () {
                           Navigator.push(
                             context,
-                            MaterialPageRoute(builder: (context) => const NotificationPage()),
+                            MaterialPageRoute(
+                              builder: (context) => const NotificationPage(),
+                            ),
                           );
                         },
                       ),
@@ -330,9 +370,14 @@ class _GreetingRow extends StatelessWidget {
                               color: Colors.red,
                               borderRadius: BorderRadius.circular(10),
                             ),
-                            constraints: const BoxConstraints(minWidth: 16, minHeight: 16),
+                            constraints: const BoxConstraints(
+                              minWidth: 16,
+                              minHeight: 16,
+                            ),
                             child: Text(
-                              notificationCount > 99 ? '99+' : notificationCount.toString(),
+                              notificationCount > 99
+                                  ? '99+'
+                                  : notificationCount.toString(),
                               style: const TextStyle(
                                 color: Colors.white,
                                 fontSize: 10,
@@ -373,7 +418,10 @@ class _MainTitle extends StatelessWidget {
         children: [
           TextSpan(
             text: name,
-            style: const TextStyle(color: Colors.green, fontWeight: FontWeight.bold),
+            style: const TextStyle(
+              color: Colors.green,
+              fontWeight: FontWeight.bold,
+            ),
           ),
           const TextSpan(text: '?'),
         ],
@@ -390,7 +438,10 @@ class _PlansHeader extends StatelessWidget {
       children: [
         Text(
           'Your Plans',
-          style: TextStyle(fontSize: MainPageConstants.headerFontSize, fontWeight: MainPageConstants.boldWeight),
+          style: TextStyle(
+            fontSize: MainPageConstants.headerFontSize,
+            fontWeight: MainPageConstants.boldWeight,
+          ),
         ),
       ],
     );
@@ -413,24 +464,30 @@ class _TravelPlansList extends StatelessWidget {
         scrollDirection: Axis.horizontal,
         physics: const AlwaysScrollableScrollPhysics(),
         child: Row(
-          children: travelPlans
-              .map((travel) => Row(
-                    children: [
-                      TravelPlanCard(
-                        travelId: travel.id,
-                        uid: travel.uid,
-                        name: travel.name,
-                        startDate: travel.startDate ?? DateTime.now(),
-                        endDate: travel.endDate,
-                        image: travel.imageUrl?.isNotEmpty == true ? travel.imageUrl! : 'assets/sample_image.jpg',
-                        location: travel.location,
-                        createdOn: travel.createdOn,
-                      ),
-                      const SizedBox(width: MainPageConstants.cardSpacing),
-                    ],
-                  ))
-              .take(MainPageConstants.numTravelPlans)
-              .toList(),
+          children:
+              travelPlans
+                  .map(
+                    (travel) => Row(
+                      children: [
+                        TravelPlanCard(
+                          travelId: travel.id,
+                          uid: travel.uid,
+                          name: travel.name,
+                          startDate: travel.startDate ?? DateTime.now(),
+                          endDate: travel.endDate,
+                          image:
+                              travel.imageUrl?.isNotEmpty == true
+                                  ? travel.imageUrl!
+                                  : 'assets/sample_image.jpg',
+                          location: travel.location,
+                          createdOn: travel.createdOn,
+                        ),
+                        const SizedBox(width: MainPageConstants.cardSpacing),
+                      ],
+                    ),
+                  )
+                  .take(MainPageConstants.numTravelPlans)
+                  .toList(),
         ),
       );
     }
@@ -442,7 +499,10 @@ class _SharedPlansHeader extends StatelessWidget {
   Widget build(BuildContext context) {
     return const Text(
       'Shared With You',
-      style: TextStyle(fontSize: MainPageConstants.headerFontSize, fontWeight: MainPageConstants.boldWeight),
+      style: TextStyle(
+        fontSize: MainPageConstants.headerFontSize,
+        fontWeight: MainPageConstants.boldWeight,
+      ),
     );
   }
 }
@@ -467,24 +527,32 @@ class _SharedTravelPlansList extends StatelessWidget {
             scrollDirection: Axis.horizontal,
             physics: const AlwaysScrollableScrollPhysics(),
             child: Row(
-              children: snapshot.data!
-                  .map((travel) => Row(
-                        children: [
-                          TravelPlanCard(
-                            travelId: travel.id,
-                            uid: travel.uid,
-                            name: travel.name,
-                            startDate: travel.startDate ?? DateTime.now(),
-                            endDate: travel.endDate ?? DateTime.now(),
-                            image: travel.imageUrl?.isNotEmpty == true ? travel.imageUrl! : 'assets/sample_image.jpg',
-                            location: travel.location,
-                            createdOn: travel.createdOn,
-                          ),
-                          const SizedBox(width: MainPageConstants.cardSpacing),
-                        ],
-                      ))
-                  .take(MainPageConstants.numTravelPlans)
-                  .toList(),
+              children:
+                  snapshot.data!
+                      .map(
+                        (travel) => Row(
+                          children: [
+                            TravelPlanCard(
+                              travelId: travel.id,
+                              uid: travel.uid,
+                              name: travel.name,
+                              startDate: travel.startDate ?? DateTime.now(),
+                              endDate: travel.endDate ?? DateTime.now(),
+                              image:
+                                  travel.imageUrl?.isNotEmpty == true
+                                      ? travel.imageUrl!
+                                      : 'assets/sample_image.jpg',
+                              location: travel.location,
+                              createdOn: travel.createdOn,
+                            ),
+                            const SizedBox(
+                              width: MainPageConstants.cardSpacing,
+                            ),
+                          ],
+                        ),
+                      )
+                      .take(MainPageConstants.numTravelPlans)
+                      .toList(),
             ),
           );
         }

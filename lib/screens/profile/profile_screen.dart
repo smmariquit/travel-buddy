@@ -64,7 +64,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
   AppUser? _currentUserData;
   bool _isPrivate = false;
 
-
   int _friendsCount = 0;
 
   @override
@@ -219,20 +218,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   // Navigate to Friends List Screen
   void _navigateToFriendsList() {
-    if (_currentUserData == null || (_currentUserData!.friendUIDs?.isEmpty ?? true)) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('No friends to display'))
-      );
+    if (_currentUserData == null ||
+        (_currentUserData!.friendUIDs?.isEmpty ?? true)) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('No friends to display')));
       return;
     }
-    
+
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => FriendsListScreen(
-          friendUIDs: _currentUserData!.friendUIDs!,
-          currentUserID: _currentUserData!.uid,
-        ),
+        builder:
+            (context) => FriendsListScreen(
+              friendUIDs: _currentUserData!.friendUIDs!,
+              currentUserID: _currentUserData!.uid,
+            ),
       ),
     );
   }
@@ -281,7 +282,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
                 SizedBox(height: 20),
-                
+
                 Card(
                   margin: EdgeInsets.symmetric(horizontal: 20),
                   shape: RoundedRectangleBorder(
@@ -294,32 +295,49 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         // Profile Image
                         GestureDetector(
                           onTap: () async {
-                            final source = await showModalBottomSheet<ImageSource>(
-                              context: context,
-                              builder: (context) => SafeArea(
-                                child: Column(
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    ListTile(
-                                      leading: const Icon(Icons.camera_alt),
-                                      title: const Text('Take a photo'),
-                                      onTap: () => Navigator.pop(context, ImageSource.camera),
-                                    ),
-                                    ListTile(
-                                      leading: const Icon(Icons.photo_library),
-                                      title: const Text('Choose from gallery'),
-                                      onTap: () => Navigator.pop(context, ImageSource.gallery),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
+                            final source =
+                                await showModalBottomSheet<ImageSource>(
+                                  context: context,
+                                  builder:
+                                      (context) => SafeArea(
+                                        child: Column(
+                                          mainAxisSize: MainAxisSize.min,
+                                          children: [
+                                            ListTile(
+                                              leading: const Icon(
+                                                Icons.camera_alt,
+                                              ),
+                                              title: const Text('Take a photo'),
+                                              onTap:
+                                                  () => Navigator.pop(
+                                                    context,
+                                                    ImageSource.camera,
+                                                  ),
+                                            ),
+                                            ListTile(
+                                              leading: const Icon(
+                                                Icons.photo_library,
+                                              ),
+                                              title: const Text(
+                                                'Choose from gallery',
+                                              ),
+                                              onTap:
+                                                  () => Navigator.pop(
+                                                    context,
+                                                    ImageSource.gallery,
+                                                  ),
+                                            ),
+                                          ],
+                                        ),
+                                      ),
+                                );
 
                             if (source == null) return;
 
-                            final permission = source == ImageSource.camera
-                                ? Permission.camera
-                                : Permission.photos;
+                            final permission =
+                                source == ImageSource.camera
+                                    ? Permission.camera
+                                    : Permission.photos;
 
                             final status = await permission.request();
 
@@ -335,7 +353,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             }
 
                             final picker = ImagePicker();
-                            final pickedFile = await picker.pickImage(source: source);
+                            final pickedFile = await picker.pickImage(
+                              source: source,
+                            );
                             if (pickedFile == null) return;
 
                             final uid = _currentUserData!.uid;
@@ -346,7 +366,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                             try {
                               await storageRef.putFile(file);
-                              final imageUrl = await storageRef.getDownloadURL();
+                              final imageUrl =
+                                  await storageRef.getDownloadURL();
                               await FirebaseFirestore.instance
                                   .collection('appUsers')
                                   .doc(uid)
@@ -360,27 +381,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             } catch (e) {
                               print('Upload failed: $e');
                               ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(content: Text('Failed to upload image')),
+                                SnackBar(
+                                  content: Text('Failed to upload image'),
+                                ),
                               );
                             }
                           },
                           child: CircleAvatar(
                             radius: 50,
                             backgroundColor: Colors.grey[300],
-                            backgroundImage: _currentUserData!.profileImageUrl != null
-                                ? NetworkImage(_currentUserData!.profileImageUrl!)
-                                : null,
-                            child: _currentUserData!.profileImageUrl == null
-                                ? Icon(
-                                    Icons.person,
-                                    size: 50,
-                                    color: Colors.grey[600],
-                                  )
-                                : null,
+                            backgroundImage:
+                                _currentUserData!.profileImageUrl != null
+                                    ? NetworkImage(
+                                      _currentUserData!.profileImageUrl!,
+                                    )
+                                    : null,
+                            child:
+                                _currentUserData!.profileImageUrl == null
+                                    ? Icon(
+                                      Icons.person,
+                                      size: 50,
+                                      color: Colors.grey[600],
+                                    )
+                                    : null,
                           ),
                         ),
                         SizedBox(height: 16),
-                        
+
                         // Full Name
                         Text(
                           '${_currentUserData!.firstName} ${_currentUserData!.lastName}',
@@ -389,7 +416,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             fontWeight: FontWeight.bold,
                           ),
                         ),
-                        
+
                         // Username
                         if (_currentUserData!.username != null) ...[
                           SizedBox(height: 4),
@@ -401,23 +428,28 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             ),
                           ),
                         ],
-                        
+
                         SizedBox(height: 24),
-                        
+
                         // User Stats Row
                         FutureBuilder<QuerySnapshot>(
-                          future: FirebaseFirestore.instance
-                              .collection('travel')
-                              .where('uid', isEqualTo: _currentUserData!.uid)
-                              .get(),
+                          future:
+                              FirebaseFirestore.instance
+                                  .collection('travel')
+                                  .where(
+                                    'uid',
+                                    isEqualTo: _currentUserData!.uid,
+                                  )
+                                  .get(),
                           builder: (context, snapshot) {
                             int travelCount = 0;
-                            if (snapshot.connectionState == ConnectionState.done) {
+                            if (snapshot.connectionState ==
+                                ConnectionState.done) {
                               if (snapshot.hasData) {
                                 travelCount = snapshot.data!.docs.length;
                               }
                             }
-                            
+
                             return Row(
                               mainAxisAlignment: MainAxisAlignment.spaceEvenly,
                               children: [
@@ -425,7 +457,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                 GestureDetector(
                                   onTap: _navigateToFriendsList,
                                   child: Container(
-                                    padding: EdgeInsets.symmetric(vertical: 8, horizontal: 16),
+                                    padding: EdgeInsets.symmetric(
+                                      vertical: 8,
+                                      horizontal: 16,
+                                    ),
                                     decoration: BoxDecoration(
                                       borderRadius: BorderRadius.circular(8),
                                       color: Colors.transparent,
@@ -461,34 +496,35 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                     ),
                                   ),
                                 ),
-                                
+
                                 // Divider
                                 Container(
                                   height: 40,
                                   width: 1,
                                   color: Colors.grey[300],
                                 ),
-                                
+
                                 // Travels Count
                                 Column(
                                   children: [
-                                    snapshot.connectionState == ConnectionState.waiting
+                                    snapshot.connectionState ==
+                                            ConnectionState.waiting
                                         ? SizedBox(
-                                            height: 22,
-                                            width: 22,
-                                            child: CircularProgressIndicator(
-                                              strokeWidth: 2,
-                                              color: Colors.green,
-                                            ),
-                                          )
-                                        : Text(
-                                            '$travelCount',
-                                            style: TextStyle(
-                                              fontSize: 22,
-                                              fontWeight: FontWeight.bold,
-                                              color: Colors.green,
-                                            ),
+                                          height: 22,
+                                          width: 22,
+                                          child: CircularProgressIndicator(
+                                            strokeWidth: 2,
+                                            color: Colors.green,
                                           ),
+                                        )
+                                        : Text(
+                                          '$travelCount',
+                                          style: TextStyle(
+                                            fontSize: 22,
+                                            fontWeight: FontWeight.bold,
+                                            color: Colors.green,
+                                          ),
+                                        ),
                                     Text(
                                       'Travels',
                                       style: TextStyle(
@@ -502,9 +538,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             );
                           },
                         ),
-                        
+
                         SizedBox(height: 24),
-                        
+
                         // Private Profile Toggle
                         Row(
                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -535,9 +571,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     ),
                   ),
                 ),
-                
+
                 SizedBox(height: 24),
-                
+
                 // Profile Information Section - The existing form card
                 Card(
                   margin: EdgeInsets.symmetric(horizontal: 20),
@@ -614,19 +650,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           Wrap(
                             spacing: 8,
                             runSpacing: 8,
-                            children: _interests.map((interest) {
-                              return FilterChip(
-                                label: Text(interest['interest']),
-                                selected: interest['selected'],
-                                onSelected: (selected) {
-                                  setState(() {
-                                    interest['selected'] = selected;
-                                  });
-                                },
-                                selectedColor: Colors.green,
-                                checkmarkColor: Colors.white,
-                              );
-                            }).toList(),
+                            children:
+                                _interests.map((interest) {
+                                  return FilterChip(
+                                    label: Text(interest['interest']),
+                                    selected: interest['selected'],
+                                    onSelected: (selected) {
+                                      setState(() {
+                                        interest['selected'] = selected;
+                                      });
+                                    },
+                                    selectedColor: Colors.green,
+                                    checkmarkColor: Colors.white,
+                                  );
+                                }).toList(),
                           ),
                           SizedBox(height: 24),
                           Text(
@@ -640,19 +677,20 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           Wrap(
                             spacing: 8,
                             runSpacing: 8,
-                            children: _travelStyles.map((style) {
-                              return FilterChip(
-                                label: Text(style['style']),
-                                selected: style['selected'],
-                                onSelected: (selected) {
-                                  setState(() {
-                                    style['selected'] = selected;
-                                  });
-                                },
-                                selectedColor: Colors.green,
-                                checkmarkColor: Colors.white,
-                              );
-                            }).toList(),
+                            children:
+                                _travelStyles.map((style) {
+                                  return FilterChip(
+                                    label: Text(style['style']),
+                                    selected: style['selected'],
+                                    onSelected: (selected) {
+                                      setState(() {
+                                        style['selected'] = selected;
+                                      });
+                                    },
+                                    selectedColor: Colors.green,
+                                    checkmarkColor: Colors.white,
+                                  );
+                                }).toList(),
                           ),
                           SizedBox(height: 24),
                           ElevatedButton.icon(
@@ -676,10 +714,40 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   padding: const EdgeInsets.symmetric(horizontal: 20),
                   child: ElevatedButton.icon(
                     onPressed: () async {
-                      await context.read<AppUserProvider>().signOut();
-                      if (mounted) {
-                        Navigator.of(context).pushNamedAndRemoveUntil('/signin', (route) => false);
-                      }
+                      showDialog(
+                        context: context,
+                        builder:
+                            (context) => AlertDialog(
+                              title: Text('Confirm Sign Out'),
+                              content: Text(
+                                'Are you sure you want to sign out?',
+                              ),
+                              actions: [
+                                TextButton(
+                                  onPressed: () async {
+                                    await context
+                                        .read<AppUserProvider>()
+                                        .signOut();
+                                    if (mounted) {
+                                      Navigator.of(
+                                        context,
+                                      ).pushNamedAndRemoveUntil(
+                                        '/signin',
+                                        (route) => false,
+                                      );
+                                    }
+                                  },
+                                  child: Text('Yes'),
+                                ),
+                                TextButton(
+                                  onPressed: () {
+                                    Navigator.of(context).pop();
+                                  },
+                                  child: Text('No'),
+                                ),
+                              ],
+                            ),
+                      );
                     },
                     icon: Icon(Icons.exit_to_app),
                     label: Text('Sign Out'),

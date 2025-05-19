@@ -240,105 +240,67 @@ class _TripDetailsState extends State<TripDetails>
 
   void _addChecklistItem(int index) {
     if (_travel.uid == FirebaseAuth.instance.currentUser?.uid) {
-    final controller = TextEditingController();
-    
+      final controller = TextEditingController();
 
-    showDialog(
-      context: context,
-      builder:
-          (context) => AlertDialog(
-            title: Text("Add Checklist Item"),
-            content: TextField(
-              controller: controller,
-              decoration: InputDecoration(hintText: "Enter item"),
+      showDialog(
+        context: context,
+        builder:
+            (context) => AlertDialog(
+              title: Text("Add Checklist Item"),
+              content: TextField(
+                controller: controller,
+                decoration: InputDecoration(hintText: "Enter item"),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  child: Text("Cancel"),
+                ),
+                TextButton(
+                  onPressed: () async {
+                    if (controller.text.trim().isNotEmpty) {
+                      setState(
+                        () => _travel.activities![index].checklist!.add(
+                          controller.text.trim(),
+                        ),
+                      );
+
+                      // Save to Firestore after adding the checklist item
+                      await _saveActivitiesToFirestore();
+                    }
+                    Navigator.pop(context);
+                  },
+                  child: Text("Add"),
+                ),
+              ],
             ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                },
-                child: Text("Cancel"),
-              ),
-              TextButton(
-                onPressed: () async {
-                  if (controller.text.trim().isNotEmpty) {
-                    setState(
-                      () => _travel.activities![index].checklist!.add(
-                        controller.text.trim(),
-                      ),
-                    );
-
-                    // Save to Firestore after adding the checklist item
-                    await _saveActivitiesToFirestore();
-                  }
-                  Navigator.pop(context);
-                },
-                child: Text("Add"),
-              ),
-            ],
-          ),
-    );
+      );
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('You cannot edit shared travel plans.'),
-        ),
+        const SnackBar(content: Text('You cannot edit shared travel plans.')),
       );
     }
   }
 
   Future<void> _pickAndUploadImage(int index) async {
     if (_travel.uid == FirebaseAuth.instance.currentUser?.uid) {
-    final pickedFile = await picker.pickImage(source: ImageSource.gallery);
-    if (pickedFile == null) return;
+      final pickedFile = await picker.pickImage(source: ImageSource.gallery);
+      if (pickedFile == null) return;
 
-    final file = File(pickedFile.path);
-    if (_travel.id == null) return;
+      final file = File(pickedFile.path);
+      if (_travel.id == null) return;
 
-    final filename = '${_travel.id}_activity_${index}.jpg';
-    final ref = FirebaseStorage.instance.ref().child(
-      'itinerary_images/$filename',
-    );
-
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Uploading activity image...'),
-          behavior: SnackBarBehavior.floating,
-          margin: EdgeInsets.only(
-            bottom: MediaQuery.of(context).size.height * 0.15,
-            left: 16,
-            right: 16,
-          ),
-        ),
+      final filename = '${_travel.id}_activity_${index}.jpg';
+      final ref = FirebaseStorage.instance.ref().child(
+        'itinerary_images/$filename',
       );
-    }
-
-    try {
-      await ref.putFile(file);
-      final imageUrl = await ref.getDownloadURL();
-
-      final Activity updatedActivity = Activity(
-        title: _travel.activities![index].title,
-        startDate: _travel.activities![index].startDate,
-        endDate: _travel.activities![index].endDate,
-        place: _travel.activities![index].place,
-        time: _travel.activities![index].time,
-        notes: _travel.activities![index].notes,
-        imageUrl: imageUrl,
-        checklist: _travel.activities![index].checklist,
-      );
-
-      setState(() {
-        _travel.activities![index] = updatedActivity;
-      });
-
-      await _saveActivitiesToFirestore();
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Activity image uploaded successfully'),
+            content: Text('Uploading activity image...'),
             behavior: SnackBarBehavior.floating,
             margin: EdgeInsets.only(
               bottom: MediaQuery.of(context).size.height * 0.15,
@@ -348,26 +310,59 @@ class _TripDetailsState extends State<TripDetails>
           ),
         );
       }
-    } catch (e) {
-      if (context.mounted) {
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(
-          content: Text("Upload failed: $e"),
-            behavior: SnackBarBehavior.floating,
-            margin: EdgeInsets.only(
-              bottom: MediaQuery.of(context).size.height * 0.15,
-              left: 16,
-              right: 16,
-            ),
-          ),
+
+      try {
+        await ref.putFile(file);
+        final imageUrl = await ref.getDownloadURL();
+
+        final Activity updatedActivity = Activity(
+          title: _travel.activities![index].title,
+          startDate: _travel.activities![index].startDate,
+          endDate: _travel.activities![index].endDate,
+          place: _travel.activities![index].place,
+          time: _travel.activities![index].time,
+          notes: _travel.activities![index].notes,
+          imageUrl: imageUrl,
+          checklist: _travel.activities![index].checklist,
         );
+
+        setState(() {
+          _travel.activities![index] = updatedActivity;
+        });
+
+        await _saveActivitiesToFirestore();
+
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Activity image uploaded successfully'),
+              behavior: SnackBarBehavior.floating,
+              margin: EdgeInsets.only(
+                bottom: MediaQuery.of(context).size.height * 0.15,
+                left: 16,
+                right: 16,
+              ),
+            ),
+          );
+        }
+      } catch (e) {
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Upload failed: $e"),
+              behavior: SnackBarBehavior.floating,
+              margin: EdgeInsets.only(
+                bottom: MediaQuery.of(context).size.height * 0.15,
+                left: 16,
+                right: 16,
+              ),
+            ),
+          );
+        }
       }
-    }} else {
+    } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('You cannot edit shared travel plans.'),
-        ),
+        const SnackBar(content: Text('You cannot edit shared travel plans.')),
       );
     }
   }
@@ -746,8 +741,7 @@ class _TripDetailsState extends State<TripDetails>
                           ),
                         ),
                         SizedBox(height: 16),
-                        
-                        
+
                         // SizedBox(height: 24),
 
                         // Trip Details Section
@@ -827,7 +821,8 @@ class _TripDetailsState extends State<TripDetails>
                         SizedBox(height: 24),
 
                         // Share buttons (only for trip owner)
-                        if (_travel.uid == FirebaseAuth.instance.currentUser?.uid)
+                        if (_travel.uid ==
+                            FirebaseAuth.instance.currentUser?.uid)
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 20),
                             child: Column(
@@ -913,53 +908,87 @@ class _TripDetailsState extends State<TripDetails>
                                   onPressed: () {
                                     showDialog(
                                       context: context,
-                                      builder: (context) => AlertDialog(
-                                        title: const Text('Share by Username'),
-                                        content: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            TextField(
-                                              controller: _usernameController,
-                                              decoration: const InputDecoration(
-                                                labelText: 'Username',
-                                                border: OutlineInputBorder(),
-                                              ),
+                                      builder:
+                                          (context) => AlertDialog(
+                                            title: const Text(
+                                              'Share by Username',
                                             ),
-                                            const SizedBox(height: 16),
-                                            ElevatedButton(
-                                              onPressed: () async {
-                                                final username = _usernameController.text.trim();
-                                                if (username.isEmpty) {
-                                                  ScaffoldMessenger.of(context).showSnackBar(
-                                                    const SnackBar(
-                                                      content: Text('Please enter a username'),
-                                                    ),
-                                                  );
-                                                  return;
-                                                }
-
-                                                try {
-                                                  final userQuery = await FirebaseFirestore.instance
-                                                      .collection('appUsers')
-                                                      .where('username', isEqualTo: username)
-                                                      .get();
-
-                                                  if (userQuery.docs.isEmpty) {
-                                                    ScaffoldMessenger.of(context).showSnackBar(
-                                                      const SnackBar(
-                                                        content: Text('User not found'),
+                                            content: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                TextField(
+                                                  controller:
+                                                      _usernameController,
+                                                  decoration:
+                                                      const InputDecoration(
+                                                        labelText: 'Username',
+                                                        border:
+                                                            OutlineInputBorder(),
                                                       ),
-                                                    );
-                                                    return;
-                                                  }
+                                                ),
+                                                const SizedBox(height: 16),
+                                                ElevatedButton(
+                                                  onPressed: () async {
+                                                    final username =
+                                                        _usernameController.text
+                                                            .trim();
+                                                    if (username.isEmpty) {
+                                                      ScaffoldMessenger.of(
+                                                        context,
+                                                      ).showSnackBar(
+                                                        const SnackBar(
+                                                          content: Text(
+                                                            'Please enter a username',
+                                                          ),
+                                                        ),
+                                                      );
+                                                      return;
+                                                    }
 
-                                                  final targetUserId = userQuery.docs.first.id;
-                                                  await FirebaseFirestore.instance
-                                                      .collection('travel')
-                                                      .doc(_travel.id)
-                                                      .update({
-                                                    'sharedWith': FieldValue.arrayUnion([targetUserId]),
-                                                  });
+                                                    try {
+                                                      final userQuery =
+                                                          await FirebaseFirestore
+                                                              .instance
+                                                              .collection(
+                                                                'appUsers',
+                                                              )
+                                                              .where(
+                                                                'username',
+                                                                isEqualTo:
+                                                                    username,
+                                                              )
+                                                              .get();
+
+                                                      if (userQuery
+                                                          .docs
+                                                          .isEmpty) {
+                                                        ScaffoldMessenger.of(
+                                                          context,
+                                                        ).showSnackBar(
+                                                          const SnackBar(
+                                                            content: Text(
+                                                              'User not found',
+                                                            ),
+                                                          ),
+                                                        );
+                                                        return;
+                                                      }
+
+                                                      final targetUserId =
+                                                          userQuery
+                                                              .docs
+                                                              .first
+                                                              .id;
+                                                      await FirebaseFirestore
+                                                          .instance
+                                                          .collection('travel')
+                                                          .doc(_travel.id)
+                                                          .update({
+                                                            'sharedWith':
+                                                                FieldValue.arrayUnion([
+                                                                  targetUserId,
+                                                                ]),
+                                                          });
 
                                                       ScaffoldMessenger.of(
                                                         context,
@@ -1017,7 +1046,10 @@ class _TripDetailsState extends State<TripDetails>
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.green,
                                     foregroundColor: Colors.white,
-                                    minimumSize: const Size(double.infinity, 48),
+                                    minimumSize: const Size(
+                                      double.infinity,
+                                      48,
+                                    ),
                                   ),
                                 ),
                                 const SizedBox(height: 16),
@@ -1028,7 +1060,10 @@ class _TripDetailsState extends State<TripDetails>
                                   style: ElevatedButton.styleFrom(
                                     backgroundColor: Colors.green,
                                     foregroundColor: Colors.white,
-                                    minimumSize: const Size(double.infinity, 48),
+                                    minimumSize: const Size(
+                                      double.infinity,
+                                      48,
+                                    ),
                                     padding: const EdgeInsets.symmetric(
                                       vertical: 14,
                                       horizontal: 24,
@@ -1107,7 +1142,6 @@ class _TripDetailsState extends State<TripDetails>
                                             child: Text(
                                               'Delete',
                                               style: TextStyle(
-                                                
                                                 color: Colors.red,
                                               ),
                                             ),
@@ -1151,14 +1185,15 @@ class _TripDetailsState extends State<TripDetails>
                 ],
               ),
       bottomNavigationBar: BottomNavBar(selectedIndex: 1),
-      floatingActionButton: _travel.uid == FirebaseAuth.instance.currentUser?.uid
-          ? FloatingActionButton(
-              onPressed: _addManualItinerary,
-              backgroundColor: Colors.green.shade700,
-              child: const Icon(Icons.add),
-              tooltip: 'Add Itinerary',
-            )
-          : null,
+      floatingActionButton:
+          _travel.uid == FirebaseAuth.instance.currentUser?.uid
+              ? FloatingActionButton(
+                onPressed: _addManualItinerary,
+                backgroundColor: primaryColor,
+                child: const Icon(Icons.add),
+                tooltip: 'Add Itinerary',
+              )
+              : null,
       floatingActionButtonLocation:
           _travel.uid == FirebaseAuth.instance.currentUser?.uid
               ? FloatingActionButtonLocation.centerDocked

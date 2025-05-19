@@ -59,10 +59,8 @@ import 'screens/auth/signin_page.dart';
 @pragma('vm:entry-point')
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   // Ensure Firebase is initialized
-  await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform,
-  );
-  
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
   print("Handling a background message: ${message.messageId}");
 }
 
@@ -137,6 +135,7 @@ class _MyAppState extends State<MyApp> {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      locale: Locale('en', 'US'),
       debugShowCheckedModeBanner: false,
       title: 'TravelBuddy',
       initialRoute: '/main',
@@ -148,9 +147,9 @@ class _MyAppState extends State<MyApp> {
         useMaterial3: true,
         colorScheme: const ColorScheme(
           brightness: Brightness.light,
-          primary: Color(0xFF017E03), 
+          primary: Color(0xFF017E03),
           onPrimary: Colors.white,
-          secondary: Color.fromARGB(255, 27, 188, 32), 
+          secondary: Color.fromARGB(255, 27, 188, 32),
           onSecondary: Colors.white,
           surface: Colors.white,
           onSurface: Colors.black,
