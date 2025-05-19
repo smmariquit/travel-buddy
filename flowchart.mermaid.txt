@@ -1,0 +1,40 @@
+flowchart TB
+
+%% Icons
+    flutter[<img src="./assets/images/flutter.svg" width="30"/> Flutter UI]
+    material[<img src="./assets/images/material.svg" width="30"/> Material Design]
+    widgets[Custom Widgets]
+    provider[<img src="./assets/images/provider.svg" width="30"/> Provider]
+    api[API Layer]
+    firebase[<img src="./assets/images/firebase.svg" width="30"/> Firebase]
+    auth[Authentication]
+    firestore[Firestore]
+    storage[Storage]
+
+%% Groups
+    subgraph Frontend["Frontend"]
+        flutter
+        material
+        widgets
+    end
+
+    subgraph State["State & API Layer"]
+        provider
+        api
+    end
+
+    subgraph Backend["Backend"]
+        firebase
+        auth
+        firestore
+        storage
+    end
+
+%% Connections
+    flutter --> material
+    flutter --> widgets
+    flutter --> provider --> api --> firebase
+    firebase --> auth & firestore & storage
+
+    Frontend --> State
+    State --> Backend
