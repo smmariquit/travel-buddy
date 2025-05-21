@@ -7,6 +7,8 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:google_fonts/google_fonts.dart';
+
 
 // State Management
 import 'package:provider/provider.dart';
@@ -85,6 +87,48 @@ class _TripDetailsState extends State<TripDetails>
   void dispose() {
     _tabController.dispose();
     super.dispose();
+  }
+
+  // Add method to update notification days
+  Future<void> _updateNotificationDays(int days) async {
+    setState(() {
+      _isLoading = true;
+    });
+
+    try {
+      // Update in Firestore
+      await FirebaseFirestore.instance
+          .collection('travel')
+          .doc(_travel.id)
+          .update({'notificationDays': days});
+
+      // Update local state
+      setState(() {
+        _travel = _travel.copyWith(notificationDays: days);
+        _isLoading = false;
+      });
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Notification settings updated! You\'ll be notified $days days before your trip.',
+            style: GoogleFonts.poppins(),
+          ),
+        ),
+      );
+    } catch (e) {
+      setState(() {
+        _isLoading = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Failed to update notification settings: $e',
+            style: GoogleFonts.poppins(),
+          ),
+        ),
+      );
+    }
   }
 
   Future<void> _loadTravelData() async {
@@ -351,6 +395,81 @@ class _TripDetailsState extends State<TripDetails>
         const SnackBar(content: Text('You cannot edit shared travel plans.')),
       );
     }
+  }
+
+  Widget _buildNotificationSettings() {
+    return Card(
+      margin: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+      elevation: 2,
+      child: Padding(
+        padding: EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(Icons.notifications_active, color: Colors.blue),
+                SizedBox(width: 8),
+                Text(
+                  'Notification Settings',
+                  style: GoogleFonts.poppins(
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+            ),
+            SizedBox(height: 16),
+            Text(
+              'When do you want to be notified about this trip?',
+              style: GoogleFonts.poppins(fontSize: 14),
+            ),
+            SizedBox(height: 12),
+            _isLoading
+                ? Center(child: CircularProgressIndicator())
+                : Column(
+                    children: [
+                      // Create slider for days selection
+                      Row(
+                        children: [
+                          Text('1', style: GoogleFonts.poppins()),
+                          Expanded(
+                            child: Slider(
+                              value: _travel.notificationDays.toDouble(),
+                              min: 1,
+                              max: 30,
+                              divisions: 29,
+                              label: _travel.notificationDays.toString(),
+                              onChanged: (value) {
+                                setState(() {
+                                  _travel = _travel.copyWith(
+                                    notificationDays: value.round(),
+                                  );
+                                });
+                              },
+                              onChangeEnd: (value) {
+                                _updateNotificationDays(value.round());
+                              },
+                            ),
+                          ),
+                          Text('30', style: GoogleFonts.poppins()),
+                        ],
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        'You will be notified ${_travel.notificationDays} day${_travel.notificationDays > 1 ? "s" : ""} before your trip starts',
+                        style: GoogleFonts.poppins(
+                          fontSize: 14,
+                          color: Colors.grey[700],
+                        ),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                  ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget buildItineraryCard(Activity activity, int index) {
@@ -796,6 +915,7 @@ class _TripDetailsState extends State<TripDetails>
                           ),
                         ),
                         SizedBox(height: 24),
+                        _buildNotificationSettings(),
 
                         // Share buttons (only for trip owner)
                         if (_travel.uid ==

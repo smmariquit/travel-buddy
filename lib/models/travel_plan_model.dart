@@ -78,6 +78,7 @@ class Travel {
   final DateTime createdOn;
   List<Activity>? activities;
   String? imageUrl;
+  final int notificationDays;
 
   Travel({
     required this.id, // Required parameter
@@ -94,6 +95,8 @@ class Travel {
     required this.createdOn,
     this.activities,
     this.imageUrl,
+     // Default to 5 days for existing records
+    this.notificationDays = 5,
   });
 
   /// Creates a Travel object from a JSON map, using the document ID if provided
@@ -137,6 +140,7 @@ class Travel {
               ?.map((activity) => Activity.fromJson(activity))
               .toList(),
       imageUrl: json['imageUrl'],
+      notificationDays: json['notificationDays'] ?? 5,
     );
   }
 
@@ -157,6 +161,7 @@ class Travel {
       'createdOn': createdOn,
       'activities': activities?.map((activity) => activity.toJson()).toList(),
       'imageUrl': imageUrl,
+      'notificationDays': notificationDays,
     };
   }
 
@@ -176,6 +181,7 @@ class Travel {
     DateTime? createdOn,
     List<Activity>? activities,
     String? imageUrl,
+    int? notificationDays,
   }) {
     return Travel(
       id: id ?? this.id,
@@ -192,6 +198,7 @@ class Travel {
       createdOn: createdOn ?? this.createdOn,
       activities: activities ?? this.activities,
       imageUrl: imageUrl ?? this.imageUrl,
+      notificationDays: notificationDays ?? this.notificationDays,
     );
   }
 }

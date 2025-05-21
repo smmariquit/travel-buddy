@@ -112,6 +112,7 @@ class TravelNotification {
   final String destination;
   final DateTime startDate;
   final int daysUntil;
+  final int notificationDays;
 
   TravelNotification({
     required this.tripId,
@@ -119,5 +120,6 @@ class TravelNotification {
     required this.destination,
     required this.startDate,
     required this.daysUntil,
+    required this.notificationDays, 
   });
 }
