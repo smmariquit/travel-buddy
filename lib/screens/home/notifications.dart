@@ -143,6 +143,7 @@ class _NotificationPageState extends State<NotificationPage>
 
         final startDate = startDateTimestamp.toDate();
         final daysUntilTrip = startDate.difference(now).inDays;
+        final notificationDays = data['notificationDays'] ?? 5;
 
         // If trip starts within next 5 days, add notification
         if (daysUntilTrip <= 5 && daysUntilTrip >= 0) {
@@ -153,6 +154,7 @@ class _NotificationPageState extends State<NotificationPage>
               destination: data['destination'] ?? 'Unknown',
               startDate: startDate,
               daysUntil: daysUntilTrip,
+              notificationDays: notificationDays,
             ),
           );
 
@@ -579,7 +581,7 @@ class _NotificationPageState extends State<NotificationPage>
             ),
             SizedBox(height: 8),
             Text(
-              'You\'ll receive notifications 5 days before your travel',
+              'You\'ll receive notifications based on your trip settings',
               textAlign: TextAlign.center,
               style: GoogleFonts.poppins(color: Colors.grey[500], fontSize: 14),
             ),
@@ -888,6 +890,9 @@ class NotificationHelper {
         final startDate = startDateTimestamp.toDate();
         final daysUntilTrip = startDate.difference(now).inDays;
 
+        // Get user's notification preference (default to 5 if not set)
+        final notificationDays = data['notificationDays'] ?? 5;
+
         if (daysUntilTrip <= 5 && daysUntilTrip >= 0) {
           final notification = TravelNotification(
             tripId: doc.id,
@@ -895,6 +900,7 @@ class NotificationHelper {
             destination: data['destination'] ?? 'Unknown',
             startDate: startDate,
             daysUntil: daysUntilTrip,
+            notificationDays: notificationDays,
           );
           notifications.add(notification);
 
