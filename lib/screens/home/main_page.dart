@@ -1,4 +1,5 @@
 // Flutter & Material
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:travel_app/utils/notification_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -57,6 +58,7 @@ class MainPage extends StatefulWidget {
 
 /// Create the state for the main page
 class _MainPageState extends State<MainPage> {
+  FirebaseFirestore _firestore = FirebaseFirestore.instance;
   List<Travel> _travelPlans = [];
   bool _isLoading = true;
   List<AppUser> _requestUsers = [];
@@ -73,7 +75,7 @@ class _MainPageState extends State<MainPage> {
     super.initState();
     _travelProvider = context.read<TravelTrackerProvider>();
     _userProvider = context.read<AppUserProvider>();
-    _initializeNotificationsOnce();
+    // _initializeNotificationsOnce();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadInitialData();
@@ -102,24 +104,24 @@ class _MainPageState extends State<MainPage> {
     }
   }
 
-  Future<void> _initializeNotificationsOnce() async {
-    final prefs = await SharedPreferences.getInstance();
-    final hasInitialized =
-        prefs.getBool('hasInitializedNotifications') ?? false;
+  // Future<void> _initializeNotificationsOnce() async {
+  //   final prefs = await SharedPreferences.getInstance();
+  //   final hasInitialized =
+  //       prefs.getBool('hasInitializedNotifications') ?? false;
 
-    await _notificationService.init();
+  //   await _notificationService.init();
 
-    NotificationHelper.fetchTravelNotifications(
-      context,
-      (notifications) => setState(() => _travelNotifications = notifications),
-      (error) => debugPrint(error),
-      _notificationService,
-    );
+  //   NotificationHelper.fetchTravelNotifications(
+  //     context,
+  //     (notifications) => setState(() => _travelNotifications = notifications),
+  //     (error) => debugPrint(error),
+  //     _notificationService,
+  //   );
 
-    if (!hasInitialized) {
-      await prefs.setBool('hasInitializedNotifications', true);
-    }
-  }
+  //   if (!hasInitialized) {
+  //     await prefs.setBool('hasInitializedNotifications', true);
+  //   }
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -183,10 +185,23 @@ class _MainPageState extends State<MainPage> {
                                     height: MainPageConstants.rowSpacing,
                                   ),
                                 ),
-                                _GreetingRow(
-                                  userProvider: _userProvider,
-                                  notificationCount:
-                                      _travelNotifications.length,
+                                FutureBuilder<int>(
+                                  future: FirebaseFirestore.instance
+                                      .collection('appUsers')
+                                      .doc(
+                                        FirebaseAuth.instance.currentUser!.uid,
+                                      )
+                                      .collection('notifications')
+                                      .where('read', isEqualTo: false)
+                                      .get()
+                                      .then((value) => value.docs.length),
+                                  builder: (context, snapshot) {
+                                    final count = snapshot.data ?? 0;
+                                    return _GreetingRow(
+                                      userProvider: _userProvider,
+                                      notificationCount: count,
+                                    );
+                                  },
                                 ),
                                 Container(
                                   color: MainPageConstants.paddingColor,
