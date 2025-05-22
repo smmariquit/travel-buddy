@@ -75,7 +75,6 @@ exports.checkTripsAndNotify = functions.pubsub.schedule('every 5 minutes').onRun
     const startDate = trip.startDate;
     if (!startDate) continue;
     const startTimestamp = startDate._seconds ? new Date(startDate._seconds * 1000) : startDate.toDate();
-    const daysUntilTrip = Math.ceil((startTimestamp - new Date()) / (1000 * 60 * 60 * 24));
 
     // Get all users to notify: creator and sharedWith
     let userIds = [];
@@ -91,19 +90,29 @@ exports.checkTripsAndNotify = functions.pubsub.schedule('every 5 minutes').onRun
       const fcmToken = user.fcmToken;
       if (!fcmToken) continue;
 
-      // Get notification interval from user (default to 5 days)
-      const notificationDays = user.notificationDays || 5;
-      // Check if notification should be sent
-      if (daysUntilTrip <= notificationDays && daysUntilTrip >= 0) {
-        // Check if notification already sent for this trip and user
-        const notifRef = db.collection('appUsers').doc(userId).collection('notifications').doc(tripId);
-        const notifDoc = await notifRef.get();
-        if (notifDoc.exists && notifDoc.data().notified) continue;
+      // Get notification interval from the travel plan (default to 5 days)
+      const notificationDays = trip.notificationDays || 5;
+
+      // Calculate the window
+      const msInDay = 24 * 60 * 60 * 1000;
+      const nowMs = now.getTime();
+      const startMs = startTimestamp.getTime();
+      const daysUntilTrip = (startMs - nowMs) / msInDay;
+
+      // Only send if we're in the 24-hour window for notificationDays
+      if (
+        daysUntilTrip <= notificationDays &&
+        daysUntilTrip > (notificationDays - 1)
+      ) {
+        // Check notified count in the travel document
+        const notifiedMap = trip.notified || {};
+        const notifiedCount = notifiedMap[userId] || 0;
+        if (notifiedCount >= 1) continue; // Already notified at least once
 
         // Send push notification
         const notification = {
           title: 'Upcoming Trip Reminder',
-          body: `Your trip "${trip.name || 'Unnamed Trip'}" starts in ${daysUntilTrip} day(s)!`,
+          body: `Your trip "${trip.name || 'Unnamed Trip'}" starts in ${Math.round(daysUntilTrip)} day(s)!`,
         };
         try {
           await admin.messaging().send({
@@ -111,17 +120,14 @@ exports.checkTripsAndNotify = functions.pubsub.schedule('every 5 minutes').onRun
             notification,
             data: { tripId },
           });
-          // Mark as notified
-          await notifRef.set({
-            title: notification.title,
-            body: notification.body,
-            type: 'trip_reminder',
-            read: false,
-            timestamp: admin.firestore.FieldValue.serverTimestamp(),
-            notified: true,
-            tripId,
+
+          // Update notified count in the travel document
+          console.log(`Updating notified count for user ${userId} in trip ${tripId}...`);
+          notifiedMap[userId] = notifiedCount + 1;
+          await db.collection('travel').doc(tripId).update({
+            [`notified.${userId}`]: notifiedMap[userId]
           });
-          console.log(`Notification sent to user ${userId} for trip ${tripId}`);
+          console.log(`Updated notified count for user ${userId} in trip ${tripId}.`);
         } catch (e) {
           console.error(`Failed to send notification to user ${userId} for trip ${tripId}:`, e);
         }
