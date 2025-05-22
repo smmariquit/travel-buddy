@@ -1370,7 +1370,7 @@ class _TripDetailsState extends State<TripDetails>
                 onPressed: _addManualItinerary,
                 backgroundColor: primaryColor,
                 tooltip: 'Add Itinerary',
-                child: const Icon(Icons.add),
+                child: const Icon(Icons.playlist_add_check),
               )
               : null,
       floatingActionButtonLocation:
