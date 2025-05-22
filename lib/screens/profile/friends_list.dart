@@ -44,14 +44,18 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
     try {
       final snapshots = await Future.wait(
         widget.friendUIDs.map((uid) {
-          return FirebaseFirestore.instance.collection('appUsers').doc(uid).get();
+          return FirebaseFirestore.instance
+              .collection('appUsers')
+              .doc(uid)
+              .get();
         }),
       );
 
-      final loadedFriends = snapshots
-          .where((doc) => doc.exists)
-          .map((doc) => AppUser.fromJson(doc.data()!))
-          .toList();
+      final loadedFriends =
+          snapshots
+              .where((doc) => doc.exists)
+              .map((doc) => AppUser.fromJson(doc.data()!))
+              .toList();
 
       loadedFriends.sort((a, b) => a.firstName.compareTo(b.firstName));
 
@@ -62,7 +66,11 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
     } catch (e) {
       print('Error loading friends: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to load friends', style: GoogleFonts.poppins())),
+        SnackBar(
+          content: Text('Failed to load friends', style: GoogleFonts.poppins()),
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.zero,
+        ),
       );
       setState(() {
         _isLoading = false;
@@ -72,22 +80,30 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
 
   Future<void> _removeFriend(String friendUID) async {
     try {
-      final confirm = await showDialog<bool>(
+      final confirm =
+          await showDialog<bool>(
             context: context,
-            builder: (context) => AlertDialog(
-              title: Text('Remove Friend', style: GoogleFonts.poppins()),
-              content: Text('Are you sure you want to remove this friend?', style: GoogleFonts.poppins()),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(false),
-                  child: Text('Cancel', style: GoogleFonts.poppins()),
+            builder:
+                (context) => AlertDialog(
+                  title: Text('Remove Friend', style: GoogleFonts.poppins()),
+                  content: Text(
+                    'Are you sure you want to remove this friend?',
+                    style: GoogleFonts.poppins(),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(false),
+                      child: Text('Cancel', style: GoogleFonts.poppins()),
+                    ),
+                    TextButton(
+                      onPressed: () => Navigator.of(context).pop(true),
+                      child: Text(
+                        'Remove',
+                        style: GoogleFonts.poppins(color: Colors.red),
+                      ),
+                    ),
+                  ],
                 ),
-                TextButton(
-                  onPressed: () => Navigator.of(context).pop(true),
-                  child: Text('Remove', style: GoogleFonts.poppins(color: Colors.red)),
-                ),
-              ],
-            ),
           ) ??
           false;
 
@@ -97,27 +113,38 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
           .collection('appUsers')
           .doc(widget.currentUserID)
           .update({
-        'friendUIDs': FieldValue.arrayRemove([friendUID]),
-      });
+            'friendUIDs': FieldValue.arrayRemove([friendUID]),
+          });
 
       await FirebaseFirestore.instance
           .collection('appUsers')
           .doc(friendUID)
           .update({
-        'friendUIDs': FieldValue.arrayRemove([widget.currentUserID]),
-      });
+            'friendUIDs': FieldValue.arrayRemove([widget.currentUserID]),
+          });
 
       setState(() {
         _friends.removeWhere((friend) => friend.uid == friendUID);
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Friend removed', style: GoogleFonts.poppins())),
+        SnackBar(
+          content: Text('Friend removed', style: GoogleFonts.poppins()),
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.zero,
+        ),
       );
     } catch (e) {
       print('Error removing friend: $e');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Failed to remove friend', style: GoogleFonts.poppins())),
+        SnackBar(
+          content: Text(
+            'Failed to remove friend',
+            style: GoogleFonts.poppins(),
+          ),
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.zero,
+        ),
       );
     }
   }
@@ -140,20 +167,23 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
       child: ListTile(
         leading: CircleAvatar(
           backgroundColor: Colors.grey.shade300,
-          backgroundImage: friend.profileImageUrl != null
-              ? NetworkImage(friend.profileImageUrl!)
-              : null,
-          child: friend.profileImageUrl == null
-              ? Icon(Icons.person, color: Colors.grey.shade600)
-              : null,
+          backgroundImage:
+              friend.profileImageUrl != null
+                  ? NetworkImage(friend.profileImageUrl!)
+                  : null,
+          child:
+              friend.profileImageUrl == null
+                  ? Icon(Icons.person, color: Colors.grey.shade600)
+                  : null,
         ),
         title: Text(
           '${friend.firstName} ${friend.lastName}',
           style: GoogleFonts.poppins(fontWeight: FontWeight.bold),
         ),
-        subtitle: friend.username != null
-            ? Text('@${friend.username}', style: GoogleFonts.poppins())
-            : null,
+        subtitle:
+            friend.username != null
+                ? Text('@${friend.username}', style: GoogleFonts.poppins())
+                : null,
         trailing: IconButton(
           icon: Icon(Icons.person_remove, color: Colors.red),
           onPressed: () => _removeFriend(friend.uid),
@@ -171,11 +201,14 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
       appBar: AppBar(
         title: Text(
           'Friends',
-          style: GoogleFonts.poppins(color: Colors.white, fontWeight: FontWeight.bold),
+          style: GoogleFonts.poppins(
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
         ),
         backgroundColor: Colors.green,
         elevation: 0,
-        iconTheme: IconThemeData(color: Colors.white), 
+        iconTheme: IconThemeData(color: Colors.white),
       ),
       body: Column(
         children: [
@@ -203,16 +236,21 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
             ),
           ),
           Expanded(
-            child: _isLoading
-                ? Center(child: CircularProgressIndicator())
-                : _friends.isEmpty
+            child:
+                _isLoading
+                    ? Center(child: CircularProgressIndicator())
+                    : _friends.isEmpty
                     ? Center(
-                        child: Text('No friends yet', style: GoogleFonts.poppins()),
-                      )
+                      child: Text(
+                        'No friends yet',
+                        style: GoogleFonts.poppins(),
+                      ),
+                    )
                     : RefreshIndicator(
-                        onRefresh: _loadFriends,
-                        child: _filteredFriends.isEmpty
-                            ? ListView(
+                      onRefresh: _loadFriends,
+                      child:
+                          _filteredFriends.isEmpty
+                              ? ListView(
                                 children: [
                                   Center(
                                     child: Padding(
@@ -225,13 +263,15 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
                                   ),
                                 ],
                               )
-                            : ListView.builder(
+                              : ListView.builder(
                                 itemCount: _filteredFriends.length,
                                 itemBuilder: (context, index) {
-                                  return _buildFriendTile(_filteredFriends[index]);
+                                  return _buildFriendTile(
+                                    _filteredFriends[index],
+                                  );
                                 },
                               ),
-                      ),
+                    ),
           ),
         ],
       ),

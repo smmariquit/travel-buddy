@@ -199,10 +199,12 @@ class _SignUpPageState extends State<SignUpPage> {
       // Show a SnackBar if validation fails
       print('Personal Info form is not valid');
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           content: Text('Please fill out all required fields.'),
           backgroundColor: Colors.red,
           duration: Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.zero,
         ),
       );
     }
@@ -596,12 +598,14 @@ class _SignUpPageState extends State<SignUpPage> {
                         } else {
                           // Show a SnackBar if validation fails
                           ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
+                            SnackBar(
                               content: Text(
                                 'Please fix the errors before continuing.',
                               ),
                               backgroundColor: Colors.red,
                               duration: Duration(seconds: 2),
+                              behavior: SnackBarBehavior.floating,
+                              margin: EdgeInsets.zero,
                             ),
                           );
                         }
@@ -743,7 +747,7 @@ class _SignUpPageState extends State<SignUpPage> {
                           ),
                           // Password strength indicator
                           Padding(
-                            padding: const EdgeInsets.only(bottom: 30),
+                            padding: const EdgeInsets.only(bottom: 10),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -779,6 +783,16 @@ class _SignUpPageState extends State<SignUpPage> {
                                   ),
                                 ),
                               ],
+                            ),
+                          ),
+                          Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Text(
+                              "Password must be at least 6 characters long and contain uppercase, lowercase, digit, and special character",
+                              style: TextStyle(
+                                color: Colors.black,
+                                fontSize: 12,
+                              ),
                             ),
                           ),
                           // Confirm password field
@@ -922,7 +936,11 @@ class _SignUpPageState extends State<SignUpPage> {
       // Check if there was an error during sign up
       if (signUpMessage != null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Error creating account: $signUpMessage")),
+          SnackBar(
+            content: Text("Error creating account: $signUpMessage"),
+            behavior: SnackBarBehavior.floating,
+            margin: EdgeInsets.zero,
+          ),
         );
         return;
       }
@@ -976,15 +994,19 @@ class _SignUpPageState extends State<SignUpPage> {
               content: Text(
                 'Error uploading profile image: ${imageError.toString().substring(0, 100)}',
               ),
+              behavior: SnackBarBehavior.floating,
+              margin: EdgeInsets.zero,
             ),
           );
         }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
+          SnackBar(
             content: Text(
               'User account created but session not established. Please try logging in.',
             ),
+            behavior: SnackBarBehavior.floating,
+            margin: EdgeInsets.zero,
           ),
         );
       }
@@ -998,6 +1020,8 @@ class _SignUpPageState extends State<SignUpPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Sign-up failed: ${e.toString().substring(0, 100)}'),
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.zero,
         ),
       );
     }

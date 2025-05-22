@@ -30,6 +30,8 @@ class _FindSimilarPeopleScreenState extends State<FindSimilarPeopleScreen> {
   String? _errorMessage;
   AppUser? _currentUser;
 
+  String _filter = 'interests'; // 'interests', 'travelStyles', or 'everyone'
+
   @override
   void initState() {
     super.initState();
@@ -172,6 +174,7 @@ class _FindSimilarPeopleScreenState extends State<FindSimilarPeopleScreen> {
                 )
                 .where('isPrivate', isEqualTo: false)
                 .get();
+
         // store user
         for (var doc in travelStylesSnapshot.docs) {
           final user = AppUser.fromJson(doc.data());
@@ -463,7 +466,7 @@ class _FindSimilarPeopleScreenState extends State<FindSimilarPeopleScreen> {
                 child: Padding(
                   padding: EdgeInsets.all(16.0),
                   child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       Center(
                         child: Container(
@@ -476,7 +479,10 @@ class _FindSimilarPeopleScreenState extends State<FindSimilarPeopleScreen> {
                           ),
                         ),
                       ),
-                      Row(
+                      // Centered profile photo, name, username
+                      Column(
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        crossAxisAlignment: CrossAxisAlignment.center,
                         children: [
                           CircleAvatar(
                             radius: 40,
@@ -493,38 +499,57 @@ class _FindSimilarPeopleScreenState extends State<FindSimilarPeopleScreen> {
                                     )
                                     : null,
                           ),
-                          SizedBox(width: 16),
-                          Expanded(
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Text(
-                                  "${user.firstName} ${user.lastName}",
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 22,
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                                Text(
-                                  "@${user.username}",
-                                  style: GoogleFonts.poppins(
-                                    fontSize: 16,
-                                    color: Colors.grey[600],
-                                  ),
-                                ),
-                                if (user.location != null)
-                                  Row(
-                                    children: [
-                                      Icon(Icons.location_on, size: 16),
-                                      SizedBox(width: 4),
-                                      Text(
-                                        user.location!,
-                                        style: GoogleFonts.poppins(),
-                                      ),
-                                    ],
-                                  ),
-                              ],
+                          SizedBox(height: 12),
+                          Text(
+                            "${user.firstName} ${user.lastName}",
+                            style: GoogleFonts.poppins(
+                              fontSize: 22,
+                              fontWeight: FontWeight.bold,
                             ),
+                            textAlign: TextAlign.center,
+                          ),
+                          Text(
+                            "@${user.username}",
+                            style: GoogleFonts.poppins(
+                              fontSize: 16,
+                              color: Colors.grey[600],
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                          SizedBox(height: 8),
+                          // Friends and Travels count (centered)
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(
+                                Icons.people,
+                                size: 16,
+                                color: Colors.blueGrey,
+                              ),
+                              SizedBox(width: 4),
+                              Text(
+                                "Friends: " +
+                                    (user.friendUIDs?.length.toString() ?? '0'),
+                                style: GoogleFonts.poppins(
+                                  fontSize: 13,
+                                  color: Colors.blueGrey,
+                                ),
+                              ),
+                              SizedBox(width: 16),
+                              Icon(
+                                Icons.airplanemode_active,
+                                size: 16,
+                                color: Colors.blueGrey,
+                              ),
+                              SizedBox(width: 4),
+                              Text(
+                                "Travels: 0",
+                                style: GoogleFonts.poppins(
+                                  fontSize: 13,
+                                  color: Colors.blueGrey,
+                                ),
+                              ),
+                            ],
                           ),
                         ],
                       ),
@@ -620,6 +645,7 @@ class _FindSimilarPeopleScreenState extends State<FindSimilarPeopleScreen> {
                         sentRequest,
                         receivedRequest,
                       ),
+                      SizedBox(height: 48), // Extra space at the bottom
                     ],
                   ),
                 ),
@@ -731,6 +757,48 @@ class _FindSimilarPeopleScreenState extends State<FindSimilarPeopleScreen> {
 
   @override
   Widget build(BuildContext context) {
+    List<AppUser> sortedUsers = List.from(_similarUsers);
+    if (_currentUser != null) {
+      if (_filter == 'interests') {
+        sortedUsers.sort((a, b) {
+          final aMatches =
+              a.interests
+                  ?.where((i) => _currentUser!.interests?.contains(i) ?? false)
+                  .length ??
+              0;
+          final bMatches =
+              b.interests
+                  ?.where((i) => _currentUser!.interests?.contains(i) ?? false)
+                  .length ??
+              0;
+          return bMatches.compareTo(aMatches);
+        });
+      } else if (_filter == 'travelStyles') {
+        sortedUsers.sort((a, b) {
+          final aMatches =
+              a.travelStyles
+                  ?.where(
+                    (i) => _currentUser!.travelStyles?.contains(i) ?? false,
+                  )
+                  .length ??
+              0;
+          final bMatches =
+              b.travelStyles
+                  ?.where(
+                    (i) => _currentUser!.travelStyles?.contains(i) ?? false,
+                  )
+                  .length ??
+              0;
+          return bMatches.compareTo(aMatches);
+        });
+      } else if (_filter == 'everyone') {
+        sortedUsers.sort((a, b) {
+          final aName = (a.firstName ?? '') + (a.lastName ?? '');
+          final bName = (b.firstName ?? '') + (b.lastName ?? '');
+          return aName.toLowerCase().compareTo(bName.toLowerCase());
+        });
+      }
+    }
     return Scaffold(
       backgroundColor: Colors.grey[100],
       appBar: AppBar(
@@ -743,6 +811,105 @@ class _FindSimilarPeopleScreenState extends State<FindSimilarPeopleScreen> {
       ),
       body: Column(
         children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 8),
+            child: SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                children: [
+                  ElevatedButton.icon(
+                    icon: Icon(
+                      Icons.people,
+                      color:
+                          _filter == 'everyone'
+                              ? Colors.white
+                              : Colors.blueGrey,
+                    ),
+                    label: Text(
+                      "Everyone",
+                      style: GoogleFonts.poppins(
+                        color:
+                            _filter == 'everyone'
+                                ? Colors.white
+                                : Colors.blueGrey,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          _filter == 'everyone'
+                              ? Colors.blue
+                              : Colors.grey[200],
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _filter = 'everyone';
+                      });
+                    },
+                  ),
+                  SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    icon: Icon(
+                      Icons.interests,
+                      color:
+                          _filter == 'interests'
+                              ? Colors.white
+                              : Colors.blueGrey,
+                    ),
+                    label: Text(
+                      "Matched Interests",
+                      style: GoogleFonts.poppins(
+                        color:
+                            _filter == 'interests'
+                                ? Colors.white
+                                : Colors.blueGrey,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          _filter == 'interests'
+                              ? Colors.blue
+                              : Colors.grey[200],
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _filter = 'interests';
+                      });
+                    },
+                  ),
+                  SizedBox(width: 8),
+                  ElevatedButton.icon(
+                    icon: Icon(
+                      Icons.style,
+                      color:
+                          _filter == 'travelStyles'
+                              ? Colors.white
+                              : Colors.blueGrey,
+                    ),
+                    label: Text(
+                      "Matched Travel Styles",
+                      style: GoogleFonts.poppins(
+                        color:
+                            _filter == 'travelStyles'
+                                ? Colors.white
+                                : Colors.blueGrey,
+                      ),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor:
+                          _filter == 'travelStyles'
+                              ? Colors.blue
+                              : Colors.grey[200],
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        _filter = 'travelStyles';
+                      });
+                    },
+                  ),
+                ],
+              ),
+            ),
+          ),
           Expanded(
             child:
                 _isLoading
@@ -773,7 +940,7 @@ class _FindSimilarPeopleScreenState extends State<FindSimilarPeopleScreen> {
                         ),
                       ),
                     )
-                    : _similarUsers.isEmpty
+                    : sortedUsers.isEmpty
                     ? Center(
                       child: Text(
                         "No similar users found. Try adding more interests or travel styles!",
@@ -782,36 +949,21 @@ class _FindSimilarPeopleScreenState extends State<FindSimilarPeopleScreen> {
                       ),
                     )
                     : ListView.builder(
-                      itemCount: _similarUsers.length,
+                      padding: const EdgeInsets.only(
+                        bottom: 80,
+                      ), // extra space for FAB
+                      itemCount: sortedUsers.length,
                       itemBuilder: (context, index) {
-                        final user = _similarUsers[index];
+                        final user = sortedUsers[index];
                         return SimilarUserCard(
                           user: user,
                           currentUser: _currentUser!,
                           onTap: () => _showUserDetails(user),
+                          filter: _filter,
                         );
                       },
                     ),
           ),
-          // Padding(
-          //   padding: const EdgeInsets.all(16.0),
-          //   child: SizedBox(
-          //     width: double.infinity,
-          //     child: ElevatedButton.icon(
-          //       onPressed: _scanQRCodeToAddFriend,
-          //       icon: Icon(Icons.qr_code_scanner),
-          //       label: Text("Scan to Add"),
-          //       style: ElevatedButton.styleFrom(
-          //         backgroundColor: Colors.green,
-          //         foregroundColor: Colors.white,
-          //         padding: EdgeInsets.symmetric(vertical: 16),
-          //         shape: RoundedRectangleBorder(
-          //           borderRadius: BorderRadius.circular(12),
-          //         ),
-          //       ),
-          //     ),
-          //   ),
-          // ),
         ],
       ),
       bottomNavigationBar: BottomNavBar(selectedIndex: 2),
@@ -831,17 +983,34 @@ class SimilarUserCard extends StatelessWidget {
   final AppUser user;
   final AppUser currentUser;
   final VoidCallback onTap;
+  final String filter;
 
   const SimilarUserCard({
     super.key,
     required this.user,
     required this.currentUser,
     required this.onTap,
+    required this.filter,
   });
+
+  List<String> _getMatchedInterests() {
+    final userInterests = user.interests ?? [];
+    final currentUserInterests = currentUser.interests ?? [];
+    return userInterests
+        .where((interest) => currentUserInterests.contains(interest))
+        .toList();
+  }
+
+  List<String> _getMatchedTravelStyles() {
+    final userStyles = user.travelStyles ?? [];
+    final currentUserStyles = currentUser.travelStyles ?? [];
+    return userStyles
+        .where((style) => currentUserStyles.contains(style))
+        .toList();
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Determine friend status
     final bool isFriend = currentUser.friendUIDs?.contains(user.uid) ?? false;
     final bool sentRequest =
         currentUser.sentFriendRequests?.contains(user.uid) ?? false;
@@ -867,7 +1036,16 @@ class SimilarUserCard extends StatelessWidget {
     } else {
       relationshipIcon = Icons.person_add;
       iconColor = Colors.blue;
-      relationshipText = "Send Request";
+      relationshipText = "Not Friends";
+    }
+
+    final matchedInterests = _getMatchedInterests();
+    final matchedStyles = _getMatchedTravelStyles();
+    String matchText = '';
+    if (filter == 'interests' && matchedInterests.isNotEmpty) {
+      matchText = 'Matched Interests: ${matchedInterests.length}';
+    } else if (filter == 'travelStyles' && matchedStyles.isNotEmpty) {
+      matchText = 'Matched Travel Styles: ${matchedStyles.length}';
     }
 
     return Card(
@@ -915,6 +1093,14 @@ class SimilarUserCard extends StatelessWidget {
                       ),
                     ),
                     SizedBox(height: 4),
+                    if (matchText.isNotEmpty)
+                      Text(
+                        matchText,
+                        style: GoogleFonts.poppins(
+                          fontSize: 12,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
                     Row(
                       children: [
                         Icon(relationshipIcon, size: 14, color: iconColor),

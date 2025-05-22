@@ -198,9 +198,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
         print("Failed to save interests and travel styles: $e");
       }
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Profile updated')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Profile updated'),
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.zero,
+        ),
+      );
 
       provider.loadUserStream(uid);
       final doc =
@@ -221,9 +225,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _navigateToFriendsList() {
     if (_currentUserData == null ||
         (_currentUserData!.friendUIDs?.isEmpty ?? true)) {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('No friends to display')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('No friends to display'),
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.zero,
+        ),
+      );
       return;
     }
 
@@ -293,278 +301,298 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     padding: const EdgeInsets.all(20.0),
                     child: Column(
                       children: [
-                        // Profile Image
-                        GestureDetector(
-                          onTap: () async {
-                            final source =
-                                await showModalBottomSheet<ImageSource>(
-                                  context: context,
-                                  builder:
-                                      (context) => SafeArea(
-                                        child: Column(
-                                          mainAxisSize: MainAxisSize.min,
-                                          children: [
-                                            ListTile(
-                                              leading: const Icon(
-                                                Icons.camera_alt,
-                                              ),
-                                              title: const Text('Take a photo'),
-                                              onTap:
-                                                  () => Navigator.pop(
-                                                    context,
-                                                    ImageSource.camera,
+                        // Centered Profile Image, Name, Username, Stats
+                        Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          crossAxisAlignment: CrossAxisAlignment.center,
+                          children: [
+                            // Profile Image
+                            GestureDetector(
+                              onTap: () async {
+                                final source =
+                                    await showModalBottomSheet<ImageSource>(
+                                      context: context,
+                                      builder:
+                                          (context) => SafeArea(
+                                            child: Column(
+                                              mainAxisSize: MainAxisSize.min,
+                                              children: [
+                                                ListTile(
+                                                  leading: const Icon(
+                                                    Icons.camera_alt,
                                                   ),
+                                                  title: const Text(
+                                                    'Take a photo',
+                                                  ),
+                                                  onTap:
+                                                      () => Navigator.pop(
+                                                        context,
+                                                        ImageSource.camera,
+                                                      ),
+                                                ),
+                                                ListTile(
+                                                  leading: const Icon(
+                                                    Icons.photo_library,
+                                                  ),
+                                                  title: const Text(
+                                                    'Choose from gallery',
+                                                  ),
+                                                  onTap:
+                                                      () => Navigator.pop(
+                                                        context,
+                                                        ImageSource.gallery,
+                                                      ),
+                                                ),
+                                              ],
                                             ),
-                                            ListTile(
-                                              leading: const Icon(
-                                                Icons.photo_library,
+                                          ),
+                                    );
+                                if (source == null) return;
+                                final permission =
+                                    source == ImageSource.camera
+                                        ? Permission.camera
+                                        : Permission.photos;
+                                final status = await permission.request();
+                                if (!status.isGranted) {
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text(
+                                        '${permission.toString().split('.').last} permission denied',
+                                      ),
+                                      behavior: SnackBarBehavior.floating,
+                                      margin: EdgeInsets.zero,
+                                    ),
+                                  );
+                                  return;
+                                }
+                                final picker = ImagePicker();
+                                final pickedFile = await picker.pickImage(
+                                  source: source,
+                                );
+                                if (pickedFile == null) return;
+                                final uid = _currentUserData!.uid;
+                                final file = File(pickedFile.path);
+                                final storageRef = FirebaseStorage.instance
+                                    .ref()
+                                    .child('profile_images/$uid.jpg');
+                                try {
+                                  await storageRef.putFile(file);
+                                  final imageUrl =
+                                      await storageRef.getDownloadURL();
+                                  await FirebaseFirestore.instance
+                                      .collection('appUsers')
+                                      .doc(uid)
+                                      .update({'profileImageUrl': imageUrl});
+                                  setState(() {
+                                    _currentUserData = _currentUserData!
+                                        .copyWith(profileImageUrl: imageUrl);
+                                  });
+                                } catch (e) {
+                                  print('Upload failed: $e');
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    SnackBar(
+                                      content: Text('Failed to upload image'),
+                                      behavior: SnackBarBehavior.floating,
+                                      margin: EdgeInsets.zero,
+                                    ),
+                                  );
+                                }
+                              },
+                              child: CircleAvatar(
+                                radius: 50,
+                                backgroundColor: Colors.grey[300],
+                                backgroundImage:
+                                    _currentUserData!.profileImageUrl != null
+                                        ? NetworkImage(
+                                          _currentUserData!.profileImageUrl!,
+                                        )
+                                        : null,
+                                child:
+                                    _currentUserData!.profileImageUrl == null
+                                        ? Icon(
+                                          Icons.person,
+                                          size: 50,
+                                          color: Colors.grey[600],
+                                        )
+                                        : null,
+                              ),
+                            ),
+                            SizedBox(height: 16),
+                            // Full Name
+                            Text(
+                              '${_currentUserData!.firstName} ${_currentUserData!.lastName}',
+                              style: TextStyle(
+                                fontSize: 24,
+                                fontWeight: FontWeight.bold,
+                              ),
+                              textAlign: TextAlign.center,
+                            ),
+                            // Username
+                            if (_currentUserData!.username != null) ...[
+                              SizedBox(height: 4),
+                              Text(
+                                '@${_currentUserData!.username}',
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: Colors.grey[600],
+                                ),
+                                textAlign: TextAlign.center,
+                              ),
+                            ],
+                            SizedBox(height: 24),
+                            // User Stats Row (centered)
+                            FutureBuilder<QuerySnapshot>(
+                              future:
+                                  FirebaseFirestore.instance
+                                      .collection('travel')
+                                      .where(
+                                        'uid',
+                                        isEqualTo: _currentUserData!.uid,
+                                      )
+                                      .get(),
+                              builder: (context, snapshot) {
+                                int travelCount = 0;
+                                if (snapshot.connectionState ==
+                                    ConnectionState.done) {
+                                  if (snapshot.hasData) {
+                                    travelCount = snapshot.data!.docs.length;
+                                  }
+                                }
+                                return Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    // Friends Count - Now clickable
+                                    GestureDetector(
+                                      onTap: _navigateToFriendsList,
+                                      child: Container(
+                                        padding: EdgeInsets.symmetric(
+                                          vertical: 8,
+                                          horizontal: 16,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          borderRadius: BorderRadius.circular(
+                                            8,
+                                          ),
+                                          color: Colors.transparent,
+                                        ),
+                                        child: Column(
+                                          children: [
+                                            Text(
+                                              '$_friendsCount',
+                                              style: TextStyle(
+                                                fontSize: 22,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.green,
                                               ),
-                                              title: const Text(
-                                                'Choose from gallery',
-                                              ),
-                                              onTap:
-                                                  () => Navigator.pop(
-                                                    context,
-                                                    ImageSource.gallery,
+                                            ),
+                                            Row(
+                                              children: [
+                                                Text(
+                                                  'Friends',
+                                                  style: TextStyle(
+                                                    fontSize: 14,
+                                                    color: Colors.grey[600],
                                                   ),
+                                                ),
+                                                SizedBox(width: 4),
+                                                Icon(
+                                                  Icons.arrow_forward_ios,
+                                                  size: 12,
+                                                  color: Colors.grey[600],
+                                                ),
+                                              ],
                                             ),
                                           ],
                                         ),
                                       ),
-                                );
-
-                            if (source == null) return;
-
-                            final permission =
-                                source == ImageSource.camera
-                                    ? Permission.camera
-                                    : Permission.photos;
-
-                            final status = await permission.request();
-
-                            if (!status.isGranted) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text(
-                                    '${permission.toString().split('.').last} permission denied',
-                                  ),
-                                ),
-                              );
-                              return;
-                            }
-
-                            final picker = ImagePicker();
-                            final pickedFile = await picker.pickImage(
-                              source: source,
-                            );
-                            if (pickedFile == null) return;
-
-                            final uid = _currentUserData!.uid;
-                            final file = File(pickedFile.path);
-                            final storageRef = FirebaseStorage.instance
-                                .ref()
-                                .child('profile_images/$uid.jpg');
-
-                            try {
-                              await storageRef.putFile(file);
-                              final imageUrl =
-                                  await storageRef.getDownloadURL();
-                              await FirebaseFirestore.instance
-                                  .collection('appUsers')
-                                  .doc(uid)
-                                  .update({'profileImageUrl': imageUrl});
-
-                              setState(() {
-                                _currentUserData = _currentUserData!.copyWith(
-                                  profileImageUrl: imageUrl,
-                                );
-                              });
-                            } catch (e) {
-                              print('Upload failed: $e');
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Failed to upload image'),
-                                ),
-                              );
-                            }
-                          },
-                          child: CircleAvatar(
-                            radius: 50,
-                            backgroundColor: Colors.grey[300],
-                            backgroundImage:
-                                _currentUserData!.profileImageUrl != null
-                                    ? NetworkImage(
-                                      _currentUserData!.profileImageUrl!,
-                                    )
-                                    : null,
-                            child:
-                                _currentUserData!.profileImageUrl == null
-                                    ? Icon(
-                                      Icons.person,
-                                      size: 50,
-                                      color: Colors.grey[600],
-                                    )
-                                    : null,
-                          ),
-                        ),
-                        SizedBox(height: 16),
-
-                        // Full Name
-                        Text(
-                          '${_currentUserData!.firstName} ${_currentUserData!.lastName}',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-
-                        // Username
-                        if (_currentUserData!.username != null) ...[
-                          SizedBox(height: 4),
-                          Text(
-                            '@${_currentUserData!.username}',
-                            style: TextStyle(
-                              fontSize: 16,
-                              color: Colors.grey[600],
-                            ),
-                          ),
-                        ],
-
-                        SizedBox(height: 24),
-
-                        // User Stats Row
-                        FutureBuilder<QuerySnapshot>(
-                          future:
-                              FirebaseFirestore.instance
-                                  .collection('travel')
-                                  .where(
-                                    'uid',
-                                    isEqualTo: _currentUserData!.uid,
-                                  )
-                                  .get(),
-                          builder: (context, snapshot) {
-                            int travelCount = 0;
-                            if (snapshot.connectionState ==
-                                ConnectionState.done) {
-                              if (snapshot.hasData) {
-                                travelCount = snapshot.data!.docs.length;
-                              }
-                            }
-
-                            return Row(
-                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                              children: [
-                                // Friends Count - Now clickable
-                                GestureDetector(
-                                  onTap: _navigateToFriendsList,
-                                  child: Container(
-                                    padding: EdgeInsets.symmetric(
-                                      vertical: 8,
-                                      horizontal: 16,
                                     ),
-                                    decoration: BoxDecoration(
-                                      borderRadius: BorderRadius.circular(8),
-                                      color: Colors.transparent,
-                                    ),
-                                    child: Column(
+                                    SizedBox(width: 32),
+                                    // Travels Count
+                                    Column(
                                       children: [
-                                        Text(
-                                          '$_friendsCount',
-                                          style: TextStyle(
-                                            fontSize: 22,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.green,
-                                          ),
-                                        ),
-                                        Row(
-                                          children: [
-                                            Text(
-                                              'Friends',
+                                        snapshot.connectionState ==
+                                                ConnectionState.waiting
+                                            ? SizedBox(
+                                              height: 22,
+                                              width: 22,
+                                              child: CircularProgressIndicator(
+                                                strokeWidth: 2,
+                                                color: Colors.green,
+                                              ),
+                                            )
+                                            : Text(
+                                              '$travelCount',
                                               style: TextStyle(
-                                                fontSize: 14,
-                                                color: Colors.grey[600],
+                                                fontSize: 22,
+                                                fontWeight: FontWeight.bold,
+                                                color: Colors.green,
                                               ),
                                             ),
-                                            SizedBox(width: 4),
-                                            Icon(
-                                              Icons.arrow_forward_ios,
-                                              size: 12,
-                                              color: Colors.grey[600],
-                                            ),
-                                          ],
+                                        Text(
+                                          'Travels',
+                                          style: TextStyle(
+                                            fontSize: 14,
+                                            color: Colors.grey[600],
+                                          ),
                                         ),
                                       ],
                                     ),
+                                  ],
+                                );
+                              },
+                            ),
+                            SizedBox(height: 24),
+                            // Private Profile Toggle (centered)
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  'Private Profile',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w500,
                                   ),
                                 ),
-
-                                // Divider
-                                Container(
-                                  height: 40,
-                                  width: 1,
-                                  color: Colors.grey[300],
-                                ),
-
-                                // Travels Count
-                                Column(
-                                  children: [
-                                    snapshot.connectionState ==
-                                            ConnectionState.waiting
-                                        ? SizedBox(
-                                          height: 22,
-                                          width: 22,
-                                          child: CircularProgressIndicator(
-                                            strokeWidth: 2,
-                                            color: Colors.green,
-                                          ),
-                                        )
-                                        : Text(
-                                          '$travelCount',
-                                          style: TextStyle(
-                                            fontSize: 22,
-                                            fontWeight: FontWeight.bold,
-                                            color: Colors.green,
-                                          ),
-                                        ),
-                                    Text(
-                                      'Travels',
-                                      style: TextStyle(
-                                        fontSize: 14,
-                                        color: Colors.grey[600],
-                                      ),
-                                    ),
-                                  ],
+                                SizedBox(width: 12),
+                                Switch(
+                                  value: _isPrivate,
+                                  onChanged: (value) async {
+                                    if (value)
+                                      showDialog(
+                                        context: context,
+                                        builder:
+                                            (context) => AlertDialog(
+                                              title: Text("Private Profile"),
+                                              content: Text(
+                                                "Are you sure you want to make your profile private?",
+                                              ),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed: () {
+                                                    Navigator.of(context).pop();
+                                                  },
+                                                  child: Text("Cancel"),
+                                                ),
+                                                TextButton(
+                                                  onPressed: () {
+                                                    Navigator.of(context).pop();
+                                                  },
+                                                  child: Text("Confirm"),
+                                                ),
+                                              ],
+                                            ),
+                                      );
+                                    setState(() {
+                                      _isPrivate = value;
+                                    });
+                                    await FirebaseFirestore.instance
+                                        .collection('appUsers')
+                                        .doc(_currentUserData!.uid)
+                                        .update({'isPrivate': value});
+                                  },
+                                  activeColor: Colors.green,
                                 ),
                               ],
-                            );
-                          },
-                        ),
-
-                        SizedBox(height: 24),
-
-                        // Private Profile Toggle
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                          children: [
-                            Text(
-                              'Private Profile',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                            Switch(
-                              value: _isPrivate,
-                              onChanged: (value) async {
-                                setState(() {
-                                  _isPrivate = value;
-                                });
-                                await FirebaseFirestore.instance
-                                    .collection('appUsers')
-                                    .doc(_currentUserData!.uid)
-                                    .update({'isPrivate': value});
-                              },
-                              activeColor: Colors.green,
                             ),
                           ],
                         ),

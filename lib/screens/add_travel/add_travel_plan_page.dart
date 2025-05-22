@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:intl/intl.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:qr_flutter/qr_flutter.dart';
@@ -37,11 +38,13 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
 
   late String _name, _location;
   DateTime? _startDate, _endDate;
+  String durationText = 'Trip Duration: Not set';
   String? _flightDetails, _accommodation, _notes;
   final List<String> _checklist = [];
   final List<Activity> _activities = [];
   bool _isOneDayTrip = false;
-  String _tripDuration = '';
+  LatLng? locationSelected;
+  int days = 0;
 
   // Controllers
   final _nameController = TextEditingController();
@@ -95,37 +98,29 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
                   _buildHeader(
                     'Trip Info',
                     trailing: TextButton.icon(
-                      icon: Icon(Icons.qr_code_scanner, color: primaryColor),
-                      label: Text(
-                        "or Scan QR",
-                        style: TextStyle(color: primaryColor),
+                      style: TextButton.styleFrom(
+                        backgroundColor: primaryColor,
+                        foregroundColor: Colors.white,
+                        textStyle: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
+                      icon: Icon(Icons.qr_code_scanner, color: Colors.white),
+                      label: Text("Scan QR"),
                       onPressed: _showQRScanOptions,
                     ),
                   ),
                   _buildTextField(
-                    'Trip Name',
-                    _nameController,
-                    (value) => value!.isEmpty ? 'Enter a name' : null,
+                    label: 'Trip Name',
+                    controller: _nameController,
+                    validator:
+                        (value) => value!.isEmpty ? 'Enter a name' : null,
                     onSaved: (v) => _name = v!,
                   ),
 
                   // Location TextField with Auto-Suggestion and Map Picker
-                  Row(
-                    children: [
-                      Expanded(
-                        child: GestureDetector(
-                          onTap: _handleLocationAutocomplete,
-                          child: _buildLocationFieldWithAutocomplete(),
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      IconButton(
-                        icon: Icon(Icons.map, color: primaryColor),
-                        onPressed: _openMapPicker,
-                      ),
-                    ],
-                  ),
+                  _buildLocationFieldWithAutocomplete(),
 
                   Row(
                     children: [
@@ -136,72 +131,156 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
                           true,
                         ),
                       ),
-                      if (!_isOneDayTrip) ...[
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: _buildDateField(
-                            'End Date',
-                            _endDateController,
-                            false,
-                          ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: _buildDateField(
+                          'End Date',
+                          _endDateController,
+                          false,
                         ),
-                      ],
+                      ),
                     ],
                   ),
                   const SizedBox(height: 8),
+                  // Trip Duration Display
+                  Builder(
+                    builder: (context) {
+                      if (_startDate != null && _endDate != null) {
+                        if (days == 0) {
+                          durationText = 'Trip Duration: 1 day';
+                        } else if (days > 0) {
+                          durationText = 'Trip Duration: ${days + 1} days';
+                        } else {
+                          durationText = 'Trip Duration: Invalid dates';
+                        }
+                      } else if (_startDate != null && _endDate == null) {
+                        durationText =
+                            'Trip Duration: Starts on ${DateFormat('EEEE, MMM d, yyyy').format(_startDate!)}';
+                      }
+                      return Card(
+                        color: Colors.green[50],
+                        margin: const EdgeInsets.symmetric(vertical: 8),
+                        child: Padding(
+                          padding: const EdgeInsets.all(12.0),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Icon(Icons.access_time, color: primaryColor),
+                              SizedBox(width: 8),
+                              Text(
+                                durationText,
+                                style: TextStyle(
+                                  color: primaryColor,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 16,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  _buildHeader('Additional Info'),
                   Row(
                     children: [
-                      Checkbox(
-                        value: _isOneDayTrip,
-                        onChanged: (value) {
+                      Expanded(
+                        child: _buildTextField(
+                          label: 'Flight Details',
+                          controller: _flightController,
+                          onSaved: (v) => _flightDetails = v,
+                          hint: 'e.g. Flight #, Departure Time, etc.',
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      OutlinedButton.icon(
+                        onPressed: () {
                           setState(() {
-                            _isOneDayTrip = value ?? false;
-                            if (_isOneDayTrip && _startDate != null) {
-                              _endDate = _startDate;
-                              _endDateController.text =
-                                  _startDateController.text;
-                              _updateTripDuration();
-                            }
+                            _flightController.text = 'N/A';
                           });
                         },
-                      ),
-                      Text(
-                        'This is a one-day trip',
-                        style: TextStyle(color: primaryColor),
+                        label: Text(
+                          'N/A',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: primaryColor,
+                          ),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: primaryColor),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
                       ),
                     ],
                   ),
-                  if (_startDate != null && _endDate != null && !_isOneDayTrip)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 8.0),
-                      child: Text(
-                        _tripDuration,
-                        style: TextStyle(
-                          color: primaryColor,
-                          fontWeight: FontWeight.bold,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildTextField(
+                          label: 'Accommodation',
+                          controller: _accommodationController,
+                          onSaved: (v) => _accommodation = v,
+                          hint: 'e.g. Hotel Name, Address, etc.',
                         ),
                       ),
-                    ),
-                  const SizedBox(height: 16),
-                  _buildHeader('Additional Info'),
-                  _buildTextField(
-                    'Flight Details',
-                    _flightController,
-                    null,
-                    onSaved: (v) => _flightDetails = v,
+                      const SizedBox(width: 8),
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          setState(() {
+                            _accommodationController.text = 'N/A';
+                          });
+                        },
+                        label: Text(
+                          'N/A',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: primaryColor,
+                          ),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: primaryColor),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  _buildTextField(
-                    'Accommodation',
-                    _accommodationController,
-                    null,
-                    onSaved: (v) => _accommodation = v,
-                  ),
-                  _buildTextField(
-                    'Notes',
-                    _notesController,
-                    null,
-                    maxLines: 3,
-                    onSaved: (v) => _notes = v,
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildTextField(
+                          label: 'Notes',
+                          controller: _notesController,
+                          maxLines: 3,
+                          onSaved: (v) => _notes = v,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      OutlinedButton.icon(
+                        onPressed: () {
+                          setState(() {
+                            _notesController.text = 'N/A';
+                          });
+                        },
+                        label: Text(
+                          'N/A',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            color: primaryColor,
+                          ),
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          side: BorderSide(color: primaryColor),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(8),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 20),
                   Center(
@@ -328,9 +407,13 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
           result,
           currentUser.uid,
         );
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(message)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            behavior: SnackBarBehavior.floating,
+            margin: EdgeInsets.zero,
+          ),
+        );
 
         if (message != successMessage) {
           return;
@@ -351,9 +434,13 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
             MaterialPageRoute(builder: (_) => TripDetails(travel: travel)),
           );
         } else {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text("Travel plan not found.")));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Travel plan not found."),
+              behavior: SnackBarBehavior.floating,
+              margin: EdgeInsets.zero,
+            ),
+          );
         }
       }
     }
@@ -379,12 +466,13 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
     );
   }
 
-  Widget _buildTextField(
-    String label,
-    TextEditingController controller,
-    String? Function(String?)? validator, {
+  Widget _buildTextField({
+    required String label,
+    required TextEditingController controller,
     int maxLines = 1,
+    String? Function(String?)? validator,
     void Function(String?)? onSaved,
+    String? hint,
   }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0),
@@ -393,6 +481,7 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
         maxLines: maxLines,
         decoration: InputDecoration(
           labelText: label,
+          hintText: hint ?? '',
           labelStyle: TextStyle(color: primaryColor),
           border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
           focusedBorder: OutlineInputBorder(
@@ -424,9 +513,7 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
         if (isStart && (value == null || value.isEmpty)) {
           return 'Please select a start date';
         }
-        if (!isStart && !_isOneDayTrip && (value == null || value.isEmpty)) {
-          return 'Please select an end date';
-        }
+        // End date is optional, so no validation required here
         return null;
       },
     );
@@ -456,7 +543,6 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
               'EEEE, MMM d, yyyy',
             ).format(picked);
           }
-          _updateTripDuration();
         } else {
           // Only allow end date selection if it's not a one-day trip
           if (!_isOneDayTrip) {
@@ -469,6 +555,8 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
                     style: TextStyle(color: backgroundColor),
                   ),
                   backgroundColor: errorColor,
+                  behavior: SnackBarBehavior.floating,
+                  margin: EdgeInsets.zero,
                 ),
               );
               return;
@@ -477,23 +565,22 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
             _endDateController.text = DateFormat(
               'EEEE, MMM d, yyyy',
             ).format(picked);
-            _updateTripDuration();
+            setState(() {
+              if (_endDate != null || _startDate != null) {
+                days = picked.difference(_startDate!).inDays;
+              }
+              if (_endDate == null) {
+                durationText =
+                    'Trip Duration: Starts on ${DateFormat('EEEE, MMM d, yyyy').format(_startDate!)}';
+              } else if (days == 0) {
+                durationText = 'Trip Duration: 1 day';
+              } else if (days > 0) {
+                durationText = 'Trip Duration: ${days + 1} days';
+              } else {
+                durationText = 'Trip Duration: Invalid dates';
+              }
+            });
           }
-        }
-      });
-    }
-  }
-
-  void _updateTripDuration() {
-    if (_startDate != null && _endDate != null) {
-      final days = _endDate!.difference(_startDate!).inDays;
-      setState(() {
-        if (days == 0) {
-          _tripDuration = 'This is a one-day trip';
-          _isOneDayTrip = true; // Automatically set one-day trip
-        } else {
-          _tripDuration = 'Trip Duration: ${days + 1} days';
-          _isOneDayTrip = false; // Automatically set multi-day trip
         }
       });
     }
@@ -508,6 +595,8 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
             content: Text("Start date can't be empty"),
             backgroundColor: errorColor,
             duration: Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+            margin: EdgeInsets.zero,
           ),
         );
         return;
@@ -526,35 +615,16 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
         _startDate!.day,
       );
 
-      if (startDate.isBefore(today)) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Start date can't be in the past"),
-            backgroundColor: errorColor,
-            duration: Duration(seconds: 2),
-          ),
-        );
-        return;
-      }
-
-      if (!_isOneDayTrip) {
-        if (_endDate == null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text("End date can't be empty"),
-              backgroundColor: errorColor,
-              duration: Duration(seconds: 2),
-            ),
-          );
-          return;
-        }
-
+      // Only validate end date if it is set
+      if (_endDate != null) {
         if (_endDate!.isBefore(_startDate!)) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(
               content: Text("End date can't be before start date"),
               backgroundColor: errorColor,
               duration: Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+              margin: EdgeInsets.zero,
             ),
           );
           return;
@@ -565,13 +635,12 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
               content: Text("Start date can't be after end date"),
               backgroundColor: errorColor,
               duration: Duration(seconds: 2),
+              behavior: SnackBarBehavior.floating,
+              margin: EdgeInsets.zero,
             ),
           );
           return;
         }
-      } else {
-        // For one-day trips, set end date same as start date
-        _endDate = _startDate;
       }
 
       // Validate required fields
@@ -581,6 +650,8 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
             content: Text("Trip name can't be empty"),
             backgroundColor: errorColor,
             duration: Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+            margin: EdgeInsets.zero,
           ),
         );
         return;
@@ -592,6 +663,8 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
             content: Text("Location can't be empty"),
             backgroundColor: errorColor,
             duration: Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+            margin: EdgeInsets.zero,
           ),
         );
         return;
@@ -606,6 +679,8 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
             content: Text("User not logged in"),
             backgroundColor: errorColor,
             duration: Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+            margin: EdgeInsets.zero,
           ),
         );
         return;
@@ -663,6 +738,8 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
             ),
             backgroundColor: errorColor,
             duration: Duration(seconds: 2),
+            behavior: SnackBarBehavior.floating,
+            margin: EdgeInsets.zero,
           ),
         );
       }
@@ -673,6 +750,8 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
           content: Text("Please fill in all required fields correctly"),
           backgroundColor: errorColor,
           duration: Duration(seconds: 2),
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.zero,
         ),
       );
     }
@@ -737,7 +816,11 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
                     );
                   } else {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("Travel plan not found.")),
+                      SnackBar(
+                        content: Text("Travel plan not found."),
+                        behavior: SnackBarBehavior.floating,
+                        margin: EdgeInsets.zero,
+                      ),
                     );
                   }
                 },
@@ -791,15 +874,23 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
       if (byteData != null) {
         byteData.buffer.asUint8List();
 
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text('QR Code to gallery!')));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('QR Code to gallery!'),
+            behavior: SnackBarBehavior.floating,
+            margin: EdgeInsets.zero,
+          ),
+        );
       }
     } catch (e) {
       print('Error saving QR code: $e');
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Failed to save QR code.')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Failed to save QR code.'),
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.zero,
+        ),
+      );
     }
   }
 
@@ -829,6 +920,8 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
             content: Text(
               "No location suggestions found, please enter manually.",
             ),
+            behavior: SnackBarBehavior.floating,
+            margin: EdgeInsets.zero,
           ),
         );
       }
@@ -836,7 +929,11 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
       // Handle API error response
       print("Failed to get autocomplete suggestions: ${response.errorMessage}");
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to get location suggestions")),
+        SnackBar(
+          content: Text("Failed to get location suggestions"),
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.zero,
+        ),
       );
     }
   }
@@ -851,6 +948,8 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
             content: Text(
               'Location permission is required to pick a place on the map.',
             ),
+            behavior: SnackBarBehavior.floating,
+            margin: EdgeInsets.zero,
           ),
         );
         return;
@@ -860,13 +959,19 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
 
   Future<void> _openMapPicker() async {
     await _requestLocationPermission();
+    Position position = await Geolocator.getCurrentPosition();
+    double lat = position.latitude;
+    double long = position.longitude;
 
     final result = await Navigator.push(
       context,
       MaterialPageRoute(
         builder:
             (_) => MapPickerPage(
-              initialPosition: LatLng(14.5995, 120.9842), // Manila as default
+              initialPosition:
+                  LatLng(lat, long) ??
+                  (locationSelected ??
+                      LatLng(14.5995, 120.9842)), // Manila as default
             ),
       ),
     );
@@ -874,16 +979,16 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
     // Check if result is a Map containing address and location
     if (result != null && result is Map) {
       final address = result['address'] as String?;
-      final location = result['location'] as LatLng?;
+      locationSelected = result['location'] as LatLng?;
 
-      if (address != null && location != null) {
+      if (address != null && locationSelected != null) {
         setState(() {
           _locationController.text = address;
         });
 
         // Store the location coordinates
-        final double latitude = location.latitude;
-        final double longitude = location.longitude;
+        final double latitude = locationSelected!.latitude;
+        final double longitude = locationSelected!.longitude;
 
         // Optionally print to verify
         print("Selected location: $address ($latitude, $longitude)");
@@ -892,73 +997,102 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
   }
 
   Widget _buildLocationFieldWithAutocomplete() {
-    return Column(
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        TextFormField(
-          controller: _locationController,
-          decoration: InputDecoration(
-            labelText: 'Location',
-            labelStyle: TextStyle(color: primaryColor),
-            border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
-            focusedBorder: OutlineInputBorder(
-              borderSide: BorderSide(color: primaryColor, width: 2),
-            ),
-            suffixIcon: Icon(Icons.location_on, color: primaryColor),
+        Expanded(
+          child: Column(
+            children: [
+              TextFormField(
+                controller: _locationController,
+                decoration: InputDecoration(
+                  labelText: 'Location',
+                  labelStyle: TextStyle(color: primaryColor),
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  focusedBorder: OutlineInputBorder(
+                    borderSide: BorderSide(color: primaryColor, width: 2),
+                  ),
+                ),
+                validator:
+                    (value) => value!.isEmpty ? 'Enter a location' : null,
+                onChanged: (value) {
+                  if (_debounce?.isActive ?? false) _debounce!.cancel();
+                  _debounce = Timer(
+                    const Duration(milliseconds: 500),
+                    () async {
+                      if (value.isNotEmpty) {
+                        final response = await places.autocomplete(value);
+                        if (response.isOkay) {
+                          setState(() {
+                            _predictions = response.predictions;
+                            _isSearching = true;
+                          });
+                        }
+                      } else {
+                        setState(() {
+                          _predictions = [];
+                          _isSearching = false;
+                        });
+                      }
+                    },
+                  );
+                },
+                onSaved: (v) => _location = v!,
+              ),
+              if (_isSearching && _predictions.isNotEmpty)
+                Container(
+                  height: 200,
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    border: Border.all(color: primaryColor),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: ListView.builder(
+                    itemCount: _predictions.length,
+                    itemBuilder: (context, index) {
+                      final prediction = _predictions[index];
+                      return ListTile(
+                        title: Text(prediction.description ?? ''),
+                        onTap: () async {
+                          final placeId = prediction.placeId!;
+                          final details = await places.getDetailsByPlaceId(
+                            placeId,
+                          );
+                          final selectedLocation =
+                              details.result.formattedAddress ??
+                              prediction.description;
+
+                          setState(() {
+                            _locationController.text = selectedLocation!;
+                            _isSearching = false;
+                            _predictions.clear();
+                          });
+                        },
+                      );
+                    },
+                  ),
+                ),
+              SizedBox(height: 10),
+            ],
           ),
-          validator: (value) => value!.isEmpty ? 'Enter a location' : null,
-          onChanged: (value) {
-            if (_debounce?.isActive ?? false) _debounce!.cancel();
-            _debounce = Timer(const Duration(milliseconds: 500), () async {
-              if (value.isNotEmpty) {
-                final response = await places.autocomplete(value);
-                if (response.isOkay) {
-                  setState(() {
-                    _predictions = response.predictions;
-                    _isSearching = true;
-                  });
-                }
-              } else {
-                setState(() {
-                  _predictions = [];
-                  _isSearching = false;
-                });
-              }
-            });
-          },
-          onSaved: (v) => _location = v!,
         ),
-        if (_isSearching && _predictions.isNotEmpty)
-          Container(
-            height: 200,
-            decoration: BoxDecoration(
-              color: Colors.white,
-              border: Border.all(color: primaryColor),
+        const SizedBox(width: 8),
+        TextButton.icon(
+          icon: Icon(Icons.map, color: primaryColor, size: 32),
+          label: Text(
+            "View Map",
+            style: TextStyle(color: primaryColor, fontWeight: FontWeight.w500),
+          ),
+          style: TextButton.styleFrom(
+            padding: EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+            shape: RoundedRectangleBorder(
               borderRadius: BorderRadius.circular(10),
             ),
-            child: ListView.builder(
-              itemCount: _predictions.length,
-              itemBuilder: (context, index) {
-                final prediction = _predictions[index];
-                return ListTile(
-                  title: Text(prediction.description ?? ''),
-                  onTap: () async {
-                    final placeId = prediction.placeId!;
-                    final details = await places.getDetailsByPlaceId(placeId);
-                    final selectedLocation =
-                        details.result.formattedAddress ??
-                        prediction.description;
-
-                    setState(() {
-                      _locationController.text = selectedLocation!;
-                      _isSearching = false;
-                      _predictions.clear();
-                    });
-                  },
-                );
-              },
-            ),
           ),
-        SizedBox(height: 10),
+          onPressed: _openMapPicker,
+        ),
       ],
     );
   }
@@ -976,9 +1110,13 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
           result,
           currentUser.uid,
         );
-        ScaffoldMessenger.of(
-          context,
-        ).showSnackBar(SnackBar(content: Text(message)));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(message),
+            behavior: SnackBarBehavior.floating,
+            margin: EdgeInsets.zero,
+          ),
+        );
 
         if (message != successMessage) {
           return;
@@ -999,9 +1137,13 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
             MaterialPageRoute(builder: (_) => TripDetails(travel: travel)),
           );
         } else {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text("Travel plan not found.")));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text("Travel plan not found."),
+              behavior: SnackBarBehavior.floating,
+              margin: EdgeInsets.zero,
+            ),
+          );
         }
       }
     }

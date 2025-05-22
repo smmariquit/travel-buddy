@@ -66,7 +66,11 @@ class _MapPickerPageState extends State<MapPickerPage> {
       Navigator.pop(context);
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text("Failed to retrieve place details")),
+        SnackBar(
+          content: Text("Failed to retrieve place details"),
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.zero,
+        ),
       );
     }
   }
@@ -100,7 +104,7 @@ class _MapPickerPageState extends State<MapPickerPage> {
             padding: const EdgeInsets.all(16.0),
             child: ElevatedButton(
               onPressed: _confirmSelection,
-              child: Text("Confirm Location"),
+              child: Text("Confirm"),
               style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
             ),
           ),
