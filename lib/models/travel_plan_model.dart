@@ -74,7 +74,7 @@ class Travel {
   final String? accommodation;
   final String? notes;
   final List<String>? checklist;
-  final List<String>? sharedWith;
+  late final List<String>? sharedWith;
   final DateTime createdOn;
   List<Activity>? activities;
   String? imageUrl;

@@ -221,6 +221,8 @@ class _NotificationPageState extends State<NotificationPage>
             'Friend request from ${user.firstName} accepted!',
             style: GoogleFonts.poppins(),
           ),
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.zero,
         ),
       );
     } catch (e) {
@@ -230,6 +232,8 @@ class _NotificationPageState extends State<NotificationPage>
             'Error accepting request: $e',
             style: GoogleFonts.poppins(),
           ),
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.zero,
         ),
       );
     }
@@ -312,6 +316,8 @@ class _NotificationPageState extends State<NotificationPage>
             'Friend request rejected',
             style: GoogleFonts.poppins(),
           ),
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.zero,
         ),
       );
     } catch (e) {
@@ -321,6 +327,8 @@ class _NotificationPageState extends State<NotificationPage>
             'Error rejecting request: $e',
             style: GoogleFonts.poppins(),
           ),
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.zero,
         ),
       );
     }
@@ -524,73 +532,150 @@ class _NotificationPageState extends State<NotificationPage>
         ),
       );
     }
-    return ListView.builder(
+    return ListView(
       padding: EdgeInsets.all(16),
-      itemCount: _travelNotifications.length,
-      itemBuilder: (context, index) {
-        final notification = _travelNotifications[index];
-        final isRead = notification['read'] ?? false;
-        return Dismissible(
-          key: Key(notification['id']),
-          background: Container(
-            color: Colors.red,
-            alignment: Alignment.centerRight,
-            padding: EdgeInsets.only(right: 20),
-            child: Icon(Icons.delete, color: Colors.white),
-          ),
-          direction: DismissDirection.endToStart,
-          onDismissed: (direction) async {
-            final userId = FirebaseAuth.instance.currentUser?.uid;
-            if (userId != null) {
-              await _notificationService.markNotificationAsRead(
-                userId: userId,
-                notificationId: notification['id'],
-              );
-            }
-            setState(() {
-              _travelNotifications.removeAt(index);
-            });
-          },
-          child: Card(
-            margin: EdgeInsets.only(bottom: 16),
-            elevation: 2,
-            child: ListTile(
-              contentPadding: EdgeInsets.all(16),
-              leading: Icon(
-                isRead ? Icons.notifications_none : Icons.notifications_active,
-                color: isRead ? Colors.grey : Colors.blue,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.end,
+          children: [
+            ElevatedButton.icon(
+              icon: Icon(Icons.delete, color: Colors.white),
+              label: Text('Delete All', style: GoogleFonts.poppins()),
+              onPressed: _deleteAllTravelNotifications,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
               ),
-              title: Text(
-                notification['title'] ?? 'Notification',
-                style: GoogleFonts.poppins(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 18,
-                  color: isRead ? Colors.grey : Colors.black,
-                ),
-              ),
-              subtitle: Text(
-                notification['body'] ?? '',
-                style: GoogleFonts.poppins(
-                  color: isRead ? Colors.grey : Colors.black,
-                ),
-              ),
-              onTap: () async {
-                final userId = FirebaseAuth.instance.currentUser?.uid;
-                if (userId != null && !isRead) {
-                  await _notificationService.markNotificationAsRead(
-                    userId: userId,
-                    notificationId: notification['id'],
-                  );
-                  setState(() {
-                    _travelNotifications[index]['read'] = true;
-                  });
-                }
-              },
             ),
-          ),
-        );
-      },
+            SizedBox(width: 8),
+            ElevatedButton.icon(
+              icon: Icon(Icons.check, color: Colors.white),
+              label: Text('Mark All as Read'),
+              onPressed: _markAllTravelNotificationsAsRead,
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.green,
+                foregroundColor: Colors.white,
+                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              ),
+            ),
+          ],
+        ),
+        SizedBox(height: 16),
+        ..._travelNotifications.asMap().entries.map((entry) {
+          final index = entry.key;
+          final notification = entry.value;
+          final isRead = notification['read'] ?? false;
+          return Dismissible(
+            key: Key(notification['id']),
+            background: Container(
+              color: Colors.red,
+              alignment: Alignment.centerRight,
+              padding: EdgeInsets.only(right: 20),
+              child: Icon(Icons.delete, color: Colors.white),
+            ),
+            direction: DismissDirection.endToStart,
+            onDismissed: (direction) async {
+              final userId = FirebaseAuth.instance.currentUser?.uid;
+              if (userId != null) {
+                await _notificationService.markNotificationAsRead(
+                  userId: userId,
+                  notificationId: notification['id'],
+                );
+              }
+              setState(() {
+                _travelNotifications.removeAt(index);
+              });
+            },
+            child: Card(
+              margin: EdgeInsets.only(bottom: 16),
+              elevation: 2,
+              child: ListTile(
+                contentPadding: EdgeInsets.all(16),
+                leading: Icon(
+                  isRead
+                      ? Icons.notifications_none
+                      : Icons.notifications_active,
+                  color: isRead ? Colors.grey : Colors.blue,
+                ),
+                title: Text(
+                  notification['title'] ?? 'Notification',
+                  style: GoogleFonts.poppins(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 18,
+                    color: isRead ? Colors.grey : Colors.black,
+                  ),
+                ),
+                subtitle: Text(
+                  notification['body'] ?? '',
+                  style: GoogleFonts.poppins(
+                    color: isRead ? Colors.grey : Colors.black,
+                  ),
+                ),
+                onTap: () async {
+                  final userId = FirebaseAuth.instance.currentUser?.uid;
+                  if (userId != null && !isRead) {
+                    await _notificationService.markNotificationAsRead(
+                      userId: userId,
+                      notificationId: notification['id'],
+                    );
+                    setState(() {
+                      _travelNotifications[index]['read'] = true;
+                    });
+                  }
+                },
+              ),
+            ),
+          );
+        }).toList(),
+      ],
     );
+  }
+
+  Future<void> _deleteAllTravelNotifications() async {
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: Text('Delete All Notifications'),
+            content: Text('Are you sure you want to delete all notifications?'),
+          ),
+    );
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId != null) {
+      FirebaseFirestore.instance
+          .collection('appUsers')
+          .doc(userId)
+          .collection('notifications')
+          .get()
+          .then((snapshot) {
+            snapshot.docs.forEach((doc) => doc.reference.delete());
+          });
+      setState(() {
+        _travelNotifications = [];
+      });
+    }
+  }
+
+  Future<void> _markAllTravelNotificationsAsRead() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId != null) {
+      await FirebaseFirestore.instance
+          .collection('appUsers')
+          .doc(userId)
+          .collection('notifications')
+          .get()
+          .then((snapshot) {
+            snapshot.docs.forEach(
+              (doc) => doc.reference.update({'read': true}),
+            );
+          });
+      setState(() {
+        _travelNotifications.forEach(
+          (notification) => notification['read'] = true,
+        );
+      });
+    }
   }
 
   // Helper method to format date

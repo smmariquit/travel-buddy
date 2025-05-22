@@ -272,9 +272,13 @@ class _SignInPageState extends State<SignInPage> {
             MaterialPageRoute(builder: (context) => MainPage()),
           );
         } else {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text(result)));
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text(result),
+              behavior: SnackBarBehavior.floating,
+              margin: EdgeInsets.zero,
+            ),
+          );
         }
       },
     ),

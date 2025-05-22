@@ -121,6 +121,8 @@ class TravelPlanCard extends StatelessWidget {
                     'Error loading travel details: ${e.toString()}',
                   ),
                   backgroundColor: Colors.red,
+                  behavior: SnackBarBehavior.floating,
+                  margin: EdgeInsets.zero,
                 ),
               );
             }
@@ -183,7 +185,7 @@ class TravelPlanCard extends StatelessWidget {
                           child: Text(
                             endDate != null
                                 ? '${_formatDate(startDate)} - ${_formatDate(endDate!)}'
-                                : '${_formatDate(startDate)} -',
+                                : '${_formatDate(startDate)}',
                             style: const TextStyle(
                               fontSize: 12,
                               color: Colors.grey,

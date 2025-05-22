@@ -9,7 +9,6 @@ import 'package:intl/intl.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:google_fonts/google_fonts.dart';
 
-
 // State Management
 import 'package:provider/provider.dart';
 
@@ -41,9 +40,11 @@ class _TripDetailsState extends State<TripDetails>
   final picker = ImagePicker();
   late TabController _tabController;
   bool _isLoading = true;
+  late Travel updatedTravel;
   final GlobalKey qrKey = GlobalKey();
-  late Travel _travel;
+  Travel? _travel;
   final _usernameController = TextEditingController();
+  late bool hasFriends;
   final _errorMessage = ValueNotifier<String?>(null);
 
   Widget _buildDetailRow(IconData icon, String label, String value) {
@@ -99,12 +100,12 @@ class _TripDetailsState extends State<TripDetails>
       // Update in Firestore
       await FirebaseFirestore.instance
           .collection('travel')
-          .doc(_travel.id)
+          .doc(_travel!.id)
           .update({'notificationDays': days});
 
       // Update local state
       setState(() {
-        _travel = _travel.copyWith(notificationDays: days);
+        _travel = _travel!.copyWith(notificationDays: days);
         _isLoading = false;
       });
 
@@ -114,6 +115,8 @@ class _TripDetailsState extends State<TripDetails>
             'Notification settings updated! You\'ll be notified $days days before your trip.',
             style: GoogleFonts.poppins(),
           ),
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.zero,
         ),
       );
     } catch (e) {
@@ -126,6 +129,8 @@ class _TripDetailsState extends State<TripDetails>
             'Failed to update notification settings: $e',
             style: GoogleFonts.poppins(),
           ),
+          behavior: SnackBarBehavior.floating,
+          margin: EdgeInsets.zero,
         ),
       );
     }
@@ -140,15 +145,15 @@ class _TripDetailsState extends State<TripDetails>
       final docSnapshot =
           await FirebaseFirestore.instance
               .collection('travel')
-              .doc(_travel.id)
+              .doc(_travel!.id)
               .get();
 
       if (docSnapshot.exists) {
         final data = docSnapshot.data();
         if (data != null) {
-          final updatedTravel = Travel.fromJson(data, _travel.id);
+          updatedTravel = Travel.fromJson(data, _travel!.id);
           setState(() {
-            _travel = _travel.copyWith(
+            _travel = _travel!.copyWith(
               name: updatedTravel.name,
               location: updatedTravel.location,
               startDate: updatedTravel.startDate,
@@ -159,6 +164,7 @@ class _TripDetailsState extends State<TripDetails>
               activities: updatedTravel.activities,
               imageUrl: updatedTravel.imageUrl,
               sharedWith: updatedTravel.sharedWith,
+              notificationDays: updatedTravel.notificationDays,
             );
             _coverImageUrl = updatedTravel.imageUrl;
           });
@@ -177,25 +183,25 @@ class _TripDetailsState extends State<TripDetails>
   Future<void> _saveActivitiesToFirestore() async {
     try {
       final List<Map<String, dynamic>> activitiesData =
-          _travel.activities?.map((activity) => activity.toJson()).toList() ??
+          _travel!.activities?.map((activity) => activity.toJson()).toList() ??
           [];
 
       await FirebaseFirestore.instance
           .collection('travel')
-          .doc(_travel.id)
+          .doc(_travel!.id)
           .update({'activities': activitiesData});
     } catch (e) {}
   }
 
   void _generateEmptyActivities() {
-    if (_travel.activities == null || _travel.activities!.isEmpty) {
+    if (_travel!.activities == null || _travel!.activities!.isEmpty) {
       int days = 1;
-      if (_travel.endDate != null && _travel.startDate != null) {
-        days = _travel.endDate!.difference(_travel.startDate!).inDays + 1;
+      if (_travel!.endDate != null && _travel!.startDate != null) {
+        days = _travel!.endDate!.difference(_travel!.startDate!).inDays + 1;
       }
-      _travel = _travel.copyWith(
+      _travel = _travel!.copyWith(
         activities: List.generate(days, (i) {
-          final date = _travel.startDate!.add(Duration(days: i));
+          final date = _travel!.startDate!.add(Duration(days: i));
           return Activity(
             title: "Day ${i + 1} - ${date.toLocal().toString().split(' ')[0]}",
             startDate: date,
@@ -210,21 +216,21 @@ class _TripDetailsState extends State<TripDetails>
   }
 
   Future<void> _loadCoverImageUrl() async {
-    if (_travel.imageUrl != null && _travel.imageUrl!.isNotEmpty) {
+    if (_travel!.imageUrl != null && _travel!.imageUrl!.isNotEmpty) {
       setState(() {
-        _coverImageUrl = _travel.imageUrl;
+        _coverImageUrl = _travel!.imageUrl;
       });
       return;
     }
 
     try {
       final ref = FirebaseStorage.instance.ref(
-        'cover_images/${_travel.id}.jpg',
+        'cover_images/${_travel!.id}.jpg',
       );
       final url = await ref.getDownloadURL();
       setState(() {
         _coverImageUrl = url;
-        _travel = _travel.copyWith(imageUrl: url);
+        _travel = _travel!.copyWith(imageUrl: url);
       });
     } catch (e) {}
   }
@@ -235,7 +241,7 @@ class _TripDetailsState extends State<TripDetails>
 
     final file = File(pickedFile.path);
     final storageRef = FirebaseStorage.instance.ref().child(
-      'cover_images/${_travel.id}.jpg',
+      'cover_images/${_travel!.id}.jpg',
     );
 
     try {
@@ -244,13 +250,13 @@ class _TripDetailsState extends State<TripDetails>
 
       await FirebaseFirestore.instance
           .collection('travel')
-          .doc(_travel.id)
+          .doc(_travel!.id)
           .update({'imageUrl': imageUrl});
 
       setState(() {
         _coverImage = file;
         _coverImageUrl = imageUrl;
-        _travel = _travel.copyWith(imageUrl: imageUrl);
+        _travel = _travel!.copyWith(imageUrl: imageUrl);
       });
     } catch (e) {
       if (context.mounted) {
@@ -258,11 +264,7 @@ class _TripDetailsState extends State<TripDetails>
           SnackBar(
             content: Text('Failed to upload cover image'),
             behavior: SnackBarBehavior.floating,
-            margin: EdgeInsets.only(
-              bottom: MediaQuery.of(context).size.height * 0.15,
-              left: 16,
-              right: 16,
-            ),
+            margin: EdgeInsets.zero,
           ),
         );
       }
@@ -270,7 +272,7 @@ class _TripDetailsState extends State<TripDetails>
   }
 
   void _addChecklistItem(int index) {
-    if (_travel.uid == FirebaseAuth.instance.currentUser?.uid) {
+    if (_travel!.uid == FirebaseAuth.instance.currentUser?.uid) {
       final controller = TextEditingController();
 
       showDialog(
@@ -293,7 +295,7 @@ class _TripDetailsState extends State<TripDetails>
                   onPressed: () async {
                     if (controller.text.trim().isNotEmpty) {
                       setState(
-                        () => _travel.activities![index].checklist!.add(
+                        () => _travel!.activities![index].checklist!.add(
                           controller.text.trim(),
                         ),
                       );
@@ -316,13 +318,13 @@ class _TripDetailsState extends State<TripDetails>
   }
 
   Future<void> _pickAndUploadImage(int index) async {
-    if (_travel.uid == FirebaseAuth.instance.currentUser?.uid) {
+    if (_travel!.uid == FirebaseAuth.instance.currentUser?.uid) {
       final pickedFile = await picker.pickImage(source: ImageSource.gallery);
       if (pickedFile == null) return;
 
       final file = File(pickedFile.path);
 
-      final filename = '${_travel.id}_activity_$index.jpg';
+      final filename = '${_travel!.id}_activity_$index.jpg';
       final ref = FirebaseStorage.instance.ref().child(
         'itinerary_images/$filename',
       );
@@ -332,11 +334,7 @@ class _TripDetailsState extends State<TripDetails>
           SnackBar(
             content: Text('Uploading activity image...'),
             behavior: SnackBarBehavior.floating,
-            margin: EdgeInsets.only(
-              bottom: MediaQuery.of(context).size.height * 0.15,
-              left: 16,
-              right: 16,
-            ),
+            margin: EdgeInsets.zero,
           ),
         );
       }
@@ -346,18 +344,18 @@ class _TripDetailsState extends State<TripDetails>
         final imageUrl = await ref.getDownloadURL();
 
         final Activity updatedActivity = Activity(
-          title: _travel.activities![index].title,
-          startDate: _travel.activities![index].startDate,
-          endDate: _travel.activities![index].endDate,
-          place: _travel.activities![index].place,
-          time: _travel.activities![index].time,
-          notes: _travel.activities![index].notes,
+          title: _travel!.activities![index].title,
+          startDate: _travel!.activities![index].startDate,
+          endDate: _travel!.activities![index].endDate,
+          place: _travel!.activities![index].place,
+          time: _travel!.activities![index].time,
+          notes: _travel!.activities![index].notes,
           imageUrl: imageUrl,
-          checklist: _travel.activities![index].checklist,
+          checklist: _travel!.activities![index].checklist,
         );
 
         setState(() {
-          _travel.activities![index] = updatedActivity;
+          _travel!.activities![index] = updatedActivity;
         });
 
         await _saveActivitiesToFirestore();
@@ -367,11 +365,7 @@ class _TripDetailsState extends State<TripDetails>
             SnackBar(
               content: Text('Activity image uploaded successfully'),
               behavior: SnackBarBehavior.floating,
-              margin: EdgeInsets.only(
-                bottom: MediaQuery.of(context).size.height * 0.15,
-                left: 16,
-                right: 16,
-              ),
+              margin: EdgeInsets.zero,
             ),
           );
         }
@@ -381,11 +375,7 @@ class _TripDetailsState extends State<TripDetails>
             SnackBar(
               content: Text("Upload failed: $e"),
               behavior: SnackBarBehavior.floating,
-              margin: EdgeInsets.only(
-                bottom: MediaQuery.of(context).size.height * 0.15,
-                left: 16,
-                right: 16,
-              ),
+              margin: EdgeInsets.zero,
             ),
           );
         }
@@ -419,53 +409,58 @@ class _TripDetailsState extends State<TripDetails>
                 ),
               ],
             ),
-            SizedBox(height: 16),
-            Text(
-              'When do you want to be notified about this trip?',
-              style: GoogleFonts.poppins(fontSize: 14),
-            ),
+            if (_travel!.uid == FirebaseAuth.instance.currentUser?.uid)
+              SizedBox(height: 16),
+            if (_travel!.uid == FirebaseAuth.instance.currentUser?.uid)
+              Text(
+                'When do you want to be notified about this trip?',
+                style: GoogleFonts.poppins(fontSize: 14),
+              ),
             SizedBox(height: 12),
+
             _isLoading
                 ? Center(child: CircularProgressIndicator())
                 : Column(
-                    children: [
-                      // Create slider for days selection
-                      Row(
-                        children: [
-                          Text('1', style: GoogleFonts.poppins()),
-                          Expanded(
-                            child: Slider(
-                              value: _travel.notificationDays.toDouble(),
-                              min: 1,
-                              max: 30,
-                              divisions: 29,
-                              label: _travel.notificationDays.toString(),
-                              onChanged: (value) {
-                                setState(() {
-                                  _travel = _travel.copyWith(
-                                    notificationDays: value.round(),
-                                  );
-                                });
-                              },
-                              onChangeEnd: (value) {
-                                _updateNotificationDays(value.round());
-                              },
-                            ),
+                  children: [
+                    // Create slider for days selection
+                    Row(
+                      children: [
+                        Text('1', style: GoogleFonts.poppins()),
+                        Expanded(
+                          child: Slider(
+                            value: _travel!.notificationDays.toDouble(),
+                            min: 1,
+                            max: 30,
+                            divisions: 29,
+                            label: _travel!.notificationDays.toString(),
+                            onChanged: (value) {
+                              setState(() {
+                                _travel = _travel!.copyWith(
+                                  notificationDays: value.round(),
+                                );
+                              });
+                            },
+                            onChangeEnd: (value) {
+                              _updateNotificationDays(value.round());
+                            },
                           ),
-                          Text('30', style: GoogleFonts.poppins()),
-                        ],
-                      ),
+                        ),
+                        Text('30', style: GoogleFonts.poppins()),
+                      ],
+                    ),
+                    if (_travel!.uid == FirebaseAuth.instance.currentUser?.uid)
                       SizedBox(height: 8),
+                    if (_travel!.uid == FirebaseAuth.instance.currentUser?.uid)
                       Text(
-                        'You will be notified ${_travel.notificationDays} day${_travel.notificationDays > 1 ? "s" : ""} before your trip starts',
+                        'You will be notified ${_travel!.notificationDays} day${_travel!.notificationDays > 1 ? "s" : ""} before your trip starts',
                         style: GoogleFonts.poppins(
                           fontSize: 14,
                           color: Colors.grey[700],
                         ),
                         textAlign: TextAlign.center,
                       ),
-                    ],
-                  ),
+                  ],
+                ),
           ],
         ),
       ),
@@ -507,16 +502,17 @@ class _TripDetailsState extends State<TripDetails>
                   },
                 ),
               ),
-            TextButton.icon(
-              onPressed: () => _pickAndUploadImage(index),
-              icon: Icon(Icons.upload, color: Colors.green.shade700),
-              label: Text(
-                activity.imageUrl != null && activity.imageUrl!.isNotEmpty
-                    ? 'Change Image'
-                    : 'Upload Image',
-                style: TextStyle(color: Colors.green.shade700),
+            if (_travel!.uid == FirebaseAuth.instance.currentUser?.uid)
+              TextButton.icon(
+                onPressed: () => _pickAndUploadImage(index),
+                icon: Icon(Icons.upload, color: Colors.green.shade700),
+                label: Text(
+                  activity.imageUrl != null && activity.imageUrl!.isNotEmpty
+                      ? 'Change Image'
+                      : 'Upload Image',
+                  style: TextStyle(color: Colors.green.shade700),
+                ),
               ),
-            ),
             const SizedBox(height: 10),
             Text("Checklist:", style: TextStyle(fontWeight: FontWeight.bold)),
             ...activity.checklist!.map(
@@ -531,14 +527,15 @@ class _TripDetailsState extends State<TripDetails>
                 ),
               ),
             ),
-            TextButton.icon(
-              onPressed: () => _addChecklistItem(index),
-              icon: Icon(Icons.add, color: Colors.green.shade700),
-              label: Text(
-                "Add Checklist Item",
-                style: TextStyle(color: Colors.green.shade700),
+            if (_travel!.uid == FirebaseAuth.instance.currentUser?.uid)
+              TextButton.icon(
+                onPressed: () => _addChecklistItem(index),
+                icon: Icon(Icons.add, color: Colors.green.shade700),
+                label: Text(
+                  "Add Checklist Item",
+                  style: TextStyle(color: Colors.green.shade700),
+                ),
               ),
-            ),
           ],
         ),
       ),
@@ -566,7 +563,7 @@ class _TripDetailsState extends State<TripDetails>
                   onPressed: () async {
                     final picked = await showDatePicker(
                       context: context,
-                      initialDate: _travel.startDate ?? DateTime.now(),
+                      initialDate: _travel!.startDate ?? DateTime.now(),
                       firstDate: DateTime(2000),
                       lastDate: DateTime(2100),
                     );
@@ -588,8 +585,8 @@ class _TripDetailsState extends State<TripDetails>
                   if (selectedDate != null &&
                       titleController.text.trim().isNotEmpty) {
                     setState(() {
-                      _travel.activities ??= [];
-                      _travel.activities!.add(
+                      _travel!.activities ??= [];
+                      _travel!.activities!.add(
                         Activity(
                           title: titleController.text.trim(),
                           startDate: selectedDate!,
@@ -664,11 +661,7 @@ class _TripDetailsState extends State<TripDetails>
         SnackBar(
           content: Text('Failed to save QR code.'),
           behavior: SnackBarBehavior.floating,
-          margin: EdgeInsets.only(
-            bottom: MediaQuery.of(context).size.height * 0.15,
-            left: 16,
-            right: 16,
-          ),
+          margin: EdgeInsets.zero,
         ),
       );
     }
@@ -733,13 +726,13 @@ class _TripDetailsState extends State<TripDetails>
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        title: Text(_travel.name),
+        title: Text(_travel!.name),
         bottom: TabBar(
           controller: _tabController,
           tabs: [Tab(text: 'Overview'), Tab(text: 'Itineraries')],
         ),
         actions: [
-          if (_travel.uid == FirebaseAuth.instance.currentUser?.uid)
+          if (_travel!.uid == FirebaseAuth.instance.currentUser?.uid)
             IconButton(
               icon: Icon(Icons.edit),
               onPressed: _editTravelPlan,
@@ -864,7 +857,7 @@ class _TripDetailsState extends State<TripDetails>
                                 _buildDetailRow(
                                   Icons.location_on,
                                   'Destination',
-                                  _travel.location,
+                                  _travel!.location,
                                 ),
                                 SizedBox(height: 8),
                                 _buildDetailRow(
@@ -872,42 +865,42 @@ class _TripDetailsState extends State<TripDetails>
                                   'Start Date',
                                   DateFormat(
                                     'EEEE, MMM d, yyyy',
-                                  ).format(_travel.startDate!),
+                                  ).format(_travel!.startDate!),
                                 ),
                                 SizedBox(height: 8),
                                 _buildDetailRow(
                                   Icons.calendar_today,
                                   'End Date',
-                                  _travel.endDate != null
+                                  _travel!.endDate != null
                                       ? DateFormat(
                                         'EEEE, MMM d, yyyy',
-                                      ).format(_travel.endDate!)
+                                      ).format(_travel!.endDate!)
                                       : 'Not set',
                                 ),
-                                if (_travel.flightDetails?.isNotEmpty ??
+                                if (_travel!.flightDetails?.isNotEmpty ??
                                     false) ...[
                                   SizedBox(height: 8),
                                   _buildDetailRow(
                                     Icons.flight,
                                     'Flight Details',
-                                    _travel.flightDetails!,
+                                    _travel!.flightDetails!,
                                   ),
                                 ],
-                                if (_travel.accommodation?.isNotEmpty ??
+                                if (_travel!.accommodation?.isNotEmpty ??
                                     false) ...[
                                   SizedBox(height: 8),
                                   _buildDetailRow(
                                     Icons.hotel,
                                     'Accommodation',
-                                    _travel.accommodation!,
+                                    _travel!.accommodation!,
                                   ),
                                 ],
-                                if (_travel.notes?.isNotEmpty ?? false) ...[
+                                if (_travel!.notes?.isNotEmpty ?? false) ...[
                                   SizedBox(height: 8),
                                   _buildDetailRow(
                                     Icons.note,
                                     'Notes',
-                                    _travel.notes!,
+                                    _travel!.notes!,
                                   ),
                                 ],
                               ],
@@ -915,18 +908,20 @@ class _TripDetailsState extends State<TripDetails>
                           ),
                         ),
                         SizedBox(height: 24),
-                        _buildNotificationSettings(),
+                        if (_travel!.uid ==
+                            FirebaseAuth.instance.currentUser?.uid)
+                          _buildNotificationSettings(),
 
                         // Share buttons (only for trip owner)
-                        if (_travel.uid ==
+                        if (_travel!.uid ==
                             FirebaseAuth.instance.currentUser?.uid)
                           Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 20),
                             child: Column(
                               children: [
                                 // Shared Users Section
-                                if (_travel.sharedWith != null &&
-                                    _travel.sharedWith!.isNotEmpty)
+                                if (_travel!.sharedWith != null &&
+                                    _travel!.sharedWith!.isNotEmpty)
                                   Card(
                                     elevation: 4,
                                     shape: RoundedRectangleBorder(
@@ -1002,193 +997,226 @@ class _TripDetailsState extends State<TripDetails>
                                   ),
                                 SizedBox(height: 16),
                                 ElevatedButton.icon(
-                                  onPressed: () {
-                                    showDialog(
-                                      context: context,
-                                      builder:
-                                          (context) => AlertDialog(
-                                            title: const Text(
-                                              'Share by Username',
-                                            ),
-                                            content: Column(
-                                              mainAxisSize: MainAxisSize.min,
-                                              children: [
-                                                TextField(
-                                                  controller:
-                                                      _usernameController,
-                                                  decoration:
-                                                      const InputDecoration(
-                                                        labelText: 'Username',
-                                                        border:
-                                                            OutlineInputBorder(),
-                                                      ),
-                                                ),
-                                                const SizedBox(height: 16),
-                                                // Add error message display
-                                                ValueListenableBuilder<String?>(
-                                                  valueListenable:
-                                                      _errorMessage,
-                                                  builder: (
-                                                    context,
-                                                    error,
-                                                    child,
-                                                  ) {
-                                                    if (error == null)
-                                                      return SizedBox.shrink();
-                                                    return Padding(
-                                                      padding:
-                                                          const EdgeInsets.only(
-                                                            bottom: 16.0,
-                                                          ),
-                                                      child: Text(
-                                                        error,
-                                                        style: TextStyle(
-                                                          color: Colors.red,
-                                                          fontSize: 14,
+                                  onPressed: () async {
+                                    if (await userHasFriends()) {
+                                      showDialog(
+                                        context: context,
+                                        builder:
+                                            (context) => AlertDialog(
+                                              title: const Text(
+                                                'Share by Username',
+                                              ),
+                                              content: Column(
+                                                mainAxisSize: MainAxisSize.min,
+                                                children: [
+                                                  TextField(
+                                                    controller:
+                                                        _usernameController,
+                                                    decoration:
+                                                        const InputDecoration(
+                                                          labelText: 'Username',
+                                                          border:
+                                                              OutlineInputBorder(),
                                                         ),
-                                                      ),
-                                                    );
-                                                  },
-                                                ),
-                                                ElevatedButton(
-                                                  onPressed: () async {
-                                                    final username =
-                                                        _usernameController.text
-                                                            .trim();
-                                                    if (username.isEmpty) {
-                                                      ScaffoldMessenger.of(
-                                                        context,
-                                                      ).showSnackBar(
-                                                        const SnackBar(
-                                                          content: Text(
-                                                            'Please enter a username',
+                                                  ),
+                                                  const SizedBox(height: 16),
+                                                  // Add error message display
+                                                  ValueListenableBuilder<
+                                                    String?
+                                                  >(
+                                                    valueListenable:
+                                                        _errorMessage,
+                                                    builder: (
+                                                      context,
+                                                      error,
+                                                      child,
+                                                    ) {
+                                                      if (error == null)
+                                                        return SizedBox.shrink();
+                                                      return Padding(
+                                                        padding:
+                                                            const EdgeInsets.only(
+                                                              bottom: 16.0,
+                                                            ),
+                                                        child: Text(
+                                                          error,
+                                                          style: TextStyle(
+                                                            color: Colors.red,
+                                                            fontSize: 14,
                                                           ),
                                                         ),
                                                       );
-                                                      return;
-                                                    }
-
-                                                    try {
-                                                      // Clear any previous error
-                                                      _errorMessage.value =
-                                                          null;
-
-                                                      // First check if user exists
-                                                      final userQuery =
-                                                          await FirebaseFirestore
-                                                              .instance
-                                                              .collection(
-                                                                'appUsers',
-                                                              )
-                                                              .where(
-                                                                'username',
-                                                                isEqualTo:
-                                                                    username,
-                                                              )
-                                                              .get();
-
-                                                      if (userQuery
-                                                          .docs
-                                                          .isEmpty) {
-                                                        _errorMessage.value =
-                                                            'User not found';
+                                                    },
+                                                  ),
+                                                  ElevatedButton(
+                                                    onPressed: () async {
+                                                      final username =
+                                                          _usernameController
+                                                              .text
+                                                              .trim();
+                                                      if (username.isEmpty) {
+                                                        ScaffoldMessenger.of(
+                                                          context,
+                                                        ).showSnackBar(
+                                                          const SnackBar(
+                                                            content: Text(
+                                                              'Please enter a username',
+                                                            ),
+                                                          ),
+                                                        );
                                                         return;
                                                       }
 
-                                                      final targetUserId =
-                                                          userQuery
-                                                              .docs
-                                                              .first
-                                                              .id;
-
-                                                      // Check if they are friends
-                                                      final targetUserDoc =
-                                                          await FirebaseFirestore
-                                                              .instance
-                                                              .collection(
-                                                                'appUsers',
-                                                              )
-                                                              .doc(targetUserId)
-                                                              .get();
-
-                                                      final currentUserId =
-                                                          FirebaseAuth
-                                                              .instance
-                                                              .currentUser
-                                                              ?.uid;
-                                                      if (currentUserId ==
-                                                          null) {
+                                                      try {
+                                                        // Clear any previous error
                                                         _errorMessage.value =
-                                                            'You must be logged in to share';
-                                                        return;
-                                                      }
+                                                            null;
 
-                                                      final isFriend =
-                                                          targetUserDoc
-                                                              .data()?['friends']
-                                                              ?.contains(
-                                                                currentUserId,
-                                                              ) ??
-                                                          false;
+                                                        // First check if user exists
+                                                        final userQuery =
+                                                            await FirebaseFirestore
+                                                                .instance
+                                                                .collection(
+                                                                  'appUsers',
+                                                                )
+                                                                .where(
+                                                                  'username',
+                                                                  isEqualTo:
+                                                                      username,
+                                                                )
+                                                                .get();
 
-                                                      if (!isFriend) {
-                                                        _errorMessage.value =
-                                                            'User is not a friend';
-                                                        return;
-                                                      }
+                                                        if (userQuery
+                                                            .docs
+                                                            .isEmpty) {
+                                                          _errorMessage.value =
+                                                              'User not found';
+                                                          return;
+                                                        }
 
-                                                      // If they are friends, share the travel plan
-                                                      await FirebaseFirestore
-                                                          .instance
-                                                          .collection('travel')
-                                                          .doc(_travel.id)
-                                                          .update({
-                                                            'sharedWith':
-                                                                FieldValue.arrayUnion([
+                                                        final targetUserId =
+                                                            userQuery
+                                                                .docs
+                                                                .first
+                                                                .id;
+
+                                                        // Check if they are friends
+                                                        final targetUserDoc =
+                                                            await FirebaseFirestore
+                                                                .instance
+                                                                .collection(
+                                                                  'appUsers',
+                                                                )
+                                                                .doc(
                                                                   targetUserId,
-                                                                ]),
-                                                          });
+                                                                )
+                                                                .get();
 
-                                                      ScaffoldMessenger.of(
-                                                        context,
-                                                      ).showSnackBar(
-                                                        SnackBar(
-                                                          content: Text(
-                                                            'Travel plan shared successfully',
+                                                        final currentUserId =
+                                                            FirebaseAuth
+                                                                .instance
+                                                                .currentUser
+                                                                ?.uid;
+                                                        if (currentUserId ==
+                                                            null) {
+                                                          _errorMessage.value =
+                                                              'You must be logged in to share';
+                                                          return;
+                                                        }
+
+                                                        final isFriend =
+                                                            targetUserDoc
+                                                                .data()?['friendUIDs']
+                                                                ?.contains(
+                                                                  currentUserId,
+                                                                ) ??
+                                                            false;
+
+                                                        if (!isFriend) {
+                                                          _errorMessage.value =
+                                                              '${username} is not a friend';
+                                                          return;
+                                                        }
+
+                                                        // If they are friends, share the travel plan
+                                                        await FirebaseFirestore
+                                                            .instance
+                                                            .collection(
+                                                              'travel',
+                                                            )
+                                                            .doc(_travel!.id)
+                                                            .update({
+                                                              'sharedWith':
+                                                                  FieldValue.arrayUnion([
+                                                                    targetUserId,
+                                                                  ]),
+                                                            });
+                                                        setState(() {
+                                                          _travel = _travel!
+                                                              .copyWith(
+                                                                sharedWith: [
+                                                                  ..._travel!
+                                                                      .sharedWith!,
+                                                                  targetUserId,
+                                                                ],
+                                                              );
+                                                        });
+                                                        ScaffoldMessenger.of(
+                                                          context,
+                                                        ).showSnackBar(
+                                                          SnackBar(
+                                                            content: Text(
+                                                              'Travel plan shared successfully',
+                                                            ),
+                                                            behavior:
+                                                                SnackBarBehavior
+                                                                    .floating,
+                                                            margin:
+                                                                EdgeInsets.zero,
                                                           ),
-                                                          behavior:
-                                                              SnackBarBehavior
-                                                                  .floating,
-                                                          margin: EdgeInsets.only(
-                                                            bottom:
-                                                                MediaQuery.of(
-                                                                  context,
-                                                                ).size.height *
-                                                                0.15,
-                                                            left: 16,
-                                                            right: 16,
-                                                          ),
+                                                        );
+                                                        Navigator.pop(context);
+                                                      } catch (e) {
+                                                        _errorMessage.value =
+                                                            'Failed to share travel plan: ${e.toString()}';
+                                                      }
+                                                    },
+                                                    style:
+                                                        ElevatedButton.styleFrom(
+                                                          backgroundColor:
+                                                              Colors.green,
+                                                          foregroundColor:
+                                                              Colors.white,
                                                         ),
-                                                      );
-                                                      Navigator.pop(context);
-                                                    } catch (e) {
-                                                      _errorMessage.value =
-                                                          'Failed to share travel plan: ${e.toString()}';
-                                                    }
-                                                  },
-                                                  style:
-                                                      ElevatedButton.styleFrom(
-                                                        backgroundColor:
-                                                            Colors.green,
-                                                        foregroundColor:
-                                                            Colors.white,
+                                                    child: const Text('Share'),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                      );
+                                    } else {
+                                      showDialog(
+                                        context: context,
+                                        builder:
+                                            (context) => AlertDialog(
+                                              title: Text(
+                                                'No friends to share with',
+                                              ),
+                                              content: Text(
+                                                'Please add friends to share with',
+                                              ),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed:
+                                                      () => Navigator.pop(
+                                                        context,
                                                       ),
-                                                  child: const Text('Share'),
+                                                  child: Text('OK'),
                                                 ),
                                               ],
                                             ),
-                                          ),
-                                    );
+                                      );
+                                    }
                                   },
                                   icon: const Icon(Icons.person_add),
                                   label: const Text('Share by Username'),
@@ -1227,7 +1255,7 @@ class _TripDetailsState extends State<TripDetails>
                           ),
                         const SizedBox(height: 24),
                         // Delete Button (only for trip owner)
-                        if (_travel.uid ==
+                        if (_travel!.uid ==
                             FirebaseAuth.instance.currentUser?.uid)
                           Center(
                             child: ElevatedButton.icon(
@@ -1258,7 +1286,9 @@ class _TripDetailsState extends State<TripDetails>
 
                                               final success = await context
                                                   .read<TravelTrackerProvider>()
-                                                  .deleteTravelPlan(_travel.id);
+                                                  .deleteTravelPlan(
+                                                    _travel!.id,
+                                                  );
 
                                               if (success) {
                                                 scaffoldMessenger.showSnackBar(
@@ -1319,14 +1349,14 @@ class _TripDetailsState extends State<TripDetails>
                   Padding(
                     padding: const EdgeInsets.all(16.0),
                     child:
-                        _travel.activities == null ||
-                                _travel.activities!.isEmpty
+                        _travel!.activities == null ||
+                                _travel!.activities!.isEmpty
                             ? Center(child: Text("No itineraries found."))
                             : ListView.builder(
-                              itemCount: _travel.activities!.length,
+                              itemCount: _travel!.activities!.length,
                               itemBuilder:
                                   (context, index) => buildItineraryCard(
-                                    _travel.activities![index],
+                                    _travel!.activities![index],
                                     index,
                                   ),
                             ),
@@ -1335,7 +1365,7 @@ class _TripDetailsState extends State<TripDetails>
               ),
       bottomNavigationBar: BottomNavBar(selectedIndex: 1),
       floatingActionButton:
-          _travel.uid == FirebaseAuth.instance.currentUser?.uid
+          _travel!.uid == FirebaseAuth.instance.currentUser?.uid
               ? FloatingActionButton(
                 onPressed: _addManualItinerary,
                 backgroundColor: primaryColor,
@@ -1344,19 +1374,19 @@ class _TripDetailsState extends State<TripDetails>
               )
               : null,
       floatingActionButtonLocation:
-          _travel.uid == FirebaseAuth.instance.currentUser?.uid
+          _travel!.uid == FirebaseAuth.instance.currentUser?.uid
               ? FloatingActionButtonLocation.centerDocked
               : null,
     );
   }
 
   Future<List<Map<String, dynamic>>> _getSharedUsersInfo() async {
-    if (_travel.sharedWith == null || _travel.sharedWith!.isEmpty) {
+    if (_travel!.sharedWith == null || _travel!.sharedWith!.isEmpty) {
       return [];
     }
 
     List<Map<String, dynamic>> usersInfo = [];
-    for (String uid in _travel.sharedWith!) {
+    for (String uid in _travel!.sharedWith!) {
       try {
         final userDoc =
             await FirebaseFirestore.instance
@@ -1379,7 +1409,7 @@ class _TripDetailsState extends State<TripDetails>
     try {
       await FirebaseFirestore.instance
           .collection('travel')
-          .doc(_travel.id)
+          .doc(_travel!.id)
           .update({
             'sharedWith': FieldValue.arrayRemove([userId]),
           });
@@ -1408,12 +1438,14 @@ class _TripDetailsState extends State<TripDetails>
   }
 
   Future<void> _editTravelPlan() async {
-    final nameController = TextEditingController(text: _travel.name);
-    final locationController = TextEditingController(text: _travel.location);
-    final notesController = TextEditingController(text: _travel.notes);
-    final flightController = TextEditingController(text: _travel.flightDetails);
+    final nameController = TextEditingController(text: _travel!.name);
+    final locationController = TextEditingController(text: _travel!.location);
+    final notesController = TextEditingController(text: _travel!.notes);
+    final flightController = TextEditingController(
+      text: _travel!.flightDetails,
+    );
     final accommodationController = TextEditingController(
-      text: _travel.accommodation,
+      text: _travel!.accommodation,
     );
 
     return showDialog(
@@ -1476,7 +1508,7 @@ class _TripDetailsState extends State<TripDetails>
               ElevatedButton(
                 onPressed: () async {
                   try {
-                    final updatedTravel = _travel.copyWith(
+                    final updatedTravel = _travel!.copyWith(
                       name: nameController.text.trim(),
                       location: locationController.text.trim(),
                       notes: notesController.text.trim(),
@@ -1486,7 +1518,7 @@ class _TripDetailsState extends State<TripDetails>
 
                     await FirebaseFirestore.instance
                         .collection('travel')
-                        .doc(_travel.id)
+                        .doc(_travel!.id)
                         .update(updatedTravel.toJson());
 
                     await _loadTravelData();
@@ -1521,5 +1553,16 @@ class _TripDetailsState extends State<TripDetails>
             ],
           ),
     );
+  }
+
+  Future<bool> userHasFriends() async {
+    final userDoc =
+        await FirebaseFirestore.instance
+            .collection('appUsers')
+            .doc(FirebaseAuth.instance.currentUser?.uid)
+            .get();
+
+    final friends = userDoc.data()?['friendUIDs'];
+    return friends != null && friends is List && friends.isNotEmpty;
   }
 }
