@@ -20,7 +20,7 @@ class _NotificationPageState extends State<NotificationPage>
     with SingleTickerProviderStateMixin {
   AppUser? _currentUser;
   List<AppUser> _requestUsers = [];
-  List<TravelNotification> _travelNotifications = [];
+  List<Map<String, dynamic>> _travelNotifications = [];
   bool _isLoading = true;
   String? _errorMessage;
   TabController? _tabController;
@@ -112,108 +112,28 @@ class _NotificationPageState extends State<NotificationPage>
 
   // Fetch travel notifications
   Future<void> _fetchTravelNotifications() async {
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+    });
+
     try {
       final userId = FirebaseAuth.instance.currentUser?.uid;
       if (userId == null) return;
 
-      final now = DateTime.now();
-      final notifications = <TravelNotification>[];
-
-      // Query travels where user is owner
-      final ownerSnapshot =
-          await FirebaseFirestore.instance
-              .collection('travel')
-              .where('uid', isEqualTo: userId)
-              .get();
-
-      // Query travels where user is in sharedWith
-      final sharedSnapshot =
-          await FirebaseFirestore.instance
-              .collection('travel')
-              .where('sharedWith', arrayContains: userId)
-              .get();
-
-      // Combine both query results
-      final allDocs = [...ownerSnapshot.docs, ...sharedSnapshot.docs];
-
-      for (var doc in allDocs) {
-        final data = doc.data();
-        final startDateTimestamp = data['startDate'] as Timestamp?;
-        if (startDateTimestamp == null) continue;
-
-        final startDate = startDateTimestamp.toDate();
-        final daysUntilTrip = startDate.difference(now).inDays;
-        final notificationDays = data['notificationDays'] ?? 5;
-
-        // If trip starts within next 5 days, add notification
-        if (daysUntilTrip <= 5 && daysUntilTrip >= 0) {
-          notifications.add(
-            TravelNotification(
-              tripId: doc.id,
-              tripName: data['name'] ?? 'Unnamed Trip',
-              destination: data['destination'] ?? 'Unknown',
-              startDate: startDate,
-              daysUntil: daysUntilTrip,
-              notificationDays: notificationDays,
-            ),
-          );
-
-          // await sendPushNotification(
-          //   fcmToken: _currentUser?.fcmToken ?? '',
-          //   title: 'Upcoming Trip Reminder',
-          //   body: 'Your trip "${data['name'] ?? 'Unnamed Trip'}" starts in $daysUntilTrip day(s)!',
-          // );
-
-          // Send a local notification for upcoming trip
-          await _notificationService.showTripReminderNotification(
-            title: 'Upcoming Trip Reminder',
-            body:
-                'Your trip "${data['name'] ?? 'Unnamed Trip'}" starts in $daysUntilTrip day(s)!',
-            payload: doc.id,
-          );
-        }
-      }
+      final notifications = await _notificationService.getUserNotifications(
+        userId,
+      );
 
       setState(() {
         _travelNotifications = notifications;
+        _isLoading = false;
       });
     } catch (e) {
-      debugPrint('Error fetching travel notifications: $e');
-    }
-  }
-
-  // Delete travel notification
-  Future<void> _deleteNotification(TravelNotification notification) async {
-    try {
       setState(() {
-        _travelNotifications.removeWhere(
-          (n) => n.tripId == notification.tripId,
-        );
+        _isLoading = false;
+        _errorMessage = 'Error loading notifications: $e';
       });
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Notification dismissed', style: GoogleFonts.poppins()),
-          action: SnackBarAction(
-            label: 'UNDO',
-            onPressed: () {
-              // Re-add the notification if user taps UNDO
-              setState(() {
-                _travelNotifications.add(notification);
-              });
-            },
-          ),
-        ),
-      );
-    } catch (e) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Error dismissing notification: $e',
-            style: GoogleFonts.poppins(),
-          ),
-        ),
-      );
     }
   }
 
@@ -563,6 +483,12 @@ class _NotificationPageState extends State<NotificationPage>
 
   // Updated travel tab with delete buttons
   Widget _buildTravelTab() {
+    if (_isLoading) {
+      return Center(child: CircularProgressIndicator());
+    }
+    if (_errorMessage != null) {
+      return Center(child: Text(_errorMessage!));
+    }
     if (_travelNotifications.isEmpty) {
       return Center(
         child: Column(
@@ -598,14 +524,14 @@ class _NotificationPageState extends State<NotificationPage>
         ),
       );
     }
-
     return ListView.builder(
       padding: EdgeInsets.all(16),
       itemCount: _travelNotifications.length,
       itemBuilder: (context, index) {
         final notification = _travelNotifications[index];
+        final isRead = notification['read'] ?? false;
         return Dismissible(
-          key: Key(notification.tripId),
+          key: Key(notification['id']),
           background: Container(
             color: Colors.red,
             alignment: Alignment.centerRight,
@@ -613,106 +539,53 @@ class _NotificationPageState extends State<NotificationPage>
             child: Icon(Icons.delete, color: Colors.white),
           ),
           direction: DismissDirection.endToStart,
-          onDismissed: (direction) {
-            _deleteNotification(notification);
+          onDismissed: (direction) async {
+            final userId = FirebaseAuth.instance.currentUser?.uid;
+            if (userId != null) {
+              await _notificationService.markNotificationAsRead(
+                userId: userId,
+                notificationId: notification['id'],
+              );
+            }
+            setState(() {
+              _travelNotifications.removeAt(index);
+            });
           },
           child: Card(
             margin: EdgeInsets.only(bottom: 16),
             elevation: 2,
-            child: Stack(
-              children: [
-                ListTile(
-                  contentPadding: EdgeInsets.all(16),
-                  leading: CircleAvatar(
-                    backgroundColor: Colors.blue[100],
-                    child: Icon(Icons.flight_takeoff, color: Colors.blue[800]),
-                  ),
-                  title: Text(
-                    notification.tripName,
-                    style: GoogleFonts.poppins(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 18,
-                    ),
-                  ),
-                  subtitle: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      SizedBox(height: 4),
-                      Text(
-                        'Destination: ${notification.destination}',
-                        style: GoogleFonts.poppins(),
-                      ),
-                      SizedBox(height: 4),
-                      Text(
-                        notification.daysUntil == 0
-                            ? 'Your trip starts today!'
-                            : 'Starting in ${notification.daysUntil} day${notification.daysUntil > 1 ? "s" : ""}',
-                        style: GoogleFonts.poppins(
-                          color:
-                              notification.daysUntil <= 1
-                                  ? Colors.red
-                                  : Colors.green[700],
-                          fontWeight: FontWeight.w500,
-                        ),
-                      ),
-                      SizedBox(height: 8),
-                      Text(
-                        'Date: ${_formatDate(notification.startDate)}',
-                        style: GoogleFonts.poppins(color: Colors.grey[600]),
-                      ),
-                    ],
-                  ),
-                  trailing: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      // Delete button
-                      IconButton(
-                        icon: Icon(Icons.delete_outline, color: Colors.red),
-                        onPressed: () => _deleteNotification(notification),
-                      ),
-                      IconButton(
-                        icon: Icon(Icons.arrow_forward_ios),
-                        onPressed: () async {
-                          try {
-                            // Fetch the full travel document from Firestore by tripId
-                            final doc =
-                                await FirebaseFirestore.instance
-                                    .collection('travel')
-                                    .doc(notification.tripId)
-                                    .get();
-
-                            if (!doc.exists) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                SnackBar(
-                                  content: Text('Trip details not found'),
-                                ),
-                              );
-                              return;
-                            }
-
-                            // Parse the document into a Travel instance
-                            final travelData = doc.data()!;
-                            final travel = Travel.fromJson(travelData, doc.id);
-
-                            // Navigate to TripDetails page with the Travel instance
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (_) => TripDetails(travel: travel),
-                              ),
-                            );
-                          } catch (e) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              SnackBar(
-                                content: Text('Error loading trip details: $e'),
-                              ),
-                            );
-                          }
-                        },
-                      ),
-                    ],
-                  ),
+            child: ListTile(
+              contentPadding: EdgeInsets.all(16),
+              leading: Icon(
+                isRead ? Icons.notifications_none : Icons.notifications_active,
+                color: isRead ? Colors.grey : Colors.blue,
+              ),
+              title: Text(
+                notification['title'] ?? 'Notification',
+                style: GoogleFonts.poppins(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 18,
+                  color: isRead ? Colors.grey : Colors.black,
                 ),
-              ],
+              ),
+              subtitle: Text(
+                notification['body'] ?? '',
+                style: GoogleFonts.poppins(
+                  color: isRead ? Colors.grey : Colors.black,
+                ),
+              ),
+              onTap: () async {
+                final userId = FirebaseAuth.instance.currentUser?.uid;
+                if (userId != null && !isRead) {
+                  await _notificationService.markNotificationAsRead(
+                    userId: userId,
+                    notificationId: notification['id'],
+                  );
+                  setState(() {
+                    _travelNotifications[index]['read'] = true;
+                  });
+                }
+              },
             ),
           ),
         );
@@ -764,7 +637,10 @@ class _NotificationPageState extends State<NotificationPage>
                         borderRadius: BorderRadius.circular(12),
                       ),
                       child: Text(
-                        _travelNotifications.length.toString(),
+                        _travelNotifications
+                            .where((notification) => !notification['read'])
+                            .length
+                            .toString(),
                         style: GoogleFonts.poppins(
                           color: Colors.white,
                           fontSize: 12,

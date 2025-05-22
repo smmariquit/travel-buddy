@@ -60,3 +60,72 @@ exports.sendPushNotification = functions.https.onCall(async (data, context) => {
     throw new functions.https.HttpsError("unknown", error.message, error);
   }
 });
+
+// Scheduled function to check for upcoming trips and notify users every 5 minutes
+exports.checkTripsAndNotify = functions.pubsub.schedule('every 5 minutes').onRun(async (context) => {
+  const db = admin.firestore();
+  const now = admin.firestore.Timestamp.now();
+
+  // Query all trips
+  const tripsSnapshot = await db.collection('travel').get();
+
+  for (const tripDoc of tripsSnapshot.docs) {
+    const trip = tripDoc.data();
+    const tripId = tripDoc.id;
+    const startDate = trip.startDate;
+    if (!startDate) continue;
+    const startTimestamp = startDate._seconds ? new Date(startDate._seconds * 1000) : startDate.toDate();
+    const daysUntilTrip = Math.ceil((startTimestamp - new Date()) / (1000 * 60 * 60 * 24));
+
+    // Get all users to notify: creator and sharedWith
+    let userIds = [];
+    if (trip.uid) userIds.push(trip.uid);
+    if (Array.isArray(trip.sharedWith)) userIds = userIds.concat(trip.sharedWith);
+    userIds = [...new Set(userIds)]; // Remove duplicates
+
+    for (const userId of userIds) {
+      // Get user document
+      const userDoc = await db.collection('appUsers').doc(userId).get();
+      if (!userDoc.exists) continue;
+      const user = userDoc.data();
+      const fcmToken = user.fcmToken;
+      if (!fcmToken) continue;
+
+      // Get notification interval from user (default to 5 days)
+      const notificationDays = user.notificationDays || 5;
+      // Check if notification should be sent
+      if (daysUntilTrip <= notificationDays && daysUntilTrip >= 0) {
+        // Check if notification already sent for this trip and user
+        const notifRef = db.collection('appUsers').doc(userId).collection('notifications').doc(tripId);
+        const notifDoc = await notifRef.get();
+        if (notifDoc.exists && notifDoc.data().notified) continue;
+
+        // Send push notification
+        const notification = {
+          title: 'Upcoming Trip Reminder',
+          body: `Your trip "${trip.name || 'Unnamed Trip'}" starts in ${daysUntilTrip} day(s)!`,
+        };
+        try {
+          await admin.messaging().send({
+            token: fcmToken,
+            notification,
+            data: { tripId },
+          });
+          // Mark as notified
+          await notifRef.set({
+            title: notification.title,
+            body: notification.body,
+            type: 'trip_reminder',
+            read: false,
+            timestamp: admin.firestore.FieldValue.serverTimestamp(),
+            notified: true,
+            tripId,
+          });
+          console.log(`Notification sent to user ${userId} for trip ${tripId}`);
+        } catch (e) {
+          console.error(`Failed to send notification to user ${userId} for trip ${tripId}:`, e);
+        }
+      }
+    }
+  }
+});

@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 // Add import for Travel model
@@ -69,7 +70,13 @@ class NotificationManager {
           final daysUntilTrip = trip.startDate!.difference(now).inDays;
 
           // Use reminderDays if available, otherwise default to 3
-          final reminderDays = 3; // Default value
+          final reminderDays =
+              FirebaseFirestore.instance
+                      .collection('appUsers')
+                      .doc(userId)
+                      .get()
+                      .then((doc) => doc.data()?['daysBeforeTripNotify'] ?? 3)
+                  as int; // Default value
 
           // Check if we should send a notification for this trip
           if (daysUntilTrip <= reminderDays) {
