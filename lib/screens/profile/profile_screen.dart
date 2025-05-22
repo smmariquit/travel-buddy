@@ -6,6 +6,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
 import 'package:image_picker/image_picker.dart';
+import 'package:numberpicker/numberpicker.dart';
 
 // State Management
 import 'package:provider/provider.dart';
@@ -65,6 +66,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   bool _isPrivate = false;
 
   int _friendsCount = 0;
+  int _currentValue = 3; // Default value
 
   @override
   void initState() {
@@ -72,6 +74,18 @@ class _ProfileScreenState extends State<ProfileScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) async {
       final provider = context.read<AppUserProvider>();
       final userStream = provider.userStream;
+
+      // Fetch the initial daysBeforeTripNotify value
+      final doc =
+          await FirebaseFirestore.instance
+              .collection('appUsers')
+              .doc(_currentUserData?.uid)
+              .get();
+      if (doc.exists) {
+        setState(() {
+          _currentValue = doc.data()?['daysBeforeTripNotify'] ?? 3;
+        });
+      }
 
       userStream.listen((firebaseUser) async {
         if (firebaseUser != null) {
@@ -574,7 +588,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
                 SizedBox(height: 24),
 
-                // Profile Information Section - The existing form card
                 Card(
                   margin: EdgeInsets.symmetric(horizontal: 20),
                   shape: RoundedRectangleBorder(
@@ -636,6 +649,96 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             decoration: InputDecoration(
                               labelText: 'Location',
                               border: OutlineInputBorder(),
+                            ),
+                          ),
+                          SizedBox(height: 24),
+                          // Trip Notification Settings
+                          Text(
+                            'Notification Settings',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          SizedBox(height: 16),
+                          Container(
+                            padding: EdgeInsets.symmetric(
+                              vertical: 8,
+                              horizontal: 12,
+                            ),
+                            decoration: BoxDecoration(
+                              color: Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                            ),
+                            child: Row(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                Text(
+                                  'Notify me',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.grey[700],
+                                  ),
+                                ),
+                                SizedBox(width: 8),
+                                Container(
+                                  padding: EdgeInsets.symmetric(
+                                    horizontal: 8,
+                                    vertical: 4,
+                                  ),
+                                  decoration: BoxDecoration(
+                                    color: Colors.grey[100],
+                                    borderRadius: BorderRadius.circular(8),
+                                    border: Border.all(
+                                      color: Colors.grey[300]!,
+                                    ),
+                                  ),
+                                  child: Row(
+                                    mainAxisSize: MainAxisSize.min,
+                                    children: [
+                                      NumberPicker(
+                                        itemCount: 1,
+                                        value: _currentValue,
+                                        minValue: 1,
+                                        maxValue: 30,
+                                        itemWidth: 35,
+                                        itemHeight: 40,
+                                        textStyle: TextStyle(
+                                          color: Colors.grey[400],
+                                          fontSize: 20,
+                                        ),
+                                        selectedTextStyle: TextStyle(
+                                          color: Colors.green,
+                                          fontSize: 24,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                        onChanged: (value) {
+                                          setState(() => _currentValue = value);
+                                          FirebaseFirestore.instance
+                                              .collection('appUsers')
+                                              .doc(_currentUserData!.uid)
+                                              .update({
+                                                "daysBeforeTripNotify": value,
+                                              });
+                                        },
+                                      ),
+                                      Icon(
+                                        Icons.unfold_more,
+                                        size: 18,
+                                        color: Colors.grey[600],
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                                SizedBox(width: 8),
+                                Text(
+                                  'days before a trip starts',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.grey[700],
+                                  ),
+                                ),
+                              ],
                             ),
                           ),
                           SizedBox(height: 24),

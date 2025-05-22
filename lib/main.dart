@@ -35,6 +35,7 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:travel_app/screens/profile/profile_screen.dart';
 import 'firebase_options.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
@@ -141,6 +142,8 @@ class _MyAppState extends State<MyApp> {
       initialRoute: '/main',
       routes: {
         '/signin': (context) => const SignInPage(), // Sign-in page
+        '/profile': (context) => const ProfileScreen(), // Profile page
+        '/': (context) => const MainPage(), // Profile page
         '/main': (context) => const MainPage(), // Main page after sign-in
       },
       theme: ThemeData(

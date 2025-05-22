@@ -60,6 +60,55 @@ class NotificationService {
     return '+$digitsOnly';
   }
 
+  Future<void> addNotificationToUser({
+    required String userId,
+    required String title,
+    required String body,
+    required String type,
+    required bool isRead,
+  }) async {
+    await FirebaseFirestore.instance
+        .collection('appUsers')
+        .doc(userId)
+        .collection('notifications')
+        .add({
+          "title": title,
+          "body": body,
+          "type": type,
+          "read": isRead,
+          "timestamp": FieldValue.serverTimestamp(),
+        });
+  }
+
+  /// Mark a notification as read in Firestore
+  Future<void> markNotificationAsRead({
+    required String userId,
+    required String notificationId,
+  }) async {
+    await FirebaseFirestore.instance
+        .collection('appUsers')
+        .doc(userId)
+        .collection('notifications')
+        .doc(notificationId)
+        .update({'read': true});
+  }
+
+  /// Fetch all notifications for a user, ordered by timestamp descending
+  Future<List<Map<String, dynamic>>> getUserNotifications(String userId) async {
+    final snapshot =
+        await FirebaseFirestore.instance
+            .collection('appUsers')
+            .doc(userId)
+            .collection('notifications')
+            .orderBy('timestamp', descending: true)
+            .get();
+    return snapshot.docs.map((doc) {
+      final data = doc.data();
+      data['id'] = doc.id;
+      return data;
+    }).toList();
+  }
+
   // Format notification message with emojis and branding
   String formatNotificationMessage(String title, String body) {
     return '''
@@ -342,6 +391,18 @@ Safe travels! ✈️''';
     } catch (e) {
       debugPrint('Error showing local notification: $e');
     }
+
+    // Save to Firestore
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId != null) {
+      await addNotificationToUser(
+        userId: userId,
+        title: title,
+        body: body,
+        type: 'trip_reminder',
+        isRead: false,
+      );
+    }
   }
 
   // Show a friend request accepted notification
@@ -402,6 +463,19 @@ Safe travels! ✈️''';
       debugPrint('Friend request accepted notification sent successfully');
     } catch (e) {
       debugPrint('Error showing friend request accepted notification: $e');
+    }
+
+    // Save to Firestore
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId != null) {
+      await addNotificationToUser(
+        userId: userId,
+        title: 'Friend Request Accepted',
+        body:
+            'You accepted $friendName\'s friend request. You can now plan trips together! 🎉',
+        type: 'friend_request_accepted',
+        isRead: false,
+      );
     }
   }
 
@@ -464,6 +538,18 @@ Safe travels! ✈️''';
     } catch (e) {
       debugPrint('Error showing friend request rejected notification: $e');
     }
+
+    // Save to Firestore
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId != null) {
+      await addNotificationToUser(
+        userId: userId,
+        title: 'Friend Request Rejected',
+        body: 'You rejected $friendName\'s friend request.',
+        type: 'friend_request_rejected',
+        isRead: false,
+      );
+    }
   }
 
   // Show a friend request received notification
@@ -524,6 +610,19 @@ Safe travels! ✈️''';
       debugPrint('Friend request received notification sent successfully');
     } catch (e) {
       debugPrint('Error showing friend request received notification: $e');
+    }
+
+    // Save to Firestore
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId != null) {
+      await addNotificationToUser(
+        userId: userId,
+        title: 'New Friend Request',
+        body:
+            '$friendName wants to connect with you on TravelBuddy! Accept their request to start planning trips together.',
+        type: 'friend_request_received',
+        isRead: false,
+      );
     }
   }
 
