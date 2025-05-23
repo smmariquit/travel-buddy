@@ -272,9 +272,9 @@ class _SignUpPageState extends State<SignUpPage> {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  "Let's get to know you!",
+                  "Tell us about yourself",
                   style: GoogleFonts.montserrat(
-                    fontSize: 28,
+                    fontSize: 24,
                     fontWeight: FontWeight.bold,
                     color: const Color(0xFF218463),
                   ),
@@ -327,7 +327,7 @@ class _SignUpPageState extends State<SignUpPage> {
                       const SizedBox(height: 10),
                       Center(
                         child: Text(
-                          "Tap to upload or change your profile picture",
+                          "Tap to upload profile picture",
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey[800],
@@ -367,7 +367,7 @@ class _SignUpPageState extends State<SignUpPage> {
                       (val) => val == null || val.isEmpty ? "Required" : null,
                   onChanged: (val) => _signUpData.lastName = val,
                 ),
-                const SizedBox(height: 24),
+                const SizedBox(height: 160),
                 SizedBox(
                   width: double.infinity,
                   height: 55,
@@ -377,24 +377,24 @@ class _SignUpPageState extends State<SignUpPage> {
                     child: const Text("Next"),
                   ),
                 ),
-                const SizedBox(height: 12),
-                Center(
-                  child: OutlinedButton(
-                    onPressed: () {
-                      Navigator.pop(context);
-                    },
-                    style: OutlinedButton.styleFrom(
-                      foregroundColor: Colors.red,
-                      side: const BorderSide(color: Colors.red),
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      minimumSize: const Size(120, 40),
-                      padding: const EdgeInsets.symmetric(horizontal: 24),
-                    ),
-                    child: const Text('Cancel'),
-                  ),
-                ),
+                const SizedBox(height: 8),
+                // Center(
+                //   child: OutlinedButton(
+                //     onPressed: () {
+                //       Navigator.pop(context);
+                //     },
+                //     style: OutlinedButton.styleFrom(
+                //       foregroundColor: Colors.red,
+                //       side: const BorderSide(color: Colors.red),
+                //       shape: RoundedRectangleBorder(
+                //         borderRadius: BorderRadius.circular(12),
+                //       ),
+                //       minimumSize: const Size(500, 30),
+                //       padding: const EdgeInsets.symmetric(horizontal: 24),
+                //     ),
+                //     child: const Text('Cancel'),
+                //   ),
+                // ),
               ],
             ),
           ),
@@ -571,7 +571,7 @@ class _SignUpPageState extends State<SignUpPage> {
                   ),
                 ),
               ),
-              const SizedBox(height: 20),
+              // const SizedBox(height: 160),
               Row(
                 children: [
                   Expanded(
@@ -617,23 +617,23 @@ class _SignUpPageState extends State<SignUpPage> {
                 ],
               ),
               const SizedBox(height: 16),
-              Center(
-                child: OutlinedButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                  },
-                  style: OutlinedButton.styleFrom(
-                    foregroundColor: Colors.red,
-                    side: const BorderSide(color: Colors.red),
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    minimumSize: const Size(120, 40),
-                    padding: const EdgeInsets.symmetric(horizontal: 24),
-                  ),
-                  child: const Text('Cancel'),
-                ),
-              ),
+              // Center(
+              //   child: OutlinedButton(
+              //     onPressed: () {
+              //       Navigator.pop(context);
+              //     },
+              //     style: OutlinedButton.styleFrom(
+              //       foregroundColor: Colors.red,
+              //       side: const BorderSide(color: Colors.red),
+              //       shape: RoundedRectangleBorder(
+              //         borderRadius: BorderRadius.circular(12),
+              //       ),
+              //       minimumSize: const Size(120, 40),
+              //       padding: const EdgeInsets.symmetric(horizontal: 24),
+              //     ),
+              //     child: const Text('Cancel'),
+              //   ),
+              // ),
             ],
           ),
         ),
@@ -883,23 +883,23 @@ class _SignUpPageState extends State<SignUpPage> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  Center(
-                    child: OutlinedButton(
-                      onPressed: () {
-                        Navigator.pop(context);
-                      },
-                      style: OutlinedButton.styleFrom(
-                        foregroundColor: Colors.red,
-                        side: const BorderSide(color: Colors.red),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        minimumSize: const Size(120, 40),
-                        padding: const EdgeInsets.symmetric(horizontal: 24),
-                      ),
-                      child: const Text('Cancel'),
-                    ),
-                  ),
+                  // Center(
+                  //   child: OutlinedButton(
+                  //     onPressed: () {
+                  //       Navigator.pop(context);
+                  //     },
+                  //     style: OutlinedButton.styleFrom(
+                  //       foregroundColor: Colors.red,
+                  //       side: const BorderSide(color: Colors.red),
+                  //       shape: RoundedRectangleBorder(
+                  //         borderRadius: BorderRadius.circular(12),
+                  //       ),
+                  //       minimumSize: const Size(120, 40),
+                  //       padding: const EdgeInsets.symmetric(horizontal: 24),
+                  //     ),
+                  //     child: const Text('Cancel'),
+                  //   ),
+                  // ),
                 ],
               ),
             ),
