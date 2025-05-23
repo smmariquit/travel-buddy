@@ -13,6 +13,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 // App-specific
 import 'package:travel_app/api/firebase_auth_api.dart';
 
+// ignore: unused_element
 Stream<QuerySnapshot>? _userStream;
 
 class AppUserProvider with ChangeNotifier {

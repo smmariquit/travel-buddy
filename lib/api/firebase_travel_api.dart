@@ -1,11 +1,9 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:travel_app/models/travel_plan_model.dart';
 
 /// Firebase service class for managing travel plans.
 class FirebaseTravelAPI {
   static final FirebaseFirestore _db = FirebaseFirestore.instance;
-  static final FirebaseAuth _auth = FirebaseAuth.instance;
 
   /// Adds a new travel plan and returns its document ID.
   Future<String> addTravel(Travel travel) async {
@@ -15,7 +13,6 @@ class FirebaseTravelAPI {
       await docRef.set(updatedTravel.toJson());
       return docRef.id;
     } catch (e) {
-      print("Error adding travel: $e");
       return "Error adding travel: $e";
     }
   }
@@ -29,7 +26,6 @@ class FirebaseTravelAPI {
       await _db.collection('travel').doc(travel.id).update(travel.toJson());
       return "Travel updated!";
     } catch (e) {
-      print("Error updating travel: $e");
       return "Error updating travel: $e";
     }
   }
@@ -40,7 +36,6 @@ class FirebaseTravelAPI {
       await _db.collection('travel').doc(id).delete();
       return "Successfully deleted";
     } catch (e) {
-      print("Error deleting travel: $e");
       return "Error deleting travel: $e";
     }
   }
@@ -83,7 +78,6 @@ class FirebaseTravelAPI {
       }
       return null;
     } catch (e) {
-      print("Error fetching travel by ID: $e");
       return null;
     }
   }
@@ -96,11 +90,9 @@ class FirebaseTravelAPI {
       if (!doc.exists) return "Travel plan not found";
 
       final travel = Travel.fromJson(doc.data()!, doc.id);
-      print(travel.uid);
-      print(friendUid);
       if (travel.uid == friendUid) {
-      return "Cannot share travel plan with yourself";
-    }
+        return "Cannot share travel plan with yourself";
+      }
 
       final sharedWith = travel.sharedWith ?? [];
 
@@ -114,10 +106,9 @@ class FirebaseTravelAPI {
 
       return successMessage;
     } catch (e) {
-      print("Error sharing travel: $e");
       return "Failed to share travel plan";
     }
-  } 
+  }
 
   /// Removes a user from the sharedWith list.
   Future<String> removeSharedUser(String travelId, String friendUid) async {
@@ -127,7 +118,6 @@ class FirebaseTravelAPI {
       });
       return "User removed";
     } catch (e) {
-      print("Error removing shared user: $e");
       return "Error: $e";
     }
   }

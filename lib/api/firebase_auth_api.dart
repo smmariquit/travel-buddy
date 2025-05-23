@@ -1,6 +1,8 @@
 /// This file provides an interface to Firebase Authentication, allowing users to sign in
 /// using email/password or Google Sign-In. This is also where we define our sign in, sign out,
 /// and our create account method.
+library;
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 

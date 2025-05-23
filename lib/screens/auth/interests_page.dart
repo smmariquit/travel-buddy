@@ -5,13 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 
 // State Management
-import 'package:provider/provider.dart';
 
 // App-specific
-import 'package:travel_app/providers/user_provider.dart';
-import 'package:travel_app/screens/home/main_page.dart';
 import 'package:travel_app/screens/auth/travel_styles_page.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 class InterestsPage extends StatefulWidget {
   const InterestsPage({super.key});
@@ -22,14 +20,14 @@ class InterestsPage extends StatefulWidget {
 
 class _InterestsPageState extends State<InterestsPage> {
   List interests = [
-    {"interest": 'Adventure', "selected": false},
-    {"interest": 'Culture', "selected": false},
-    {"interest": 'Food', "selected": false},
-    {"interest": 'Nature', "selected": false},
-    {"interest": 'Relaxation', "selected": false},
-    {"interest": 'Shopping', "selected": false},
-    {"interest": 'Sightseeing', "selected": false},
-    {"interest": 'Sports', "selected": false},
+    {"interest": 'Adventure', "selected": false, "icon": Icons.hiking},
+    {"interest": 'Culture', "selected": false, "icon": Icons.museum},
+    {"interest": 'Food', "selected": false, "icon": Icons.restaurant},
+    {"interest": 'Nature', "selected": false, "icon": Icons.landscape},
+    {"interest": 'Relaxation', "selected": false, "icon": Icons.spa},
+    {"interest": 'Shopping', "selected": false, "icon": Icons.shopping_bag},
+    {"interest": 'Sightseeing', "selected": false, "icon": Icons.visibility},
+    {"interest": 'Sports', "selected": false, "icon": Icons.sports_soccer},
   ];
 
   // Firebase Authentication and Firestore instances
@@ -64,98 +62,122 @@ class _InterestsPageState extends State<InterestsPage> {
     return Scaffold(
       appBar: AppBar(
         automaticallyImplyLeading: false,
-        // leading: BackButton(onPressed: () => Navigator.pop(context)),
         elevation: 0,
         backgroundColor: Colors.transparent,
         foregroundColor: Colors.black,
       ),
-
-      body: Padding(
-        padding: const EdgeInsets.all(10),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
-              children: [
-                Text(
-                  "Help us know you better.",
-                  style: TextStyle(fontSize: 25),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  "Select your interests",
-                  style: TextStyle(fontSize: 16, color: Colors.grey),
-                ),
-                const SizedBox(height: 15),
-                interestChips,
-              ],
-            ),
-            saveOrSkipButton,
-          ],
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Colors.white, Colors.green.shade50],
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                children: [
+                  Text(
+                    "What interests you?",
+                    style: GoogleFonts.poppins(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    "Select your interests to help us personalize your experience",
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      color: Colors.grey[600],
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 32),
+                  interestChips,
+                ],
+              ),
+              saveOrSkipButton,
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget get saveOrSkipButton => ElevatedButton(
-    onPressed: () async {
-      if (interests.any((interest) => interest['selected'])) {
-        await saveInterests(); // Save to Firestore
-      }
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const TravelStylesPage()),
-      );
-    },
-
-    style: ElevatedButton.styleFrom(
-      minimumSize: const Size(double.infinity, 50), // Full-width button
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-    ),
-    child: Text(
-      interests.any((interest) => interest['selected']) ? "Save" : "Skip",
-      style: const TextStyle(
-        fontSize: 17,
-        fontWeight: FontWeight.w400,
-        color: Colors.black,
+  Widget get saveOrSkipButton => Container(
+    margin: EdgeInsets.only(bottom: 16),
+    child: ElevatedButton(
+      onPressed: () async {
+        if (interests.any((interest) => interest['selected'])) {
+          await saveInterests();
+        }
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const TravelStylesPage()),
+        );
+      },
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.green.shade700,
+        foregroundColor: Colors.white,
+        minimumSize: const Size(double.infinity, 56),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        elevation: 2,
+      ),
+      child: Text(
+        interests.any((interest) => interest['selected']) ? "Continue" : "Skip",
+        style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600),
       ),
     ),
   );
 
   Widget get interestChips => Wrap(
-    spacing: 10,
+    spacing: 12,
+    runSpacing: 12,
+    alignment: WrapAlignment.start,
+    crossAxisAlignment: WrapCrossAlignment.start,
     children: List.generate(interests.length, (index) {
-      return InputChip(
-        label: Text(interests[index]['interest']),
-        labelStyle: TextStyle(fontWeight: FontWeight.bold),
+      return FilterChip(
+        label: Text(
+          interests[index]['interest'],
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.w500,
+            color: interests[index]['selected'] ? Colors.white : Colors.black87,
+          ),
+        ),
+        avatar: Icon(
+          interests[index]['icon'],
+          size: 16,
+          color:
+              interests[index]['selected']
+                  ? Colors.white
+                  : Colors.green.shade700,
+        ),
         selected: interests[index]['selected'],
-        onPressed: () {
-          interests[index]['selected'] = !interests[index]['selected'];
-          setState(() {});
+        onSelected: (bool selected) {
+          setState(() {
+            interests[index]['selected'] = selected;
+          });
         },
-        selectedColor: Colors.blue,
+        selectedColor: Colors.green.shade700,
+        backgroundColor: Colors.white,
+        checkmarkColor: Colors.white,
+        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(
+            color:
+                interests[index]['selected']
+                    ? Colors.green.shade700
+                    : Colors.grey.shade300,
+            width: 1,
+          ),
+        ),
       );
     }),
   );
-  //   child: Container(
-  //     margin: const EdgeInsets.symmetric(vertical: 40, horizontal: 30),
-  //     child: Form(
-  //       key: _formKey,
-  //       child: Column(
-  //         crossAxisAlignment: CrossAxisAlignment.start,
-  //         children: [
-  //           heading,
-  //           const SizedBox(height: 10),
-  //           subtitle,
-  //           const SizedBox(height: 40),
-  //           firstNameField,
-  //           lastNameField,
-  //           emailField,
-  //           passwordField,
-  //           submitButton,
-  //         ],
-  //       ),
-  //     ),
-  //   ),
-  // ),
 }

@@ -361,7 +361,7 @@ class _NotificationPageState extends State<NotificationPage>
         : _requestUsers.isEmpty
         ? Center(
           child: Text(
-            'No pending friend requests',
+            'No friend requests received so far',
             textAlign: TextAlign.center,
             style: GoogleFonts.poppins(color: Colors.grey[600]),
           ),
@@ -437,6 +437,7 @@ class _NotificationPageState extends State<NotificationPage>
                                       'Accept',
                                       style: GoogleFonts.poppins(
                                         color: Colors.white,
+                                        fontSize: 12,
                                       ),
                                     ),
                                     onPressed: () => _acceptFriendRequest(user),
@@ -459,6 +460,7 @@ class _NotificationPageState extends State<NotificationPage>
                                       'Reject',
                                       style: GoogleFonts.poppins(
                                         color: Colors.white,
+                                        fontSize: 12,
                                       ),
                                     ),
                                     onPressed: () => _rejectFriendRequest(user),
@@ -535,31 +537,33 @@ class _NotificationPageState extends State<NotificationPage>
     return ListView(
       padding: EdgeInsets.all(16),
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            ElevatedButton.icon(
-              icon: Icon(Icons.delete, color: Colors.white),
-              label: Text('Delete All', style: GoogleFonts.poppins()),
-              onPressed: _deleteAllTravelNotifications,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        Center(
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              ElevatedButton.icon(
+                icon: Icon(Icons.delete, color: Colors.white),
+                label: Text('Delete All', style: GoogleFonts.poppins()),
+                onPressed: _deleteAllTravelNotifications,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
               ),
-            ),
-            SizedBox(width: 8),
-            ElevatedButton.icon(
-              icon: Icon(Icons.check, color: Colors.white),
-              label: Text('Mark All as Read'),
-              onPressed: _markAllTravelNotificationsAsRead,
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.green,
-                foregroundColor: Colors.white,
-                padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              SizedBox(width: 8),
+              ElevatedButton.icon(
+                icon: Icon(Icons.check, color: Colors.white),
+                label: Text('Mark All as Read'),
+                onPressed: _markAllTravelNotificationsAsRead,
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.green,
+                  foregroundColor: Colors.white,
+                  padding: EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                ),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
         SizedBox(height: 16),
         ..._travelNotifications.asMap().entries.map((entry) {
@@ -575,17 +579,28 @@ class _NotificationPageState extends State<NotificationPage>
               child: Icon(Icons.delete, color: Colors.white),
             ),
             direction: DismissDirection.endToStart,
-            onDismissed: (direction) async {
-              final userId = FirebaseAuth.instance.currentUser?.uid;
-              if (userId != null) {
-                await _notificationService.markNotificationAsRead(
-                  userId: userId,
-                  notificationId: notification['id'],
-                );
-              }
+            onDismissed: (direction) {
+              // Remove from local state first
               setState(() {
                 _travelNotifications.removeAt(index);
               });
+
+              // Then update Firestore
+              final userId = FirebaseAuth.instance.currentUser?.uid;
+              if (userId != null) {
+                _notificationService
+                    .markNotificationAsRead(
+                      userId: userId,
+                      notificationId: notification['id'],
+                    )
+                    .catchError((error) {
+                      debugPrint('Error marking notification as read: $error');
+                      // Optionally restore the notification if the Firestore update fails
+                      setState(() {
+                        _travelNotifications.insert(index, notification);
+                      });
+                    });
+              }
             },
             child: Card(
               margin: EdgeInsets.only(bottom: 16),
@@ -602,7 +617,7 @@ class _NotificationPageState extends State<NotificationPage>
                   notification['title'] ?? 'Notification',
                   style: GoogleFonts.poppins(
                     fontWeight: FontWeight.bold,
-                    fontSize: 18,
+                    fontSize: 16,
                     color: isRead ? Colors.grey : Colors.black,
                   ),
                 ),
@@ -612,16 +627,61 @@ class _NotificationPageState extends State<NotificationPage>
                     color: isRead ? Colors.grey : Colors.black,
                   ),
                 ),
+                trailing: IconButton(
+                  icon: Icon(Icons.arrow_forward_ios),
+                  onPressed: () async {
+                    try {
+                      // Fetch the full travel document from Firestore by tripId
+                      final doc =
+                          await FirebaseFirestore.instance
+                              .collection('travel')
+                              .doc(notification['id'])
+                              .get();
+
+                      if (!doc.exists) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Trip details not found')),
+                        );
+                        return;
+                      }
+
+                      // Parse the document into a Travel instance
+                      final travelData = doc.data()!;
+                      final travel = Travel.fromJson(travelData, doc.id);
+
+                      // Navigate to TripDetails page with the Travel instance
+                      Navigator.of(context).push(
+                        MaterialPageRoute(
+                          builder: (_) => TripDetails(travel: travel),
+                        ),
+                      );
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Error loading trip details: $e'),
+                        ),
+                      );
+                    }
+                  },
+                ),
                 onTap: () async {
-                  final userId = FirebaseAuth.instance.currentUser?.uid;
-                  if (userId != null && !isRead) {
-                    await _notificationService.markNotificationAsRead(
-                      userId: userId,
-                      notificationId: notification['id'],
-                    );
-                    setState(() {
-                      _travelNotifications[index]['read'] = true;
-                    });
+                  if (!isRead) {
+                    final userId = FirebaseAuth.instance.currentUser?.uid;
+                    if (userId != null) {
+                      try {
+                        await _notificationService.markNotificationAsRead(
+                          userId: userId,
+                          notificationId: notification['id'],
+                        );
+                        if (mounted) {
+                          setState(() {
+                            _travelNotifications[index]['read'] = true;
+                          });
+                        }
+                      } catch (e) {
+                        debugPrint('Error marking notification as read: $e');
+                      }
+                    }
                   }
                 },
               ),
@@ -823,11 +883,26 @@ class NotificationHelper {
     NotificationService notificationService,
   ) async {
     try {
+      debugPrint('=== TRAVEL NOTIFICATIONS CHECK START ===');
       final userId = FirebaseAuth.instance.currentUser?.uid;
-      if (userId == null) return;
+      if (userId == null) {
+        debugPrint('No user ID found, skipping notifications');
+        return;
+      }
+      debugPrint('Processing notifications for user: $userId');
 
       final now = DateTime.now();
       final notifications = <TravelNotification>[];
+
+      debugPrint('Fetching user document for SMS...');
+      final userDoc =
+          await FirebaseFirestore.instance
+              .collection('appUsers')
+              .doc(userId)
+              .get();
+
+      final phoneNumber = userDoc.data()?['phoneNumber'] as String?;
+      debugPrint('Phone number from document: $phoneNumber');
 
       final ownerSnapshot =
           await FirebaseFirestore.instance
@@ -842,22 +917,35 @@ class NotificationHelper {
               .get();
 
       final allDocs = [...ownerSnapshot.docs, ...sharedSnapshot.docs];
+      debugPrint('Found ${allDocs.length} trips to check');
 
       for (var doc in allDocs) {
         final data = doc.data();
         final startDateTimestamp = data['startDate'] as Timestamp?;
-        if (startDateTimestamp == null) continue;
+        if (startDateTimestamp == null) {
+          debugPrint('Trip ${doc.id} has no start date, skipping');
+          continue;
+        }
 
         final startDate = startDateTimestamp.toDate();
         final daysUntilTrip = startDate.difference(now).inDays;
+        debugPrint('Trip ${data['name']}: $daysUntilTrip days until start');
 
         // Get user's notification preference (default to 5 if not set)
         final notificationDays = data['notificationDays'] ?? 5;
 
         if (daysUntilTrip <= 5 && daysUntilTrip >= 0) {
+          final tripName = data['name'] ?? 'Unnamed Trip';
+          final message =
+              daysUntilTrip == 0
+                  ? 'Your trip "$tripName" starts today!'
+                  : daysUntilTrip == 1
+                  ? 'Your trip "$tripName" starts tomorrow!'
+                  : 'Your trip "$tripName" starts in $daysUntilTrip day(s)!';
+
           final notification = TravelNotification(
             tripId: doc.id,
-            tripName: data['name'] ?? 'Unnamed Trip',
+            tripName: tripName,
             destination: data['destination'] ?? 'Unknown',
             startDate: startDate,
             daysUntil: daysUntilTrip,
@@ -865,17 +953,41 @@ class NotificationHelper {
           );
           notifications.add(notification);
 
+          debugPrint('Sending notifications for trip: $tripName');
+
+          // Send local notification
           await notificationService.showTripReminderNotification(
             title: 'Upcoming Trip Reminder',
-            body:
-                'Your trip "${data['name'] ?? 'Unnamed Trip'}" starts in $daysUntilTrip day(s)!',
+            body: message,
             payload: doc.id,
           );
+          debugPrint('Local notification sent');
+
+          // Send SMS if phone number exists
+          if (phoneNumber != null && phoneNumber.isNotEmpty) {
+            debugPrint('Attempting to send SMS to: $phoneNumber');
+            try {
+              await notificationService.sendSMS(
+                phoneNumber: phoneNumber,
+                message:
+                    "Hey, Buddy! Here's a travel alert for you: \n$message",
+              );
+              debugPrint('SMS sent successfully');
+            } catch (e) {
+              debugPrint('Failed to send SMS: $e');
+            }
+          } else {
+            debugPrint('No phone number available for SMS');
+          }
+        } else {
+          debugPrint('Trip ${data['name']} is not within notification period');
         }
       }
 
+      debugPrint('=== TRAVEL NOTIFICATIONS CHECK END ===');
       onDone(notifications);
     } catch (e) {
+      debugPrint('Error in fetchTravelNotifications: $e');
       onError('Error fetching travel notifications: $e');
     }
   }
