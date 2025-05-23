@@ -1,4 +1,5 @@
 // Flutter & Material
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
@@ -11,7 +12,6 @@ import 'package:provider/provider.dart';
 // App-specific
 import 'package:travel_app/providers/user_provider.dart';
 import 'package:travel_app/providers/travel_plans_provider.dart';
-import 'package:travel_app/screens/friends/friends_list.dart';
 import 'package:travel_app/screens/home/main_page.dart';
 import 'signup_page.dart';
 
@@ -243,22 +243,25 @@ class _SignInPageState extends State<SignInPage> {
           final authProvider = context.read<AppUserProvider>();
           final travelProvider = context.read<TravelTrackerProvider>();
 
-          // Sign out first to clear any cached credentials
-          await authProvider
-              .signOutGoogle(); // You'll need to implement this method
-
-          // Now attempt to sign in with Google
+          // Sign in with Google
           String? result = await authProvider.signInWithGoogle();
 
           if (result == null) {
-            // Successful sign-in, navigate to the next page
-            travelProvider.setUser(authProvider.uid);
+            // Check if user exists in Firestore
+            final userDoc =
+                await FirebaseFirestore.instance
+                    .collection('appUsers')
+                    .doc(authProvider.uid)
+                    .get();
 
-            // Navigate to the next page
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(builder: (context) => MainPage()),
-            );
+            if (userDoc.exists) {
+              // User exists, sign them in directly
+              travelProvider.setUser(authProvider.uid);
+              Navigator.pushReplacementNamed(context, '/main');
+            } else {
+              // New user, go to signup flow
+              Navigator.pushReplacementNamed(context, '/interests');
+            }
           } else {
             // If sign-in fails, show error message
             ScaffoldMessenger.of(

@@ -1,17 +1,19 @@
 // Enhanced Firebase Cloud Function with debugging
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");
+const { logger } = require("firebase-functions");
+const { onRequest } = require("firebase-functions/v2/https");
+const { onDocumentCreated } = require("firebase-functions/v2/firestore");
+const { onSchedule } = require("firebase-functions/v2/scheduler");
+const { NotificationService } = require('./notification_service');
 
-const {logger} = require("firebase-functions");
-const {onRequest} = require("firebase-functions/v2/https");
-const {onDocumentCreated} = require("firebase-functions/v2/firestore");
-const {onSchedule} = require("firebase-functions/v2/scheduler");
 admin.initializeApp();
+const notificationService = new NotificationService();
 
 exports.sendPushNotification = functions.https.onCall(async (data, context) => {
   // Add detailed logging to troubleshoot the structure of incoming data
   console.log("Received data:", JSON.stringify(data));
-  
+
   // Validate the data structure more explicitly
   if (!data) {
     console.error("No data provided");
@@ -20,7 +22,7 @@ exports.sendPushNotification = functions.https.onCall(async (data, context) => {
       "No data provided to the function"
     );
   }
-  
+
   // Check token exists
   if (!data.token) {
     console.error("Missing token in request");
@@ -29,7 +31,7 @@ exports.sendPushNotification = functions.https.onCall(async (data, context) => {
       "Missing token field in request data"
     );
   }
-  
+
   // Check notification exists and has required fields
   if (!data.notification || !data.notification.title || !data.notification.body) {
     console.error("Missing or incomplete notification object", data.notification);
@@ -49,9 +51,9 @@ exports.sendPushNotification = functions.https.onCall(async (data, context) => {
       },
       data: data.data || {},
     };
-    
+
     console.log("Sending message:", JSON.stringify(message));
-    
+
     // Send using the correct FCM method
     const response = await admin.messaging().send(message);
     console.log("Successfully sent message:", response);
@@ -64,7 +66,7 @@ exports.sendPushNotification = functions.https.onCall(async (data, context) => {
 
 // Scheduled function to check for upcoming trips and notify users every 5 minutes
 exports.checkTripsAndNotify = onSchedule(
-  { schedule: 'every 1 minutes'},
+  { schedule: 'every 1 minutes' },
   async (event) => {
     const db = admin.firestore();
     const now = admin.firestore.Timestamp.now();

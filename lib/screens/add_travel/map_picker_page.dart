@@ -64,9 +64,7 @@ class _MapPickerPageState extends State<MapPickerPage> {
       setState(() {
         _placePredictions = response.predictions;
       });
-    } else {
-      print('Autocomplete failed: ${response.errorMessage}');
-    }
+    } else {}
   }
 
   void _selectPrediction(places.Prediction prediction) async {
@@ -239,7 +237,7 @@ class _MapPickerPageState extends State<MapPickerPage> {
                   left: 0,
                   right: 0,
                   child: Center(
-                    child: Container(
+                    child: SizedBox(
                       width: MediaQuery.of(context).size.width * 0.8,
                       child: ElevatedButton.icon(
                         icon: Icon(Icons.check_circle),

@@ -9,10 +9,10 @@ class FriendsListScreen extends StatefulWidget {
   final String currentUserID;
 
   const FriendsListScreen({
-    Key? key,
+    super.key,
     required this.friendUIDs,
     required this.currentUserID,
-  }) : super(key: key);
+  });
 
   @override
   State<FriendsListScreen> createState() => _FriendsListScreenState();
@@ -68,8 +68,6 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Failed to load friends', style: GoogleFonts.poppins()),
-          behavior: SnackBarBehavior.floating,
-          margin: EdgeInsets.zero,
         ),
       );
       setState(() {
@@ -128,11 +126,7 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Friend removed', style: GoogleFonts.poppins()),
-          behavior: SnackBarBehavior.floating,
-          margin: EdgeInsets.zero,
-        ),
+        SnackBar(content: Text('Friend removed', style: GoogleFonts.poppins())),
       );
     } catch (e) {
       print('Error removing friend: $e');
@@ -142,8 +136,6 @@ class _FriendsListScreenState extends State<FriendsListScreen> {
             'Failed to remove friend',
             style: GoogleFonts.poppins(),
           ),
-          behavior: SnackBarBehavior.floating,
-          margin: EdgeInsets.zero,
         ),
       );
     }

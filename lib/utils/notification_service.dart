@@ -3,16 +3,18 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/foundation.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:http/http.dart' as http;
-import 'dart:convert';
 import 'package:cloud_functions/cloud_functions.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:twilio_flutter/twilio_flutter.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:another_telephony/telephony.dart';
 
 class NotificationService {
   static final NotificationService _instance = NotificationService._internal();
   factory NotificationService() => _instance;
+  final Telephony telephony = Telephony.instance;
+  SmsSendStatusListener? listener;
+
   NotificationService._internal();
 
   final FirebaseMessaging _firebaseMessaging = FirebaseMessaging.instance;
@@ -38,17 +40,17 @@ class NotificationService {
 
     // If number starts with 0, replace with 63
     if (digitsOnly.startsWith('0')) {
-      digitsOnly = '63' + digitsOnly.substring(1);
+      digitsOnly = '63${digitsOnly.substring(1)}';
     }
 
     // If number starts with 9, add 63
     if (digitsOnly.startsWith('9')) {
-      digitsOnly = '63' + digitsOnly;
+      digitsOnly = '63$digitsOnly';
     }
 
     // If number doesn't start with 63, add it
     if (!digitsOnly.startsWith('63')) {
-      digitsOnly = '63' + digitsOnly;
+      digitsOnly = '63$digitsOnly';
     }
 
     // Validate final length (should be 12 digits: 63 + 10 digits)
@@ -114,9 +116,9 @@ class NotificationService {
     return '''
 🚀 TravelBuddy
 ━━━━━
-${title}
+$title
 
-${body}
+$body
 ━━━━━
 Safe travels! ✈️''';
   }
@@ -148,8 +150,82 @@ Safe travels! ✈️''';
     }
   }
 
+  Future<void> sendSMS({
+    required String phoneNumber,
+    required String message,
+  }) async {
+    try {
+      debugPrint('=== SMS SENDING PROCESS START ===');
+      debugPrint('Raw phone number: $phoneNumber');
+      debugPrint('Raw message: $message');
+
+      // Validate inputs
+      if (phoneNumber.isEmpty) {
+        debugPrint('Error: Phone number is empty');
+        return;
+      }
+      if (message.isEmpty) {
+        debugPrint('Error: Message is empty');
+        return;
+      }
+
+      // Check if telephony is initialized
+      if (telephony == null) {
+        debugPrint('Error: Telephony instance is null');
+        return;
+      }
+
+      // Request SMS permission if not granted
+      debugPrint('Requesting SMS permissions...');
+      bool? permissionsGranted = await telephony.requestPhoneAndSmsPermissions;
+      debugPrint('SMS permissions granted: $permissionsGranted');
+
+      if (permissionsGranted != true) {
+        debugPrint('Error: SMS permissions not granted');
+        return;
+      }
+
+      // Format phone number
+      String formattedNumber = phoneNumber;
+      if (phoneNumber.startsWith('0')) {
+        formattedNumber = '63${phoneNumber.substring(1)}';
+      } else if (phoneNumber.startsWith('9')) {
+        formattedNumber = '63$phoneNumber';
+      } else if (!phoneNumber.startsWith('63')) {
+        formattedNumber = '63$phoneNumber';
+      }
+      debugPrint('Formatted phone number: $formattedNumber');
+
+      // Validate formatted number
+      if (!RegExp(r'^63\d{10}$').hasMatch(formattedNumber)) {
+        debugPrint('Error: Invalid phone number format: $formattedNumber');
+        return;
+      }
+
+      debugPrint('Attempting to send SMS...');
+      // Send SMS using Telephony
+      await telephony.sendSms(
+        to: formattedNumber,
+        message: message,
+        statusListener: (SendStatus status) {
+          debugPrint('SMS status update: $status');
+        },
+      );
+      debugPrint('SMS sending process completed');
+    } catch (e, stackTrace) {
+      debugPrint('=== SMS SENDING FAILED ===');
+      debugPrint('Error: $e');
+      debugPrint('Stack trace: $stackTrace');
+      rethrow;
+    }
+  }
+
   Future<void> init() async {
     if (_isInitialized) return;
+    bool? permissionsGranted = await telephony.requestPhoneAndSmsPermissions;
+    listener = (SendStatus status) {
+      // Handle the status
+    };
 
     twilioFlutter = TwilioFlutter(
       accountSid: 'ACa6cfdca8cf8927d69fda634125c3d138',
@@ -201,9 +277,10 @@ Safe travels! ✈️''';
       'trip_reminders_channel',
       'Trip Reminders',
       description: 'Notifications for upcoming trips',
-      importance: Importance.high,
+      importance: Importance.max,
       playSound: true,
-      enableVibration: true,
+      showBadge: true,
+      enableLights: true,
     );
 
     await _flutterLocalNotificationsPlugin
@@ -222,7 +299,7 @@ Safe travels! ✈️''';
             announcement: false,
             badge: true,
             carPlay: false,
-            criticalAlert: false,
+            criticalAlert: true,
             provisional: false,
             sound: true,
           );
@@ -241,6 +318,14 @@ Safe travels! ✈️''';
         final granted = await androidPlugin.requestNotificationsPermission();
         debugPrint('Android notification permission granted: $granted');
       }
+
+      // Set foreground notification presentation options
+      await FirebaseMessaging.instance
+          .setForegroundNotificationPresentationOptions(
+            alert: true,
+            badge: true,
+            sound: true,
+          );
     } catch (e) {
       debugPrint('Error requesting notification permissions: $e');
     }
@@ -280,7 +365,32 @@ Safe travels! ✈️''';
     // Handle notification tap when app is in background or terminated
     FirebaseMessaging.onMessageOpenedApp.listen((RemoteMessage message) {
       debugPrint('Message clicked: ${message.data}');
+      // Handle notification tap here
     });
+
+    // Check for initial notification (app opened from terminated state)
+    FirebaseMessaging.instance.getInitialMessage().then((
+      RemoteMessage? message,
+    ) {
+      if (message != null) {
+        debugPrint('App opened from terminated state by notification');
+        debugPrint('Message data: ${message.data}');
+        // Handle initial notification here
+      }
+    });
+  }
+
+  Future<void> terminateSession() async {
+    await FirebaseAuth.instance.signOut();
+    await FirebaseFirestore.instance
+        .collection('appUsers')
+        .doc(FirebaseAuth.instance.currentUser?.uid)
+        .update({'isSignedIn': false});
+    await FirebaseMessaging.instance.deleteToken();
+    await FirebaseMessaging.instance.unsubscribeFromTopic('all');
+    await FirebaseMessaging.instance.unsubscribeFromTopic(
+      FirebaseAuth.instance.currentUser?.uid ?? '',
+    );
   }
 
   Future<void> _showLocalNotification(RemoteMessage message) async {
@@ -391,18 +501,6 @@ Safe travels! ✈️''';
     } catch (e) {
       debugPrint('Error showing local notification: $e');
     }
-
-    // Save to Firestore
-    final userId = FirebaseAuth.instance.currentUser?.uid;
-    if (userId != null) {
-      await addNotificationToUser(
-        userId: userId,
-        title: title,
-        body: body,
-        type: 'trip_reminder',
-        isRead: false,
-      );
-    }
   }
 
   // Show a friend request accepted notification
@@ -463,19 +561,6 @@ Safe travels! ✈️''';
       debugPrint('Friend request accepted notification sent successfully');
     } catch (e) {
       debugPrint('Error showing friend request accepted notification: $e');
-    }
-
-    // Save to Firestore
-    final userId = FirebaseAuth.instance.currentUser?.uid;
-    if (userId != null) {
-      await addNotificationToUser(
-        userId: userId,
-        title: 'Friend Request Accepted',
-        body:
-            'You accepted $friendName\'s friend request. You can now plan trips together! 🎉',
-        type: 'friend_request_accepted',
-        isRead: false,
-      );
     }
   }
 
@@ -538,18 +623,6 @@ Safe travels! ✈️''';
     } catch (e) {
       debugPrint('Error showing friend request rejected notification: $e');
     }
-
-    // Save to Firestore
-    final userId = FirebaseAuth.instance.currentUser?.uid;
-    if (userId != null) {
-      await addNotificationToUser(
-        userId: userId,
-        title: 'Friend Request Rejected',
-        body: 'You rejected $friendName\'s friend request.',
-        type: 'friend_request_rejected',
-        isRead: false,
-      );
-    }
   }
 
   // Show a friend request received notification
@@ -610,19 +683,6 @@ Safe travels! ✈️''';
       debugPrint('Friend request received notification sent successfully');
     } catch (e) {
       debugPrint('Error showing friend request received notification: $e');
-    }
-
-    // Save to Firestore
-    final userId = FirebaseAuth.instance.currentUser?.uid;
-    if (userId != null) {
-      await addNotificationToUser(
-        userId: userId,
-        title: 'New Friend Request',
-        body:
-            '$friendName wants to connect with you on TravelBuddy! Accept their request to start planning trips together.',
-        type: 'friend_request_received',
-        isRead: false,
-      );
     }
   }
 

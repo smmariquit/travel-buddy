@@ -11,6 +11,8 @@ import 'package:mobile_scanner/mobile_scanner.dart';
 import 'package:travel_app/utils/constants.dart';
 
 class QRScanPage extends StatefulWidget {
+  const QRScanPage({super.key});
+
   @override
   State<QRScanPage> createState() => _QRScanPageState();
 }

@@ -515,14 +515,28 @@ class _TripDetailsState extends State<TripDetails>
               ),
             const SizedBox(height: 10),
             Text("Checklist:", style: TextStyle(fontWeight: FontWeight.bold)),
-            ...activity.checklist!.map(
-              (item) => Padding(
+            ...activity.checklist!.asMap().entries.map(
+              (entry) => Padding(
                 padding: const EdgeInsets.symmetric(vertical: 2.0),
                 child: Row(
                   children: [
                     Icon(Icons.check_box_outline_blank, size: 16),
                     SizedBox(width: 8),
-                    Expanded(child: Text(item)),
+                    Expanded(child: Text(entry.value)),
+                    if (_travel!.uid == FirebaseAuth.instance.currentUser?.uid)
+                      IconButton(
+                        icon: Icon(
+                          Icons.delete_outline,
+                          size: 16,
+                          color: Colors.red,
+                        ),
+                        onPressed: () async {
+                          setState(() {
+                            activity.checklist!.removeAt(entry.key);
+                          });
+                          await _saveActivitiesToFirestore();
+                        },
+                      ),
                   ],
                 ),
               ),
@@ -1448,109 +1462,187 @@ class _TripDetailsState extends State<TripDetails>
       text: _travel!.accommodation,
     );
 
+    DateTime? startDate = _travel!.startDate;
+    DateTime? endDate = _travel!.endDate;
+
     return showDialog(
       context: context,
       builder:
-          (context) => AlertDialog(
-            title: Text('Edit Travel Plan'),
-            content: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  TextField(
-                    controller: nameController,
-                    decoration: InputDecoration(
-                      labelText: 'Trip Name',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  TextField(
-                    controller: locationController,
-                    decoration: InputDecoration(
-                      labelText: 'Location',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  TextField(
-                    controller: notesController,
-                    decoration: InputDecoration(
-                      labelText: 'Notes',
-                      border: OutlineInputBorder(),
-                    ),
-                    maxLines: 3,
-                  ),
-                  SizedBox(height: 8),
-                  TextField(
-                    controller: flightController,
-                    decoration: InputDecoration(
-                      labelText: 'Flight Details',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                  SizedBox(height: 8),
-                  TextField(
-                    controller: accommodationController,
-                    decoration: InputDecoration(
-                      labelText: 'Accommodation',
-                      border: OutlineInputBorder(),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: Text('Cancel'),
-              ),
-              ElevatedButton(
-                onPressed: () async {
-                  try {
-                    final updatedTravel = _travel!.copyWith(
-                      name: nameController.text.trim(),
-                      location: locationController.text.trim(),
-                      notes: notesController.text.trim(),
-                      flightDetails: flightController.text.trim(),
-                      accommodation: accommodationController.text.trim(),
-                    );
-
-                    await FirebaseFirestore.instance
-                        .collection('travel')
-                        .doc(_travel!.id)
-                        .update(updatedTravel.toJson());
-
-                    await _loadTravelData();
-
-                    if (context.mounted) {
-                      Navigator.pop(context);
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Travel plan updated successfully'),
-                          backgroundColor: Colors.green,
-                          behavior: SnackBarBehavior.floating,
+          (context) => StatefulBuilder(
+            builder:
+                (context, setState) => AlertDialog(
+                  title: Text('Edit Travel Plan'),
+                  content: SingleChildScrollView(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        TextField(
+                          controller: nameController,
+                          decoration: InputDecoration(
+                            labelText: 'Trip Name',
+                            border: OutlineInputBorder(),
+                          ),
                         ),
-                      );
-                    }
-                  } catch (e) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Error updating travel plan: $e'),
-                          backgroundColor: Colors.red,
+                        SizedBox(height: 8),
+                        TextField(
+                          controller: locationController,
+                          decoration: InputDecoration(
+                            labelText: 'Location',
+                            border: OutlineInputBorder(),
+                          ),
                         ),
-                      );
-                    }
-                  }
-                },
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.green.shade700,
-                  foregroundColor: Colors.white,
+                        SizedBox(height: 8),
+                        // Start Date Picker
+                        InkWell(
+                          onTap: () async {
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate: startDate ?? DateTime.now(),
+                              firstDate: DateTime(2000),
+                              lastDate: DateTime(2100),
+                            );
+                            if (picked != null) {
+                              setState(() {
+                                startDate = picked;
+                                // If end date is before new start date, update it
+                                if (endDate != null &&
+                                    endDate!.isBefore(picked)) {
+                                  endDate = picked;
+                                }
+                              });
+                            }
+                          },
+                          child: InputDecorator(
+                            decoration: InputDecoration(
+                              labelText: 'Start Date',
+                              border: OutlineInputBorder(),
+                              suffixIcon: Icon(Icons.calendar_today),
+                            ),
+                            child: Text(
+                              startDate != null
+                                  ? DateFormat(
+                                    'EEEE, MMM d, yyyy',
+                                  ).format(startDate!)
+                                  : 'Select Date',
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 8),
+                        // End Date Picker
+                        InkWell(
+                          onTap: () async {
+                            final picked = await showDatePicker(
+                              context: context,
+                              initialDate:
+                                  endDate ?? startDate ?? DateTime.now(),
+                              firstDate: startDate ?? DateTime(2000),
+                              lastDate: DateTime(2100),
+                            );
+                            if (picked != null) {
+                              setState(() {
+                                endDate = picked;
+                              });
+                            }
+                          },
+                          child: InputDecorator(
+                            decoration: InputDecoration(
+                              labelText: 'End Date',
+                              border: OutlineInputBorder(),
+                              suffixIcon: Icon(Icons.calendar_today),
+                            ),
+                            child: Text(
+                              endDate != null
+                                  ? DateFormat(
+                                    'EEEE, MMM d, yyyy',
+                                  ).format(endDate!)
+                                  : 'Select Date',
+                            ),
+                          ),
+                        ),
+                        SizedBox(height: 8),
+                        TextField(
+                          controller: notesController,
+                          decoration: InputDecoration(
+                            labelText: 'Notes',
+                            border: OutlineInputBorder(),
+                          ),
+                          maxLines: 3,
+                        ),
+                        SizedBox(height: 8),
+                        TextField(
+                          controller: flightController,
+                          decoration: InputDecoration(
+                            labelText: 'Flight Details',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                        SizedBox(height: 8),
+                        TextField(
+                          controller: accommodationController,
+                          decoration: InputDecoration(
+                            labelText: 'Accommodation',
+                            border: OutlineInputBorder(),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: Text('Cancel'),
+                    ),
+                    ElevatedButton(
+                      onPressed: () async {
+                        try {
+                          final updatedTravel = _travel!.copyWith(
+                            name: nameController.text.trim(),
+                            location: locationController.text.trim(),
+                            notes: notesController.text.trim(),
+                            flightDetails: flightController.text.trim(),
+                            accommodation: accommodationController.text.trim(),
+                            startDate: startDate,
+                            endDate: endDate,
+                          );
+
+                          await FirebaseFirestore.instance
+                              .collection('travel')
+                              .doc(_travel!.id)
+                              .update(updatedTravel.toJson());
+
+                          await _loadTravelData();
+
+                          if (context.mounted) {
+                            Navigator.pop(context);
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text(
+                                  'Travel plan updated successfully',
+                                ),
+                                backgroundColor: Colors.green,
+                                behavior: SnackBarBehavior.floating,
+                              ),
+                            );
+                          }
+                        } catch (e) {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              SnackBar(
+                                content: Text('Error updating travel plan: $e'),
+                                backgroundColor: Colors.red,
+                              ),
+                            );
+                          }
+                        }
+                      },
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.green.shade700,
+                        foregroundColor: Colors.white,
+                      ),
+                      child: Text('Save'),
+                    ),
+                  ],
                 ),
-                child: Text('Save'),
-              ),
-            ],
           ),
     );
   }

@@ -131,12 +131,15 @@ class _FindSimilarPeopleScreenState extends State<FindSimilarPeopleScreen> {
         _isLoading = true;
         _errorMessage = null;
       });
-      // store the interests and travel styles of the user
+
       final List<String> currentUserInterests = _currentUser!.interests ?? [];
       final List<String> currentUserTravelStyles =
           _currentUser!.travelStyles ?? [];
 
-      if (currentUserInterests.isEmpty && currentUserTravelStyles.isEmpty) {
+      // Only check for empty interests/styles if not in everyone tab
+      if (_filter != 'everyone' &&
+          currentUserInterests.isEmpty &&
+          currentUserTravelStyles.isEmpty) {
         setState(() {
           _isLoading = false;
           _errorMessage = "No Interests or Travel Styles.";
@@ -146,25 +149,43 @@ class _FindSimilarPeopleScreenState extends State<FindSimilarPeopleScreen> {
 
       final Map<String, AppUser> usersMap = {};
 
-      if (currentUserInterests.isNotEmpty) {
-        // get all the appUsers with the same interests
+      if (_filter == 'everyone') {
+        // For 'everyone' filter, get all non-private users without any matching requirements
+        final allUsersSnapshot =
+            await FirebaseFirestore.instance
+                .collection('appUsers')
+                .where('isPrivate', isEqualTo: false)
+                .get();
+
+        for (var doc in allUsersSnapshot.docs) {
+          final user = AppUser.fromJson(doc.data());
+          if (user.uid != _currentUser!.uid) {
+            usersMap[user.uid] = user;
+          }
+        }
+      } else if (_filter == 'interests' && currentUserInterests.isNotEmpty) {
         final interestsSnapshot =
             await FirebaseFirestore.instance
                 .collection('appUsers')
                 .where('interests', arrayContainsAny: currentUserInterests)
                 .where('isPrivate', isEqualTo: false)
                 .get();
-        // store the user
+
         for (var doc in interestsSnapshot.docs) {
           final user = AppUser.fromJson(doc.data());
           if (user.uid != _currentUser!.uid) {
-            usersMap[user.uid] = user;
+            final matchingInterests =
+                user.interests
+                    ?.where((i) => currentUserInterests.contains(i))
+                    .length ??
+                0;
+            if (matchingInterests > 0) {
+              usersMap[user.uid] = user;
+            }
           }
         }
-      }
-
-      // get all the appUsers with the same travel styles
-      if (currentUserTravelStyles.isNotEmpty) {
+      } else if (_filter == 'travelStyles' &&
+          currentUserTravelStyles.isNotEmpty) {
         final travelStylesSnapshot =
             await FirebaseFirestore.instance
                 .collection('appUsers')
@@ -175,11 +196,17 @@ class _FindSimilarPeopleScreenState extends State<FindSimilarPeopleScreen> {
                 .where('isPrivate', isEqualTo: false)
                 .get();
 
-        // store user
         for (var doc in travelStylesSnapshot.docs) {
           final user = AppUser.fromJson(doc.data());
           if (user.uid != _currentUser!.uid) {
-            usersMap[user.uid] = user;
+            final matchingStyles =
+                user.travelStyles
+                    ?.where((s) => currentUserTravelStyles.contains(s))
+                    .length ??
+                0;
+            if (matchingStyles > 0) {
+              usersMap[user.uid] = user;
+            }
           }
         }
       }
@@ -844,6 +871,7 @@ class _FindSimilarPeopleScreenState extends State<FindSimilarPeopleScreen> {
                       setState(() {
                         _filter = 'everyone';
                       });
+                      _fetchSimilarUsers();
                     },
                   ),
                   SizedBox(width: 8),
@@ -874,6 +902,7 @@ class _FindSimilarPeopleScreenState extends State<FindSimilarPeopleScreen> {
                       setState(() {
                         _filter = 'interests';
                       });
+                      _fetchSimilarUsers();
                     },
                   ),
                   SizedBox(width: 8),
@@ -904,6 +933,7 @@ class _FindSimilarPeopleScreenState extends State<FindSimilarPeopleScreen> {
                       setState(() {
                         _filter = 'travelStyles';
                       });
+                      _fetchSimilarUsers();
                     },
                   ),
                 ],

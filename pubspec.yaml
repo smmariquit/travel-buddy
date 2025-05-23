@@ -69,6 +69,7 @@ dependencies:
   password_strength: ^0.2.0
   intl: ^0.20.2
   numberpicker: ^2.1.2
+  another_telephony: ^0.4.1
 
 
 
@@ -131,19 +132,17 @@ flutter:
 
 flutter_native_splash:
   color: "#c7e9c0"
-  image: "assets/splash_screen/logo_placeholder.png"
-  branding: "assets/splash_screen/branding_placeholder.png"
+  image: "assets/splash_screen/logo.png"
   android: true
   ios: true
   web: false
 
   android_12:
     color: "#c7e9c0"
-    image: "assets/splash_screen/logo_placeholder.png"
-    branding: "assets/splash_screen/branding_placeholder.png"
+    image: "assets/splash_screen/logo.png"
 
 flutter_icons:
   android: true
   ios: true
-  image_path: "assets/splash_screen/logo_placeholder.png"
+  image_path: "assets/splash_screen/logo.png"
     

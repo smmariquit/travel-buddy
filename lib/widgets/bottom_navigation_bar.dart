@@ -6,6 +6,7 @@
 ///
 /// The navigation bar uses a [BottomAppBar] with a notched shape to accommodate the FAB.
 /// Each icon button navigates to a different screen using [Navigator].
+library;
 
 // Flutter & Material
 import 'package:flutter/material.dart';
@@ -17,7 +18,6 @@ import 'package:flutter/material.dart';
 // (none in this file)
 
 // App-specific
-import 'package:travel_app/utils/constants.dart';
 import 'package:travel_app/screens/home/main_page.dart';
 import 'package:travel_app/screens/friends/find_similar_people.dart';
 import 'package:travel_app/screens/profile/profile_screen.dart';

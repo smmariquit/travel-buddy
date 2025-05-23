@@ -27,6 +27,8 @@
 /// 1. Some parts of this app were made with the assistance of Large Language Models (LLMs) like Microsoft Copilot
 /// 2. [DartDoc](https://dart.dev/tools/dart-doc)
 /// 3. [Material Design](https://m3.material.io/)
+/// See github for more refs
+library;
 
 // Flutter & Material
 import 'package:flutter/material.dart';
@@ -35,9 +37,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:google_fonts/google_fonts.dart';
-import 'package:travel_app/screens/profile/profile_screen.dart';
+import 'package:travel_app/screens/auth/interests_page.dart';
 import 'firebase_options.dart';
-import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:travel_app/utils/notification_service.dart';
 
@@ -62,7 +63,18 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
   // Ensure Firebase is initialized
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  print("Handling a background message: ${message.messageId}");
+  // Initialize notification service
+  final notificationService = NotificationService();
+  await notificationService.init();
+
+  // Handle the message
+  if (message.notification != null) {
+    await notificationService.showTripReminderNotification(
+      title: message.notification!.title ?? 'Notification',
+      body: message.notification!.body ?? '',
+      payload: message.data['tripId'],
+    );
+  }
 }
 
 Future<void> main() async {
@@ -142,9 +154,9 @@ class _MyAppState extends State<MyApp> {
       initialRoute: '/main',
       routes: {
         '/signin': (context) => const SignInPage(), // Sign-in page
-        '/profile': (context) => const ProfileScreen(), // Profile page
-        '/': (context) => const MainPage(), // Profile page
         '/main': (context) => const MainPage(), // Main page after sign-in
+        '/interests':
+            (context) => const InterestsPage(), // Interests page after sign-in
       },
       theme: ThemeData(
         useMaterial3: true,

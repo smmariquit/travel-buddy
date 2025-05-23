@@ -13,6 +13,7 @@
 /// - [showModalBottomSheet](https://api.flutter.dev/flutter/material/showModalBottomSheet.html)
 /// - [ImagePicker](https://pub.dev/packages/image_picker)
 /// - [permission_handler](https://pub.dev/packages/permission_handler)
+library;
 
 // Flutter & Material
 import 'package:flutter/material.dart';

@@ -6,11 +6,10 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 
 // State Management
-import 'package:provider/provider.dart';
 
 // App-specific
-import 'package:travel_app/providers/user_provider.dart';
 import 'package:travel_app/screens/home/main_page.dart';
+import 'package:google_fonts/google_fonts.dart';
 
 // Interests
 // reference indian guy https://www.youtube.com/watch?v=yB_ysDytI9k
@@ -24,14 +23,18 @@ class TravelStylesPage extends StatefulWidget {
 
 class _TravelStylesPageState extends State<TravelStylesPage> {
   List travelStyles = [
-    {"style": 'Backpacking', "selected": false},
-    {"style": 'Luxury Travel', "selected": false},
-    {"style": 'Solo Travel', "selected": false},
-    {"style": 'Family Vacation', "selected": false},
-    {"style": 'Cruise', "selected": false},
-    {"style": 'Road Trip', "selected": false},
-    {"style": 'Eco-Tourism', "selected": false},
-    {"style": 'Adventure Travel', "selected": false},
+    {"style": 'Backpacking', "selected": false, "icon": Icons.backpack},
+    {"style": 'Luxury Travel', "selected": false, "icon": Icons.diamond},
+    {"style": 'Solo Travel', "selected": false, "icon": Icons.person},
+    {
+      "style": 'Family Vacation',
+      "selected": false,
+      "icon": Icons.family_restroom,
+    },
+    {"style": 'Cruise', "selected": false, "icon": Icons.directions_boat},
+    {"style": 'Road Trip', "selected": false, "icon": Icons.directions_car},
+    {"style": 'Eco-Tourism', "selected": false, "icon": Icons.eco},
+    {"style": 'Adventure Travel', "selected": false, "icon": Icons.terrain},
   ];
 
   final FirebaseAuth _auth = FirebaseAuth.instance;
@@ -68,70 +71,118 @@ class _TravelStylesPageState extends State<TravelStylesPage> {
         backgroundColor: Colors.transparent,
         foregroundColor: Colors.black,
       ),
-
-      body: Padding(
-        padding: const EdgeInsets.all(10),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Column(
-              children: [
-                Text(
-                  "Help us know you better.",
-                  style: TextStyle(fontSize: 25),
-                ),
-                const SizedBox(height: 10),
-                Text(
-                  "Select your travel styles",
-                  style: TextStyle(fontSize: 16, color: Colors.grey),
-                ),
-                const SizedBox(height: 10),
-                interestChips,
-              ],
-            ),
-            saveOrSkipButton,
-          ],
+      body: Container(
+        decoration: BoxDecoration(
+          gradient: LinearGradient(
+            begin: Alignment.topCenter,
+            end: Alignment.bottomCenter,
+            colors: [Colors.white, Colors.green.shade50],
+          ),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(24),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Column(
+                children: [
+                  Text(
+                    "How do you travel?",
+                    style: GoogleFonts.poppins(
+                      fontSize: 28,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Text(
+                    "Select your preferred travel styles",
+                    style: GoogleFonts.poppins(
+                      fontSize: 16,
+                      color: Colors.grey[600],
+                    ),
+                    textAlign: TextAlign.center,
+                  ),
+                  const SizedBox(height: 32),
+                  interestChips,
+                ],
+              ),
+              saveOrSkipButton,
+            ],
+          ),
         ),
       ),
     );
   }
 
-  Widget get saveOrSkipButton => ElevatedButton(
-    onPressed: () async {
-      if (travelStyles.any((style) => style['selected'])) {
-        await saveTravelStyles(); // Save travel styles
-      }
-      Navigator.push(
-        context,
-        MaterialPageRoute(builder: (context) => const MainPage()),
-      );
-    },
-    style: ElevatedButton.styleFrom(
-      minimumSize: const Size(double.infinity, 50), // Full-width button
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(8)),
-    ),
-    child: Text(
-      travelStyles.any((interest) => interest['selected']) ? "Save" : "Skip",
-      style: const TextStyle(
-        fontSize: 17,
-        fontWeight: FontWeight.w400,
-        color: Colors.black,
+  Widget get saveOrSkipButton => Container(
+    margin: EdgeInsets.only(bottom: 16),
+    child: ElevatedButton(
+      onPressed: () async {
+        if (travelStyles.any((style) => style['selected'])) {
+          await saveTravelStyles();
+        }
+        Navigator.push(
+          context,
+          MaterialPageRoute(builder: (context) => const MainPage()),
+        );
+      },
+      style: ElevatedButton.styleFrom(
+        backgroundColor: Colors.green.shade700,
+        foregroundColor: Colors.white,
+        minimumSize: const Size(double.infinity, 56),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        elevation: 2,
+      ),
+      child: Text(
+        travelStyles.any((style) => style['selected']) ? "Continue" : "Skip",
+        style: GoogleFonts.poppins(fontSize: 18, fontWeight: FontWeight.w600),
       ),
     ),
   );
 
   Widget get interestChips => Wrap(
-    spacing: 10,
+    spacing: 12,
+    runSpacing: 12,
+    alignment: WrapAlignment.start,
+    crossAxisAlignment: WrapCrossAlignment.start,
     children: List.generate(travelStyles.length, (index) {
-      return InputChip(
-        label: Text(travelStyles[index]['style']),
-        labelStyle: TextStyle(fontWeight: FontWeight.bold),
+      return FilterChip(
+        label: Text(
+          travelStyles[index]['style'],
+          style: GoogleFonts.poppins(
+            fontWeight: FontWeight.w500,
+            color:
+                travelStyles[index]['selected'] ? Colors.white : Colors.black87,
+          ),
+        ),
+        avatar: Icon(
+          travelStyles[index]['icon'],
+          size: 16,
+          color:
+              travelStyles[index]['selected']
+                  ? Colors.white
+                  : Colors.green.shade700,
+        ),
         selected: travelStyles[index]['selected'],
-        onPressed: () {
-          travelStyles[index]['selected'] = !travelStyles[index]['selected'];
-          setState(() {});
+        onSelected: (bool selected) {
+          setState(() {
+            travelStyles[index]['selected'] = selected;
+          });
         },
-        selectedColor: Colors.blue,
+        selectedColor: Colors.green.shade700,
+        backgroundColor: Colors.white,
+        checkmarkColor: Colors.white,
+        padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+          side: BorderSide(
+            color:
+                travelStyles[index]['selected']
+                    ? Colors.green.shade700
+                    : Colors.grey.shade300,
+            width: 1,
+          ),
+        ),
       );
     }),
   );

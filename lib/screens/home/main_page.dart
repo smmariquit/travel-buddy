@@ -75,7 +75,7 @@ class _MainPageState extends State<MainPage> {
     super.initState();
     _travelProvider = context.read<TravelTrackerProvider>();
     _userProvider = context.read<AppUserProvider>();
-    // _initializeNotificationsOnce();
+    _initializeNotificationsOnce();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadInitialData();
@@ -104,24 +104,24 @@ class _MainPageState extends State<MainPage> {
     }
   }
 
-  // Future<void> _initializeNotificationsOnce() async {
-  //   final prefs = await SharedPreferences.getInstance();
-  //   final hasInitialized =
-  //       prefs.getBool('hasInitializedNotifications') ?? false;
+  Future<void> _initializeNotificationsOnce() async {
+    final prefs = await SharedPreferences.getInstance();
+    final hasInitialized =
+        prefs.getBool('hasInitializedNotifications') ?? false;
 
-  //   await _notificationService.init();
+    await _notificationService.init();
 
-  //   NotificationHelper.fetchTravelNotifications(
-  //     context,
-  //     (notifications) => setState(() => _travelNotifications = notifications),
-  //     (error) => debugPrint(error),
-  //     _notificationService,
-  //   );
+    NotificationHelper.fetchTravelNotifications(
+      context,
+      (notifications) => setState(() => _travelNotifications = notifications),
+      (error) => debugPrint(error),
+      _notificationService,
+    );
 
-  //   if (!hasInitialized) {
-  //     await prefs.setBool('hasInitializedNotifications', true);
-  //   }
-  // }
+    if (!hasInitialized) {
+      await prefs.setBool('hasInitializedNotifications', true);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {

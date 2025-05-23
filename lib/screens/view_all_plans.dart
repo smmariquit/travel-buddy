@@ -3,6 +3,7 @@
 /// This screen uses a TabBar to switch between viewing personal travel plans and plans
 /// shared by other users. It also provides a floating action button to create new plans.
 /// The screen handles both loading states and error cases gracefully.
+library;
 
 // Flutter & Material
 import 'package:flutter/material.dart';
@@ -157,9 +158,9 @@ class _ViewAllPlansState extends State<ViewAllPlans>
               context,
               MaterialPageRoute(builder: (context) => AddTravelPlanPage()),
             ),
-        child: const Icon(Icons.add),
         backgroundColor: primaryColor,
         shape: const CircleBorder(),
+        child: const Icon(Icons.add),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );

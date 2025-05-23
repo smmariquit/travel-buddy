@@ -1,15 +1,12 @@
 // Flutter & Material
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 
 // Firebase & External Services
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_storage/firebase_storage.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
-import 'package:path_provider/path_provider.dart';
 
 // State Management
 import 'package:provider/provider.dart';
@@ -17,11 +14,9 @@ import 'package:provider/provider.dart';
 // App-specific
 import 'package:travel_app/screens/auth/interests_page.dart';
 import 'package:travel_app/providers/user_provider.dart';
-import 'package:travel_app/utils/pick_profile_image.dart';
 import 'package:linear_progress_bar/linear_progress_bar.dart';
 import 'package:travel_app/api/firebase_auth_api.dart';
 import 'dart:io';
-import 'dart:convert';
 import 'dart:async';
 import 'package:password_strength/password_strength.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -54,7 +49,6 @@ class _SignUpPageState extends State<SignUpPage> {
   final TextEditingController _firstNameController = TextEditingController();
   final TextEditingController _middleNameController = TextEditingController();
   final TextEditingController _lastNameController = TextEditingController();
-  File? _profileImage;
   String? password;
   String? confirmPassword;
   bool _isUsernameTaken = false;
@@ -197,14 +191,11 @@ class _SignUpPageState extends State<SignUpPage> {
       );
     } else {
       // Show a SnackBar if validation fails
-      print('Personal Info form is not valid');
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
+        const SnackBar(
           content: Text('Please fill out all required fields.'),
           backgroundColor: Colors.red,
           duration: Duration(seconds: 2),
-          behavior: SnackBarBehavior.floating,
-          margin: EdgeInsets.zero,
         ),
       );
     }
@@ -272,9 +263,9 @@ class _SignUpPageState extends State<SignUpPage> {
                 ),
                 const SizedBox(height: 10),
                 Text(
-                  "Tell us about yourself",
+                  "Let's get to know you!",
                   style: GoogleFonts.montserrat(
-                    fontSize: 24,
+                    fontSize: 28,
                     fontWeight: FontWeight.bold,
                     color: const Color(0xFF218463),
                   ),
@@ -327,7 +318,7 @@ class _SignUpPageState extends State<SignUpPage> {
                       const SizedBox(height: 10),
                       Center(
                         child: Text(
-                          "Tap to upload profile picture",
+                          "Tap to upload or change your profile picture",
                           style: TextStyle(
                             fontSize: 14,
                             color: Colors.grey[800],
@@ -367,7 +358,7 @@ class _SignUpPageState extends State<SignUpPage> {
                       (val) => val == null || val.isEmpty ? "Required" : null,
                   onChanged: (val) => _signUpData.lastName = val,
                 ),
-                const SizedBox(height: 160),
+                const SizedBox(height: 24),
                 SizedBox(
                   width: double.infinity,
                   height: 55,
@@ -377,24 +368,24 @@ class _SignUpPageState extends State<SignUpPage> {
                     child: const Text("Next"),
                   ),
                 ),
-                const SizedBox(height: 8),
-                // Center(
-                //   child: OutlinedButton(
-                //     onPressed: () {
-                //       Navigator.pop(context);
-                //     },
-                //     style: OutlinedButton.styleFrom(
-                //       foregroundColor: Colors.red,
-                //       side: const BorderSide(color: Colors.red),
-                //       shape: RoundedRectangleBorder(
-                //         borderRadius: BorderRadius.circular(12),
-                //       ),
-                //       minimumSize: const Size(500, 30),
-                //       padding: const EdgeInsets.symmetric(horizontal: 24),
-                //     ),
-                //     child: const Text('Cancel'),
-                //   ),
-                // ),
+                const SizedBox(height: 12),
+                Center(
+                  child: OutlinedButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                    },
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: Colors.red,
+                      side: const BorderSide(color: Colors.red),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      minimumSize: const Size(120, 40),
+                      padding: const EdgeInsets.symmetric(horizontal: 24),
+                    ),
+                    child: const Text('Cancel'),
+                  ),
+                ),
               ],
             ),
           ),
@@ -462,7 +453,7 @@ class _SignUpPageState extends State<SignUpPage> {
 
   /////////////PAGE 2
   Widget _buildAccountInfoPage() {
-    final _formKey2 = GlobalKey<FormState>();
+    final formKey2 = GlobalKey<FormState>();
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 30),
@@ -473,7 +464,7 @@ class _SignUpPageState extends State<SignUpPage> {
           borderRadius: BorderRadius.circular(16),
         ),
         child: Form(
-          key: _formKey2,
+          key: formKey2,
           child: Column(
             children: [
               Expanded(
@@ -504,8 +495,9 @@ class _SignUpPageState extends State<SignUpPage> {
                         onSaved: (val) => _signUpData.username = val,
                         validator: (val) {
                           if (val == null || val.isEmpty) return "Required";
-                          if (_isUsernameTaken)
+                          if (_isUsernameTaken) {
                             return "Username is already taken";
+                          }
                           return null;
                         },
                         onChanged: (text) {
@@ -524,13 +516,15 @@ class _SignUpPageState extends State<SignUpPage> {
                         onSaved: (val) => _signUpData.email = val,
                         validator: (val) {
                           if (val == null || val.isEmpty) return "Required";
-                          if (_isEmailTaken)
+                          if (_isEmailTaken) {
                             return "Email is already registered";
+                          }
                           final emailRegex = RegExp(
                             r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]+$",
                           );
-                          if (!emailRegex.hasMatch(val))
+                          if (!emailRegex.hasMatch(val)) {
                             return "Enter a valid email";
+                          }
                           return null;
                         },
                         onChanged: (val) {
@@ -543,21 +537,25 @@ class _SignUpPageState extends State<SignUpPage> {
                       ),
                       const SizedBox(height: 16),
                       _buildTextField(
-                        label: "Phone Number",
+                        label: "Phone Number (optional)",
                         hint: "e.g. 09606878535 (11 digits)",
                         controller: _phoneController,
                         onSaved: (val) => _signUpData.phone = val,
                         validator: (val) {
-                          if (val == null || val.isEmpty) return "Required";
-                          if (val.length != 11)
+                          if (val == null || val.isEmpty)
+                            return null; // Allow empty
+                          if (val.length != 11) {
                             return "Phone number must be 11 digits";
-                          if (!val.startsWith('09'))
+                          }
+                          if (!val.startsWith('09')) {
                             return "Phone number must start with '09'";
+                          }
                           if (!RegExp(r'^[0-9]+$').hasMatch(val)) {
                             return "Phone number must contain only digits";
                           }
-                          if (_isPhoneTaken)
+                          if (_isPhoneTaken) {
                             return "Phone number is already registered";
+                          }
                           return null;
                         },
                         onChanged: (val) => _signUpData.phone = val,
@@ -571,7 +569,7 @@ class _SignUpPageState extends State<SignUpPage> {
                   ),
                 ),
               ),
-              // const SizedBox(height: 160),
+              const SizedBox(height: 20),
               Row(
                 children: [
                   Expanded(
@@ -589,8 +587,8 @@ class _SignUpPageState extends State<SignUpPage> {
                   Expanded(
                     child: ElevatedButton(
                       onPressed: () async {
-                        if (_formKey2.currentState!.validate()) {
-                          _formKey2.currentState!.save();
+                        if (formKey2.currentState!.validate()) {
+                          formKey2.currentState!.save();
                           _pageController.nextPage(
                             duration: const Duration(milliseconds: 300),
                             curve: Curves.easeInOut,
@@ -598,14 +596,12 @@ class _SignUpPageState extends State<SignUpPage> {
                         } else {
                           // Show a SnackBar if validation fails
                           ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(
+                            const SnackBar(
                               content: Text(
                                 'Please fix the errors before continuing.',
                               ),
                               backgroundColor: Colors.red,
                               duration: Duration(seconds: 2),
-                              behavior: SnackBarBehavior.floating,
-                              margin: EdgeInsets.zero,
                             ),
                           );
                         }
@@ -617,23 +613,23 @@ class _SignUpPageState extends State<SignUpPage> {
                 ],
               ),
               const SizedBox(height: 16),
-              // Center(
-              //   child: OutlinedButton(
-              //     onPressed: () {
-              //       Navigator.pop(context);
-              //     },
-              //     style: OutlinedButton.styleFrom(
-              //       foregroundColor: Colors.red,
-              //       side: const BorderSide(color: Colors.red),
-              //       shape: RoundedRectangleBorder(
-              //         borderRadius: BorderRadius.circular(12),
-              //       ),
-              //       minimumSize: const Size(120, 40),
-              //       padding: const EdgeInsets.symmetric(horizontal: 24),
-              //     ),
-              //     child: const Text('Cancel'),
-              //   ),
-              // ),
+              Center(
+                child: OutlinedButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                  },
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: Colors.red,
+                    side: const BorderSide(color: Colors.red),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    minimumSize: const Size(120, 40),
+                    padding: const EdgeInsets.symmetric(horizontal: 24),
+                  ),
+                  child: const Text('Cancel'),
+                ),
+              ),
             ],
           ),
         ),
@@ -643,9 +639,9 @@ class _SignUpPageState extends State<SignUpPage> {
 
   /////////////PAGE 3
   Widget _buildSecurityInfoPage() {
-    final _formKey3 = GlobalKey<FormState>();
-    bool _obscurePassword = true;
-    bool _obscureConfirmPassword = true;
+    final formKey3 = GlobalKey<FormState>();
+    bool obscurePassword = true;
+    bool obscureConfirmPassword = true;
 
     return StatefulBuilder(
       builder: (context, setState) {
@@ -658,7 +654,7 @@ class _SignUpPageState extends State<SignUpPage> {
               borderRadius: BorderRadius.circular(16),
             ),
             child: Form(
-              key: _formKey3,
+              key: formKey3,
               child: Column(
                 children: [
                   Expanded(
@@ -689,7 +685,7 @@ class _SignUpPageState extends State<SignUpPage> {
                             child: TextFormField(
                               controller: _passwordController,
                               style: const TextStyle(color: Colors.black),
-                              obscureText: _obscurePassword,
+                              obscureText: obscurePassword,
                               decoration: InputDecoration(
                                 labelText: "Password",
                                 labelStyle: const TextStyle(
@@ -709,13 +705,13 @@ class _SignUpPageState extends State<SignUpPage> {
                                 ),
                                 suffixIcon: IconButton(
                                   icon: Icon(
-                                    _obscurePassword
+                                    obscurePassword
                                         ? Icons.visibility_off
                                         : Icons.visibility,
                                   ),
                                   onPressed: () {
                                     setState(() {
-                                      _obscurePassword = !_obscurePassword;
+                                      obscurePassword = !obscurePassword;
                                     });
                                   },
                                 ),
@@ -747,7 +743,7 @@ class _SignUpPageState extends State<SignUpPage> {
                           ),
                           // Password strength indicator
                           Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
+                            padding: const EdgeInsets.only(bottom: 30),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
@@ -785,23 +781,13 @@ class _SignUpPageState extends State<SignUpPage> {
                               ],
                             ),
                           ),
-                          Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Text(
-                              "Password must be at least 6 characters long and contain uppercase, lowercase, digit, and special character",
-                              style: TextStyle(
-                                color: Colors.black,
-                                fontSize: 12,
-                              ),
-                            ),
-                          ),
                           // Confirm password field
                           Padding(
                             padding: const EdgeInsets.only(bottom: 30),
                             child: TextFormField(
                               controller: _confirmPasswordController,
                               style: const TextStyle(color: Colors.black),
-                              obscureText: _obscureConfirmPassword,
+                              obscureText: obscureConfirmPassword,
                               decoration: InputDecoration(
                                 labelText: "Confirm Password",
                                 labelStyle: const TextStyle(
@@ -821,14 +807,14 @@ class _SignUpPageState extends State<SignUpPage> {
                                 ),
                                 suffixIcon: IconButton(
                                   icon: Icon(
-                                    _obscureConfirmPassword
+                                    obscureConfirmPassword
                                         ? Icons.visibility_off
                                         : Icons.visibility,
                                   ),
                                   onPressed: () {
                                     setState(() {
-                                      _obscureConfirmPassword =
-                                          !_obscureConfirmPassword;
+                                      obscureConfirmPassword =
+                                          !obscureConfirmPassword;
                                     });
                                   },
                                 ),
@@ -867,7 +853,7 @@ class _SignUpPageState extends State<SignUpPage> {
                       Expanded(
                         child: ElevatedButton(
                           onPressed: () async {
-                            if (_formKey3.currentState!.validate()) {
+                            if (formKey3.currentState!.validate()) {
                               password = _passwordController.text;
                               _signUpData.password = password!;
                               _signUpData.profileImage ??= File(
@@ -883,23 +869,23 @@ class _SignUpPageState extends State<SignUpPage> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  // Center(
-                  //   child: OutlinedButton(
-                  //     onPressed: () {
-                  //       Navigator.pop(context);
-                  //     },
-                  //     style: OutlinedButton.styleFrom(
-                  //       foregroundColor: Colors.red,
-                  //       side: const BorderSide(color: Colors.red),
-                  //       shape: RoundedRectangleBorder(
-                  //         borderRadius: BorderRadius.circular(12),
-                  //       ),
-                  //       minimumSize: const Size(120, 40),
-                  //       padding: const EdgeInsets.symmetric(horizontal: 24),
-                  //     ),
-                  //     child: const Text('Cancel'),
-                  //   ),
-                  // ),
+                  Center(
+                    child: OutlinedButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                      },
+                      style: OutlinedButton.styleFrom(
+                        foregroundColor: Colors.red,
+                        side: const BorderSide(color: Colors.red),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        minimumSize: const Size(120, 40),
+                        padding: const EdgeInsets.symmetric(horizontal: 24),
+                      ),
+                      child: const Text('Cancel'),
+                    ),
+                  ),
                 ],
               ),
             ),
@@ -936,11 +922,7 @@ class _SignUpPageState extends State<SignUpPage> {
       // Check if there was an error during sign up
       if (signUpMessage != null) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text("Error creating account: $signUpMessage"),
-            behavior: SnackBarBehavior.floating,
-            margin: EdgeInsets.zero,
-          ),
+          SnackBar(content: Text("Error creating account: $signUpMessage")),
         );
         return;
       }
@@ -994,19 +976,15 @@ class _SignUpPageState extends State<SignUpPage> {
               content: Text(
                 'Error uploading profile image: ${imageError.toString().substring(0, 100)}',
               ),
-              behavior: SnackBarBehavior.floating,
-              margin: EdgeInsets.zero,
             ),
           );
         }
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
+          const SnackBar(
             content: Text(
               'User account created but session not established. Please try logging in.',
             ),
-            behavior: SnackBarBehavior.floating,
-            margin: EdgeInsets.zero,
           ),
         );
       }
@@ -1020,8 +998,6 @@ class _SignUpPageState extends State<SignUpPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Sign-up failed: ${e.toString().substring(0, 100)}'),
-          behavior: SnackBarBehavior.floating,
-          margin: EdgeInsets.zero,
         ),
       );
     }

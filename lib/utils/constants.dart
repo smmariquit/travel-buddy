@@ -1,4 +1,6 @@
 /// Update this file to change settings of the app in a single place.
+library;
+
 import 'package:flutter/material.dart';
 
 const String apiKey = "AIzaSyACuAzPzmDxoadk9GGleOWBi-0luHFDYhs";
