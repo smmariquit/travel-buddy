@@ -154,8 +154,7 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
                           durationText = 'Trip Duration: Invalid dates';
                         }
                       } else if (_startDate != null && _endDate == null) {
-                        durationText =
-                            'Trip Duration: Starts on ${DateFormat('EEEE, MMM d, yyyy').format(_startDate!)}';
+                        durationText = 'Trip Duration: Flexible';
                       }
                       return Card(
                         color: Colors.green[50],
