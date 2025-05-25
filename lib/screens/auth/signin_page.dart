@@ -255,11 +255,21 @@ class _SignInPageState extends State<SignInPage> {
                     .get();
 
             if (userDoc.exists) {
-              // User exists, sign them in directly
-              travelProvider.setUser(authProvider.uid);
-              Navigator.pushReplacementNamed(context, '/main');
+              // Check if user has interests set
+              final hasInterests =
+                  userDoc.data()?['interests'] != null &&
+                  (userDoc.data()?['interests'] as List).isNotEmpty;
+
+              if (hasInterests) {
+                // User exists and has interests, go to main page
+                travelProvider.setUser(authProvider.uid);
+                Navigator.pushReplacementNamed(context, '/main');
+              } else {
+                // User exists but has no interests, go to interests page
+                Navigator.pushReplacementNamed(context, '/interests');
+              }
             } else {
-              // New user, go to signup flow
+              // New user, go to interests page
               Navigator.pushReplacementNamed(context, '/interests');
             }
           } else {

@@ -8,6 +8,7 @@ import 'package:travel_app/models/travel_notification_model.dart';
 import 'package:travel_app/screens/add_travel/trip_details.dart';
 import 'package:travel_app/models/travel_plan_model.dart';
 import 'package:intl/intl.dart';
+import 'package:travel_app/widgets/bottom_navigation_bar.dart';
 
 class NotificationPage extends StatefulWidget {
   const NotificationPage({super.key});
@@ -631,11 +632,22 @@ class _NotificationPageState extends State<NotificationPage>
                   icon: Icon(Icons.arrow_forward_ios),
                   onPressed: () async {
                     try {
+                      // Get the tripId from the notification data
+                      final tripId = notification['tripId'];
+                      if (tripId == null) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Trip ID not found in notification'),
+                          ),
+                        );
+                        return;
+                      }
+
                       // Fetch the full travel document from Firestore by tripId
                       final doc =
                           await FirebaseFirestore.instance
                               .collection('travel')
-                              .doc(notification['id'])
+                              .doc(tripId)
                               .get();
 
                       if (!doc.exists) {
@@ -826,6 +838,7 @@ class _NotificationPageState extends State<NotificationPage>
         controller: _tabController,
         children: [_buildTravelTab(), _buildFriendRequestsTab()],
       ),
+      bottomNavigationBar: BottomNavBar(selectedIndex: 0),
     );
   }
 }

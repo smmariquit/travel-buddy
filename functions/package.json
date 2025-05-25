@@ -2,7 +2,11 @@
   "name": "functions",
   "description": "Cloud Functions for Firebase",
   "scripts": {
+<<<<<<< HEAD
     "lint": "echo lint skipped",
+=======
+    "lint": "echo 'skipping lint'",
+>>>>>>> 1402d7e6f9e8444fcef241b77d45802b097ea7a7
     "serve": "firebase emulators:start --only functions",
     "shell": "firebase functions:shell",
     "start": "npm run shell",

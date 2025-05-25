@@ -7,6 +7,13 @@ const { onDocumentCreated } = require("firebase-functions/v2/firestore");
 const { onSchedule } = require("firebase-functions/v2/scheduler");
 const { NotificationService } = require('./notification_service');
 
+<<<<<<< HEAD
+=======
+const {logger} = require("firebase-functions");
+const {onRequest} = require("firebase-functions/v2/https");
+const {onDocumentCreated} = require("firebase-functions/v2/firestore");
+const {onSchedule} = require("firebase-functions/v2/scheduler");
+>>>>>>> 1402d7e6f9e8444fcef241b77d45802b097ea7a7
 admin.initializeApp();
 const notificationService = new NotificationService();
 
@@ -66,7 +73,11 @@ exports.sendPushNotification = functions.https.onCall(async (data, context) => {
 
 // Scheduled function to check for upcoming trips and notify users every 5 minutes
 exports.checkTripsAndNotify = onSchedule(
+<<<<<<< HEAD
   { schedule: 'every 1 minutes' },
+=======
+  { schedule: 'every 1 minutes'},
+>>>>>>> 1402d7e6f9e8444fcef241b77d45802b097ea7a7
   async (event) => {
     const db = admin.firestore();
     const now = admin.firestore.Timestamp.now();
