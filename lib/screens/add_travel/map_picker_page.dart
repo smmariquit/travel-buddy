@@ -241,7 +241,7 @@ class _MapPickerPageState extends State<MapPickerPage> {
                       width: MediaQuery.of(context).size.width * 0.8,
                       child: ElevatedButton.icon(
                         icon: Icon(Icons.check_circle),
-                        label: Text("Confirm Location"),
+                        label: Text("Confirm"),
                         style: ElevatedButton.styleFrom(
                           backgroundColor: Colors.green,
                           foregroundColor: Colors.white,

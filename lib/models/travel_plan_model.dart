@@ -19,7 +19,7 @@ class Activity {
   final String? time; // Can be stored as a formatted string like "10:00 AM"
   final String? notes;
   String? imageUrl; // Base64 or Firebase Storage URL
-  List<String>? checklist;
+  List<Map<String, dynamic>>? checklist;
 
   Activity({
     required this.title,
@@ -45,7 +45,14 @@ class Activity {
       notes: json['notes'],
       imageUrl: json['imageUrl'],
       checklist:
-          json['checklist'] != null ? List<String>.from(json['checklist']) : [],
+          json['checklist'] != null
+              ? List<Map<String, dynamic>>.from(
+                json['checklist'].map(
+                  (item) =>
+                      item is String ? {'text': item, 'checked': false} : item,
+                ),
+              )
+              : [],
     );
   }
 
@@ -73,7 +80,7 @@ class Travel {
   final String? flightDetails;
   final String? accommodation;
   final String? notes;
-  final List<String>? checklist;
+  final List<Map<String, dynamic>>? checklist;
   late final List<String>? sharedWith;
   final DateTime createdOn;
   List<Activity>? activities;
@@ -95,7 +102,7 @@ class Travel {
     required this.createdOn,
     this.activities,
     this.imageUrl,
-     // Default to 5 days for existing records
+    // Default to 5 days for existing records
     this.notificationDays = 5,
   });
 
@@ -126,7 +133,14 @@ class Travel {
       accommodation: json['accommodation'],
       notes: json['notes'],
       checklist:
-          json['checklist'] != null ? List<String>.from(json['checklist']) : [],
+          json['checklist'] != null
+              ? List<Map<String, dynamic>>.from(
+                json['checklist'].map(
+                  (item) =>
+                      item is String ? {'text': item, 'checked': false} : item,
+                ),
+              )
+              : [],
       sharedWith:
           json['sharedWith'] != null
               ? List<String>.from(json['sharedWith'])
@@ -176,7 +190,7 @@ class Travel {
     String? flightDetails,
     String? accommodation,
     String? notes,
-    List<String>? checklist,
+    List<Map<String, dynamic>>? checklist,
     List<String>? sharedWith,
     DateTime? createdOn,
     List<Activity>? activities,

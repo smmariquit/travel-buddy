@@ -40,7 +40,7 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
   DateTime? _startDate, _endDate;
   String durationText = 'Trip Duration: Not set';
   String? _flightDetails, _accommodation, _notes;
-  final List<String> _checklist = [];
+  final List<Map<String, dynamic>> _checklist = [];
   final List<Activity> _activities = [];
   bool _isOneDayTrip = false;
   LatLng? locationSelected;
@@ -56,6 +56,12 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
   final _endDateController = TextEditingController();
 
   final places = GoogleMapsPlaces(apiKey: apiKey);
+
+  @override
+  void initState() {
+    super.initState();
+    print('Places API initialized with key: $apiKey');
+  }
 
   @override
   void dispose() {
@@ -968,9 +974,9 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
         builder:
             (_) => MapPickerPage(
               initialPosition:
+                  locationSelected ??
                   LatLng(lat, long) ??
-                  (locationSelected ??
-                      LatLng(14.5995, 120.9842)), // Manila as default
+                  LatLng(14.5995, 120.9842), // Manila as default
             ),
       ),
     );
@@ -996,11 +1002,13 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
   }
 
   Widget _buildLocationFieldWithAutocomplete() {
+    print('Building location field with autocomplete');
     return Row(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Expanded(
           child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               TextFormField(
                 controller: _locationController,
@@ -1017,63 +1025,121 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
                 validator:
                     (value) => value!.isEmpty ? 'Enter a location' : null,
                 onChanged: (value) {
-                  if (_debounce?.isActive ?? false) _debounce!.cancel();
-                  _debounce = Timer(
-                    const Duration(milliseconds: 500),
-                    () async {
-                      if (value.isNotEmpty) {
+                  print('Text changed: $value');
+                  if (_debounce?.isActive ?? false) {
+                    print('Cancelling existing debounce');
+                    _debounce!.cancel();
+                  }
+                  _debounce = Timer(const Duration(milliseconds: 500), () async {
+                    print('Debounce timer completed');
+                    if (value.isNotEmpty) {
+                      print('Making Places API request for: $value');
+                      try {
+                        print('API Key being used: $apiKey');
                         final response = await places.autocomplete(value);
-                        if (response.isOkay) {
+                        print('Places API Response received');
+                        print('Response status: ${response.status}');
+                        print(
+                          'Number of predictions: ${response.predictions.length}',
+                        );
+                        print(
+                          'First prediction: ${response.predictions.isNotEmpty ? response.predictions.first.description : 'none'}',
+                        );
+
+                        if (response.status == 'OK') {
+                          print('Setting predictions in state');
                           setState(() {
                             _predictions = response.predictions;
                             _isSearching = true;
                           });
+                          print(
+                            'State updated with ${_predictions.length} predictions',
+                          );
+                        } else {
+                          print('Places API Error: ${response.errorMessage}');
+                          setState(() {
+                            _predictions = [];
+                            _isSearching = false;
+                          });
                         }
-                      } else {
+                      } catch (e, stackTrace) {
+                        print('Places API Exception: $e');
+                        print('Stack trace: $stackTrace');
                         setState(() {
                           _predictions = [];
                           _isSearching = false;
                         });
                       }
-                    },
-                  );
+                    } else {
+                      print('Empty value, clearing predictions');
+                      setState(() {
+                        _predictions = [];
+                        _isSearching = false;
+                      });
+                    }
+                  });
                 },
                 onSaved: (v) => _location = v!,
               ),
               if (_isSearching && _predictions.isNotEmpty)
                 Container(
-                  height: 200,
+                  margin: EdgeInsets.only(top: 4),
                   decoration: BoxDecoration(
                     color: Colors.white,
-                    border: Border.all(color: primaryColor),
                     borderRadius: BorderRadius.circular(10),
+                    border: Border.all(color: primaryColor),
+                    boxShadow: [
+                      BoxShadow(
+                        color: Colors.black.withOpacity(0.1),
+                        blurRadius: 4,
+                        offset: Offset(0, 2),
+                      ),
+                    ],
                   ),
+                  constraints: BoxConstraints(maxHeight: 200),
                   child: ListView.builder(
+                    shrinkWrap: true,
+                    padding: EdgeInsets.zero,
                     itemCount: _predictions.length,
                     itemBuilder: (context, index) {
                       final prediction = _predictions[index];
+                      print(
+                        'Building prediction item: ${prediction.description}',
+                      );
                       return ListTile(
+                        dense: true,
                         title: Text(prediction.description ?? ''),
                         onTap: () async {
-                          final placeId = prediction.placeId!;
-                          final details = await places.getDetailsByPlaceId(
-                            placeId,
-                          );
-                          final selectedLocation =
-                              details.result.formattedAddress ??
-                              prediction.description;
+                          print('Prediction tapped: ${prediction.description}');
+                          try {
+                            final placeId = prediction.placeId!;
+                            print('Fetching details for place ID: $placeId');
+                            final details = await places.getDetailsByPlaceId(
+                              placeId,
+                            );
+                            final selectedLocation =
+                                details.result.formattedAddress ??
+                                prediction.description;
+                            print('Selected location: $selectedLocation');
 
-                          setState(() {
-                            _locationController.text = selectedLocation!;
-                            _isSearching = false;
-                            _predictions.clear();
-                          });
+                            setState(() {
+                              _locationController.text = selectedLocation!;
+                              _isSearching = false;
+                              _predictions.clear();
+                            });
+                          } catch (e, stackTrace) {
+                            print('Error getting place details: $e');
+                            print('Stack trace: $stackTrace');
+                            setState(() {
+                              _isSearching = false;
+                              _predictions.clear();
+                            });
+                          }
                         },
                       );
                     },
                   ),
                 ),
-              SizedBox(height: 10),
             ],
           ),
         ),
@@ -1081,7 +1147,7 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
         TextButton.icon(
           icon: Icon(Icons.map, color: primaryColor, size: 32),
           label: Text(
-            "View Map",
+            "Map",
             style: TextStyle(color: primaryColor, fontWeight: FontWeight.w500),
           ),
           style: TextButton.styleFrom(
@@ -1146,5 +1212,40 @@ class _AddTravelPlanPageState extends State<AddTravelPlanPage> {
         }
       }
     }
+  }
+
+  void _addChecklistItem() {
+    final controller = TextEditingController();
+    showDialog(
+      context: context,
+      builder:
+          (context) => AlertDialog(
+            title: Text("Add Checklist Item"),
+            content: TextField(
+              controller: controller,
+              decoration: InputDecoration(hintText: "Enter item"),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: Text("Cancel"),
+              ),
+              TextButton(
+                onPressed: () {
+                  if (controller.text.trim().isNotEmpty) {
+                    setState(() {
+                      _checklist.add({
+                        'text': controller.text.trim(),
+                        'checked': false,
+                      });
+                    });
+                  }
+                  Navigator.pop(context);
+                },
+                child: Text("Add"),
+              ),
+            ],
+          ),
+    );
   }
 }

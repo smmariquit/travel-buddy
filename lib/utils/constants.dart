@@ -1,8 +1,9 @@
 /// Update this file to change settings of the app in a single place.
-library;
+library travel_app.constants;
 
 import 'package:flutter/material.dart';
 
+/// Google Maps API Key
 const String apiKey = "AIzaSyACuAzPzmDxoadk9GGleOWBi-0luHFDYhs";
 
 /// TravelBuddy color scheme

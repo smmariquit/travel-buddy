@@ -294,11 +294,13 @@ class _TripDetailsState extends State<TripDetails>
                 TextButton(
                   onPressed: () async {
                     if (controller.text.trim().isNotEmpty) {
-                      setState(
-                        () => _travel!.activities![index].checklist!.add(
-                          controller.text.trim(),
-                        ),
-                      );
+                      setState(() {
+                        _travel!.activities![index].checklist ??= [];
+                        _travel!.activities![index].checklist!.add({
+                          'text': controller.text.trim(),
+                          'checked': false,
+                        });
+                      });
 
                       // Save to Firestore after adding the checklist item
                       await _saveActivitiesToFirestore();
@@ -520,9 +522,31 @@ class _TripDetailsState extends State<TripDetails>
                 padding: const EdgeInsets.symmetric(vertical: 2.0),
                 child: Row(
                   children: [
-                    Icon(Icons.check_box_outline_blank, size: 16),
-                    SizedBox(width: 8),
-                    Expanded(child: Text(entry.value)),
+                    Checkbox(
+                      value: entry.value['checked'] as bool? ?? false,
+                      onChanged:
+                          (_travel!.uid ==
+                                  FirebaseAuth.instance.currentUser?.uid)
+                              ? (bool? value) async {
+                                setState(() {
+                                  activity.checklist![entry.key]['checked'] =
+                                      value ?? false;
+                                });
+                                await _saveActivitiesToFirestore();
+                              }
+                              : null,
+                    ),
+                    Expanded(
+                      child: Text(
+                        entry.value['text'] as String,
+                        style: TextStyle(
+                          decoration:
+                              (entry.value['checked'] as bool? ?? false)
+                                  ? TextDecoration.lineThrough
+                                  : null,
+                        ),
+                      ),
+                    ),
                     if (_travel!.uid == FirebaseAuth.instance.currentUser?.uid)
                       IconButton(
                         icon: Icon(
@@ -1384,7 +1408,7 @@ class _TripDetailsState extends State<TripDetails>
                 onPressed: _addManualItinerary,
                 backgroundColor: primaryColor,
                 tooltip: 'Add Itinerary',
-                child: const Icon(Icons.add),
+                child: const Icon(Icons.playlist_add_check),
               )
               : null,
       floatingActionButtonLocation:
