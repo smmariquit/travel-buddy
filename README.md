@@ -191,3 +191,7 @@ Created with https://ascii-tree-generator.com/
 
 * This project would not have been possible without the teaching committee of CMSC 23 for 2S 24-25 at UPLB.
 * Sa mga patuloy na naghahanap ng kanilang landas, *padayon*
+
+
+---
+*If this project helped you out, consider [treating me to a coffee](https://kape.stimmie.dev) ☕*
