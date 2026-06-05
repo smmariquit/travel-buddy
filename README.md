@@ -195,3 +195,8 @@ Created with https://ascii-tree-generator.com/
 
 ---
 *If this project helped you out, consider [treating me to a coffee](https://kape.stimmie.dev) ☕*
+
+## 📊 Current State of the Code
+- **Tech Stack:** Static / Basic Scripts
+- **Repository Size:** 1133 tracked files
+- **Latest Update:** `b018463 chore: add stale issue and PR validators`
