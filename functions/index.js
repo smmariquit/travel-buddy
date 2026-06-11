@@ -1,3 +1,5 @@
+// functions/index.js
+
 // Enhanced Firebase Cloud Function with debugging
 const functions = require("firebase-functions");
 const admin = require("firebase-admin");

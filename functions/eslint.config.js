@@ -1,3 +1,5 @@
+// functions/eslint.config.js
+
 module.exports = {
   languageOptions: {
     globals: {
