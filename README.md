@@ -3,7 +3,7 @@
 <img align="left" height="128" src="./assets/splash_screen/logo_placeholder.png" />
 TravelBuddy is a social app that helps users plan trips with others. Aside from being able to organize all your upcoming trips, you can also share these trips with others. Your unique travel styles and interests are accounted for, and the app connects you with like-minded travelers who share similar preferences.
 
-This travel planning app is built with [Flutter](https://flutter.dev) for the frontend, utilizing [Firebase Authentication](https://firebase.google.com/docs/auth), [Cloud Firestore](https://firebase.google.com/docs/firestore), and [Firebase Storage](https://firebase.google.com/docs/storage) services for backend functionality. It demonstrates **CRUD operations**, **real-time data synchronization**, and modern UX principles through features like **QR code sharing**, **image handling**, and **location services**. [Material Design 3](https://m3.material.io) ensures the user-friendliness of the interface.
+This travel planning app is built with [Flutter](https://flutter.dev) for the frontend, using [Firebase Authentication](https://firebase.google.com/docs/auth), [Cloud Firestore](https://firebase.google.com/docs/firestore), and [Firebase Storage](https://firebase.google.com/docs/storage) services for backend functionality. It demonstrates **CRUD operations**, **real-time data synchronization**, and modern UX principles through features like **QR code sharing**, **image handling**, and **location services**. [Material Design 3](https://m3.material.io) ensures the user-friendliness of the interface.
 
 <img src="./tech_diagram.png" />
 
@@ -33,55 +33,55 @@ Customize your travel experience by setting your travel styles and preferences. 
 ### Creating a Travel Plan
 1. Tap the "+" button on the home screen
 2. Fill in the basic details:
-   - Trip name
-   - Location (use the map picker or search)
-   - Start and end dates
-   - Check "One-day trip" if applicable
+ - Trip name
+ - Location (use the map picker or search)
+ - Start and end dates
+ - Check "One-day trip" if applicable
 3. Add optional details:
-   - Flight information
-   - Accommodation details
-   - Notes
+ - Flight information
+ - Accommodation details
+ - Notes
 4. Add a cover image (optional)
 5. Tap "Save & Continue"
 
 ### Planning Your Itinerary
 1. In your travel plan, go to the "Itineraries" tab
 2. For each day, you can:
-   - Add activities with titles and notes
-   - Create checklists for each activity
-   - Upload activity-specific images
-   - Add custom days using the "+" button
+ - Add activities with titles and notes
+ - Create checklists for each activity
+ - Upload activity-specific images
+ - Add custom days using the "+" button
 
 ### Sharing Your Travel Plan
 1. In your travel plan, tap "Share"
 2. Choose your sharing method:
-   - Share by Username: Enter your friend's username
-   - Generate QR Code: Let friends scan to join
+ - Share by Username: Enter your friend's username
+ - Generate QR Code: Let friends scan to join
 3. Note: You can only share with friends
 4. To remove someone from the plan:
-   - Go to "Shared With" section
-   - Tap the remove icon next to their name
+ - Go to "Shared With" section
+ - Tap the remove icon next to their name
 
 ### Managing Friends
 1. Go to the Friends tab
 2. To add friends:
-   - Search for users by username
-   - Send friend requests
-   - Accept incoming requests
+ - Search for users by username
+ - Send friend requests
+ - Accept incoming requests
 3. View friend profiles to see:
-   - Their travel styles
-   - Shared travel plans
-   - Common interests
+ - Their travel styles
+ - Shared travel plans
+ - Common interests
 
 ### Location Features
 1. When adding a location:
-   - Use the map picker for precise selection
-   - Use autocomplete for quick search
-   - View location on map
+ - Use the map picker for precise selection
+ - Use autocomplete for quick search
+ - View location on map
 2. The app will:
-   - Validate the location
-   - Format the address
-   - Store coordinates
+ - Validate the location
+ - Format the address
+ - Store coordinates
 
 ## Running the app 🛠️
 
@@ -97,39 +97,39 @@ Customize your travel experience by setting your travel styles and preferences. 
 ### Steps to Deploy Locally
 
 1. **Prerequisites**
-   - Install [Flutter](https://flutter.dev/docs/get-started/install) (latest stable version)
-   - Install [Git](https://git-scm.com/downloads)
-   - Install [Android Studio](https://developer.android.com/studio) or [Xcode](https://developer.apple.com/xcode/) (for iOS)
-   - Install [Firebase CLI](https://firebase.google.com/docs/cli)
+ - Install [Flutter](https://flutter.dev/docs/get-started/install) (latest stable version)
+ - Install [Git](https://git-scm.com/downloads)
+ - Install [Android Studio](https://developer.android.com/studio) or [Xcode](https://developer.apple.com/xcode/) (for iOS)
+ - Install [Firebase CLI](https://firebase.google.com/docs/cli)
 
 2. **Clone the Repository**
-   ```bash
+ ```bash
    git clone https://github.com/smmariquit/travelbuddy.git
    cd travelbuddy
    ```
 
 3. **Install Dependencies**
-   ```bash
+ ```bash
    flutter pub get
    ```
 
 4. **Set up Firebase**
-   - Create a new Firebase project at [Firebase Console](https://console.firebase.google.com/)
-   - Enable Authentication (Email/Password)
-   - Set up Firestore Database
-   - Set up Firebase Storage
-   - Download `google-services.json` (Android) and/or `GoogleService-Info.plist` (iOS)
-   - Place the configuration files in:
-     - Android: `android/app/google-services.json`
-     - iOS: `ios/Runner/GoogleService-Info.plist`
+ - Create a new Firebase project at [Firebase Console](https://console.firebase.google.com/)
+ - Enable Authentication (Email/Password)
+ - Set up Firestore Database
+ - Set up Firebase Storage
+ - Download `google-services.json` (Android) and/or `GoogleService-Info.plist` (iOS)
+ - Place the configuration files in:
+ - Android: `android/app/google-services.json`
+ - iOS: `ios/Runner/GoogleService-Info.plist`
 
 5. **Configure API Keys**
-   - Get a Google Maps API key from [Google Cloud Console](https://console.cloud.google.com/)
-   - Add the API key to:
-     - Android: `android/app/src/main/AndroidManifest.xml`
+ - Get a Google Maps API key from [Google Cloud Console](https://console.cloud.google.com/)
+ - Add the API key to:
+ - Android: `android/app/src/main/AndroidManifest.xml`
 
 6. **Run the App**
-   ```bash
+ ```bash
    flutter run  
    ```
 ---
@@ -158,7 +158,7 @@ Created with https://ascii-tree-generator.com/
 * Windee Rose De Ramos
 * Simonee Ezekiel Mariquit - ([LinkedIn](https://linkedin.com/in/stimmie))
 * Jason Duran
-  
+ 
 ## References
 
 ### Core Technologies
@@ -186,12 +186,11 @@ Created with https://ascii-tree-generator.com/
 * CMSC 23 Resources
 * [Flutter Widget Catalog](https://flutter.dev/docs/development/ui/widgets)
 * [pub.dev](https://pub.dev) - Flutter package repository
-  
+ 
 ## Acknowledgements 🙏
 
 * This project would not have been possible without the teaching committee of CMSC 23 for 2S 24-25 at UPLB.
 * Sa mga patuloy na naghahanap ng kanilang landas, *padayon*
-
 
 ---
 *If this project helped you out, consider [treating me to a coffee](https://kape.stimmie.dev) ☕*
