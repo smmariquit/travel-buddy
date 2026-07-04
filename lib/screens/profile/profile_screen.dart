@@ -164,6 +164,27 @@ class _ProfileScreenState extends State<ProfileScreen> {
     super.dispose();
   }
 
+  void _showLegalDialog(
+    BuildContext context,
+    String title,
+    String body,
+    String url,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(title),
+        content: Text('$body\n\n$url'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(),
+            child: const Text('Close'),
+          ),
+        ],
+      ),
+    );
+  }
+
   Future<void> _saveChanges() async {
     if (_formKey.currentState!.validate() && _currentUserData != null) {
       final provider = context.read<AppUserProvider>();
@@ -827,6 +848,41 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           ),
                         ],
                       ),
+                    ),
+                  ),
+                ),
+                SizedBox(height: 16),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  child: Card(
+                    child: Column(
+                      children: [
+                        ListTile(
+                          leading: Icon(Icons.privacy_tip_outlined, color: Colors.grey[700]),
+                          title: Text('Privacy Policy'),
+                          trailing: Icon(Icons.open_in_new, size: 18, color: Colors.grey),
+                          onTap: () => _showLegalDialog(
+                            context,
+                            'Privacy Policy',
+                            'Travel Buddy handles profile, trip, and location data to power matching and itineraries. '
+                            'Full policy when live: uplbtools.me/privacy',
+                            'https://uplbtools.me/privacy',
+                          ),
+                        ),
+                        const Divider(height: 1),
+                        ListTile(
+                          leading: Icon(Icons.description_outlined, color: Colors.grey[700]),
+                          title: Text('Terms of Service'),
+                          trailing: Icon(Icons.open_in_new, size: 18, color: Colors.grey),
+                          onTap: () => _showLegalDialog(
+                            context,
+                            'Terms of Service',
+                            'By using Travel Buddy you agree to use the app lawfully and respect other travelers. '
+                            'Full terms when live: uplbtools.me/terms',
+                            'https://uplbtools.me/terms',
+                          ),
+                        ),
+                      ],
                     ),
                   ),
                 ),
