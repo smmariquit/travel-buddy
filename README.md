@@ -104,14 +104,14 @@ Customize your travel experience by setting your travel styles and preferences. 
 
 2. **Clone the Repository**
  ```bash
-   git clone https://github.com/smmariquit/travelbuddy.git
-   cd travelbuddy
-   ```
+ git clone https://github.com/smmariquit/travelbuddy.git
+ cd travelbuddy
+ ```
 
 3. **Install Dependencies**
  ```bash
-   flutter pub get
-   ```
+ flutter pub get
+ ```
 
 4. **Set up Firebase**
  - Create a new Firebase project at [Firebase Console](https://console.firebase.google.com/)
@@ -130,25 +130,25 @@ Customize your travel experience by setting your travel styles and preferences. 
 
 6. **Run the App**
  ```bash
-   flutter run  
-   ```
+ flutter run 
+ ```
 ---
 ## Folder Structure 📂
 ```
 travelbuddy/
-├── lib/                    # Main application code
-│   ├── api/               # Backend service integrations
-│   ├── models/            # Data structure definitions
-│   ├── providers/         # State management
-│   ├── screens/           # UI screens and pages
-│   ├── utils/             # Helper functions and constants
-│   └── widgets/           # Reusable UI components
-├── android/               # Android-specific configurations
-│   └── app/
-│       └── src/
-│           └── main/
-│               └── AndroidManifest.xml
-└── pubspec.yaml           #  Project dependencies and metadata (splash screen)
+├── lib/ # Main application code
+│ ├── api/ # Backend service integrations
+│ ├── models/ # Data structure definitions
+│ ├── providers/ # State management
+│ ├── screens/ # UI screens and pages
+│ ├── utils/ # Helper functions and constants
+│ └── widgets/ # Reusable UI components
+├── android/ # Android-specific configurations
+│ └── app/
+│ └── src/
+│ └── main/
+│ └── AndroidManifest.xml
+└── pubspec.yaml # Project dependencies and metadata (splash screen)
 ```
 Created with https://ascii-tree-generator.com/
 
