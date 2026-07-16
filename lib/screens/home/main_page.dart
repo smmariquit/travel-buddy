@@ -21,7 +21,7 @@ import 'package:travel_app/widgets/bottom_navigation_bar.dart';
 import 'package:travel_app/widgets/travel_plan_card.dart';
 import '../auth/signin_page.dart';
 import '../add_travel/add_travel_plan_page.dart';
-import 'package:travel_app/utils/constants.dart';
+import 'package:travel_app/theme/app_colors.dart';
 
 /// Holds constants for the [MainPage].
 class MainPageConstants {
@@ -155,12 +155,7 @@ class _MainPageState extends State<MainPage> {
               Positioned.fill(
                 child: Container(
                   decoration: const BoxDecoration(
-                    gradient: LinearGradient(
-                      begin: Alignment.topCenter,
-                      end: Alignment.bottomCenter,
-                      colors: [Color(0xFFAED581), Colors.white],
-                      stops: [0.0, 0.3],
-                    ),
+                    gradient: AppColors.homeBackground,
                   ),
                 ),
               ),

@@ -9,6 +9,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 
 // App-specific
 import 'package:travel_app/screens/home/main_page.dart';
+import 'package:travel_app/theme/app_colors.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 // Interests
@@ -72,12 +73,8 @@ class _TravelStylesPageState extends State<TravelStylesPage> {
         foregroundColor: Colors.black,
       ),
       body: Container(
-        decoration: BoxDecoration(
-          gradient: LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: [Colors.white, Colors.green.shade50],
-          ),
+        decoration: const BoxDecoration(
+          gradient: AppColors.authBackground,
         ),
         child: Padding(
           padding: const EdgeInsets.all(24),
